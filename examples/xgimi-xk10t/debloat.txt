@@ -1,0 +1,56 @@
+# XGIMI projector XK10T (product tenup, device altai, MediaTek), Google TV 14 (SDK 34),
+# build UKNV.260612.001.15630599. ro.adb.secure=1.
+#
+# Apply:   TV_HOST=<projector ip> tools/disable.sh examples/xgimi-xk10t/debloat.txt
+# Undo:    TV_HOST=<projector ip> tools/restore.sh examples/xgimi-xk10t/debloat.txt com.google.android.apps.tv.launcherx
+# Everything is DISABLED, not uninstalled. Comment out any line you want to keep.
+#
+# Stock launcher: com.google.android.apps.tv.launcherx. HOME claimants: launcherx, setupwraith
+# (RecoveryActivity), Settings' FallbackHome. Saved Wi-Fi belongs to android.uid.system, so disabling
+# setupwraith does not drop the network. Prime Video ships disabled from the factory.
+# Port 5555 was open with plain USB debugging on; stock adb works from macOS.
+#
+# DO NOT DISABLE on XGIMI (projector hardware, inputs, remote):
+# com.xgimi.autokst                    # auto keystone correction
+# com.xgimi.windowsystem               # keystone/window service
+# com.xgimi.tof                        # ToF autofocus
+# com.xgimi.misckey                    # remote keys, focus/keystone shortcuts
+# com.xgimi.uiconfiguration            # global key receiver, power listener
+# com.xgimi.xrmservice                 # picture/sound adaptation
+# com.xgimi.xgimiservice               # core XGIMI system service
+# com.xgimi.doubanfm                   # music app, but also hosts SoundModeService (Bluetooth speaker mode)
+# com.mediatek.tvinput                 # HDMI/AV input services
+# com.google.android.tv.inputplayer    # input switcher and HDMI passthrough player
+# com.xgimi.overseas.xgimiatvbootwizard  # first-boot wizard
+#
+# Kept by choice on this unit: Netflix, Play Store, Google Assistant (katniss, tv.assistant),
+# Chromecast (mediashell), XGIMI accessory OTA (com.xgimi.ota.accessories), Google ambient screensaver (dreamx).
+
+# Store demo, factory and test tools
+fusion.android.tv.demo                 # RetailDisplay store demo
+com.xgimi.minitvfactory                # factory menu and burn-in services
+com.xgimi.atvwifiverify                # factory Wi-Fi verification
+
+# Telemetry, feedback and auto-installs
+com.xgimi.bugreportsender              # XGIMI bug report uploader
+com.google.android.feedback            # Google feedback
+com.android.tv.feedbackconsent         # feedback consent prompt
+com.xgimi.autoinstall                  # XGIMI auto-install of preloads
+
+# Preloaded apps (off by choice)
+com.google.android.youtube.tv          # official YouTube (SmartTube is used instead)
+com.google.android.youtube.tvmusic     # YouTube Music
+com.google.android.play.games          # Play Games
+com.xgimi.gimiplayer                   # XGIMI video/photo player
+com.google.android.marvin.talkback     # TalkBack (accessibility)
+
+# Setup wizard: claims HOME (RecoveryActivity) and wins over set-home-activity once launcherx is off.
+# Safe here because the saved Wi-Fi belongs to android.uid.system, not to setupwraith.
+com.google.android.tungsten.setupwraith
+
+# Stock home. launcher/build-and-install.sh disables launcherx itself once the new launcher is
+# installed and verified; restore.sh re-enables it when passed as the extra argument (see Undo above).
+# com.google.android.apps.tv.launcherx
+
+# Duplicate HDRezka (rezkatv.web.app is the one kept, in the dock)
+com.hdrezka.compose
