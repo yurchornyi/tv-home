@@ -131,6 +131,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ImageView npCover;
     private TextView npTitle, npArtist;
     private android.widget.ProgressBar npProgress;
+    private TextView npPlay;
+    private View[] npButtons;
     private Bitmap npCoverShown;
     private Drawable npBackdrop;
     private int lastHeroPosition = -1;
@@ -357,6 +359,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         npArtist = findViewById(R.id.npArtist);
         npProgress = findViewById(R.id.npProgress);
         nowPlaying = new NowPlaying(this, this::onNowPlayingChanged);
+        npPlay = findViewById(R.id.npPlay);
+        npButtons = new View[]{findViewById(R.id.npPrev), npPlay, findViewById(R.id.npNext), findViewById(R.id.npClose)};
+        npButtons[0].setOnClickListener(v -> nowPlaying.previous());
+        npPlay.setOnClickListener(v -> nowPlaying.playPause());
+        npButtons[2].setOnClickListener(v -> nowPlaying.next());
+        npButtons[3].setOnClickListener(v -> nowPlaying.close());
+        // The row is a dead end at both sides; Down goes back to the dock tile Up came from.
+        View.OnKeyListener npKeys = (v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                focusTile(lastFocused % COLUMNS);
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v == npButtons[0];
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return v == npButtons[npButtons.length - 1];
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                findViewById(R.id.btnSettings).requestFocus();
+                return true;
+            }
+            return false;
+        };
+        for (View b : npButtons) b.setOnKeyListener(npKeys);
         feedApps.addAll(cfg.shelfFeedApps);
         shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY);
         if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
@@ -1484,7 +1508,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
     private void onNowPlayingChanged() {
-        if (lastHeroPosition >= 0 && lastHeroPosition < COLUMNS && heroShown && grid.hasFocus()) {
+        boolean onCard = npCard.hasFocus();
+        if (onCard) {
+            // Using the card's buttons: update it in place, or back to the dock once it closes.
+            if (nowPlaying.track() != null) {
+                showNowPlaying();
+            } else {
+                hideNowPlaying(animations);
+                focusTile(lastFocused % COLUMNS);
+            }
+        } else if (lastHeroPosition >= 0 && lastHeroPosition < COLUMNS && heroShown && grid.hasFocus()) {
             showHero(lastHeroPosition, lastDockTop);
         } else if (nowPlaying.track() == null) {
             hideNowPlaying(animations);
@@ -1505,6 +1538,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfTitle.animate().cancel();
         shelfTitle.setAlpha(0f);
         npTitle.setText(t.title);
+        npPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         npArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
         if (t.cover != npCoverShown) {
             npCoverShown = t.cover;
@@ -1795,7 +1829,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                // Dock row: the Now Playing buttons when the card is up, otherwise the top bar.
+                if (npCard.getVisibility() == View.VISIBLE && npCard.getAlpha() > 0f) {
+                    npPlay.requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                    return true;
+                }
+                return false;
+            }
             target = position - COLUMNS;
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;

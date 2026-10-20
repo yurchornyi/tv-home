@@ -124,6 +124,42 @@
                 android:layout_marginTop="14dp"
                 android:max="1000"
                 android:progressDrawable="@drawable/now_playing_progress" />
+
+            <!-- Previous, play/pause, next, close: Up from the dock reaches them. -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/npPrev"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="0dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_prev" />
+
+                <TextView
+                    android:id="@+id/npPlay"
+                    style="@style/TopIconButton"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_pause" />
+
+                <TextView
+                    android:id="@+id/npNext"
+                    style="@style/TopIconButton"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_next" />
+
+                <TextView
+                    android:id="@+id/npClose"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="28dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_close" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

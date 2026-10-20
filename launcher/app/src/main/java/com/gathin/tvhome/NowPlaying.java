@@ -29,14 +29,16 @@ final class NowPlaying {
         final String title, artist, app, pkg;
         final Bitmap cover;
         final long duration;
+        final boolean playing;
 
-        Track(String title, String artist, String app, String pkg, Bitmap cover, long duration) {
+        Track(String title, String artist, String app, String pkg, Bitmap cover, long duration, boolean playing) {
             this.title = title;
             this.artist = artist;
             this.app = app;
             this.pkg = pkg;
             this.cover = cover;
             this.duration = duration;
+            this.playing = playing;
         }
     }
 
@@ -47,6 +49,8 @@ final class NowPlaying {
     private MediaSessionManager msm;
     private MediaController current;
     private Track track;
+    /** The card was closed: stays hidden until something plays again. */
+    private boolean closed;
 
     private final MediaController.Callback callback = new MediaController.Callback() {
         @Override public void onPlaybackStateChanged(PlaybackState state) { pick(); }
@@ -79,7 +83,7 @@ final class NowPlaying {
         msm = null;
     }
 
-    /** The playing track, or null when nothing plays (paused counts as nothing). */
+    /** The current track, playing or paused, or null when nothing is loaded or the card was closed. */
     Track track() {
         return track;
     }
@@ -107,22 +111,40 @@ final class NowPlaying {
         pick();
     }
 
-    /** The first session that is playing and says what it plays. */
+    /**
+     * The first session that is playing; failing that, a paused one (the one shown before first), so the card stays
+     * up with its play button. After the card was closed nothing shows until a session plays again.
+     */
     private void pick() {
         MediaController found = null;
         for (MediaController c : watched) {
-            PlaybackState s = c.getPlaybackState();
-            MediaMetadata m = c.getMetadata();
-            if (s != null && s.getState() == PlaybackState.STATE_PLAYING && m != null
-                    && m.getString(MediaMetadata.METADATA_KEY_TITLE) != null) {
+            if (state(c) == PlaybackState.STATE_PLAYING && hasTitle(c)) {
                 found = c;
                 break;
             }
         }
+        if (found != null) {
+            closed = false;
+        } else if (!closed) {
+            // Paused: keep the one shown before, else any active session that is paused (Android only reports
+            // sessions the app still marks active, so a long-stopped player does not come back).
+            if (current != null && watched.contains(current) && state(current) == PlaybackState.STATE_PAUSED
+                    && hasTitle(current)) {
+                found = current;
+            } else {
+                for (MediaController c : watched) {
+                    if (state(c) == PlaybackState.STATE_PAUSED && hasTitle(c)) {
+                        found = c;
+                        break;
+                    }
+                }
+            }
+        }
+        if (closed) found = null;
         Track next = found == null ? null : describe(found);
         boolean changed = next == null ? track != null
                 : track == null || !next.title.equals(track.title) || !next.artist.equals(track.artist)
-                        || next.cover != track.cover;
+                        || next.cover != track.cover || next.playing != track.playing;
         current = found;
         track = next;
         if (changed) listener.onNowPlayingChanged();
@@ -142,7 +164,44 @@ final class NowPlaying {
             app = String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(c.getPackageName(), 0)));
         } catch (PackageManager.NameNotFoundException ignored) {
         }
-        return new Track(title, artist, app, c.getPackageName(), cover, m.getLong(MediaMetadata.METADATA_KEY_DURATION));
+        return new Track(title, artist, app, c.getPackageName(), cover, m.getLong(MediaMetadata.METADATA_KEY_DURATION),
+                state(c) == PlaybackState.STATE_PLAYING);
+    }
+
+    private static int state(MediaController c) {
+        PlaybackState s = c.getPlaybackState();
+        return s != null ? s.getState() : PlaybackState.STATE_NONE;
+    }
+
+    private static boolean hasTitle(MediaController c) {
+        MediaMetadata m = c.getMetadata();
+        return m != null && m.getString(MediaMetadata.METADATA_KEY_TITLE) != null;
+    }
+
+    // ---- remote control of the player, from the card's buttons ----
+
+    void playPause() {
+        if (current == null) return;
+        if (state(current) == PlaybackState.STATE_PLAYING) current.getTransportControls().pause();
+        else current.getTransportControls().play();
+    }
+
+    void next() {
+        if (current != null) current.getTransportControls().skipToNext();
+    }
+
+    void previous() {
+        if (current != null) current.getTransportControls().skipToPrevious();
+    }
+
+    /** Stops the player and hides the card until something plays again. */
+    void close() {
+        if (current != null) {
+            current.getTransportControls().pause();
+            current.getTransportControls().stop();
+        }
+        closed = true;
+        pick();
     }
 
     /** The cover blurred into the shelf's backdrop: a tiny copy scaled back up with filtering, darkened a little. */
