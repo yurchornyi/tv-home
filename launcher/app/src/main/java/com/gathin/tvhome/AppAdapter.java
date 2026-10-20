@@ -13,6 +13,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.provider.Settings;
@@ -53,6 +54,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         /** Called for a D-pad direction key on a tile. Return true when handled (focus stays put). */
         boolean onTileVerticalKey(int position, int keyCode);
 
+        /** Hold OK on a tile: return true when the launcher took it (picked the tile up to move it). */
+        boolean onTileLongPress(int position);
+
         void onLibraryRequested();
         void onLibraryFocused();
         void onLibraryUp();
@@ -71,6 +75,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final String name;
         /** Ambient glow colour; 0 until sampled from the banner, or the card's accent from the start. */
         int ambient;
+        /** Top shelf art: the banner softened into a small bitmap, made on first use. */
+        Drawable shelfArt;
+        boolean shelfArtLoaded;
 
         Entry(String label, ComponentName component, Drawable banner, Drawable icon) {
             this(APP, label, component, banner, icon, null, 0);
@@ -175,6 +182,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final boolean dockRow;
     /** Dock order (config.xml dock_apps, or a theme's config.json). */
     private final List<String> favourites;
+    private final List<String> gridApps;
+    private final List<String> phoneApps;
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -196,6 +205,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.listener = listener;
         this.dockSize = dockSize;
         this.favourites = cfg.dockApps;
+        this.gridApps = cfg.gridApps;
+        this.phoneApps = cfg.phoneApps;
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.animations = cfg.animations;
@@ -222,7 +233,9 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Set<String> tvPackages = new HashSet<>();
         for (ResolveInfo ri : found) if (ri.activityInfo != null) tvPackages.add(ri.activityInfo.packageName);
         leanbackPackages = tvPackages;
-        Set<String> added = LibraryApps.load(ctx);
+        // phone_apps count as added from the library: shown as tiles, started with plain MAIN.
+        Set<String> added = new HashSet<>(LibraryApps.load(ctx));
+        added.addAll(phoneApps);
         Set<String> removed = LibraryApps.loadRemoved(ctx);
         if (!added.isEmpty()) {
             Set<String> seen = new HashSet<>(tvPackages);
@@ -268,9 +281,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (fb < 0) return -1;
                 return Integer.compare(fa, fb);
             }
-            // Cards come right after the configured dock apps, before the alphabetical grid.
+            // Cards come right after the configured dock apps, before the grid.
             boolean ca = a.kind == Entry.CARD, cb = b.kind == Entry.CARD;
             if (ca != cb) return ca ? -1 : 1;
+            int ga = gridApps.indexOf(a.pkg), gb = gridApps.indexOf(b.pkg);
+            if (ga >= 0 || gb >= 0) {
+                if (ga < 0) return 1;
+                if (gb < 0) return -1;
+                return Integer.compare(ga, gb);
+            }
             return a.label.compareToIgnoreCase(b.label);
         });
         // Retain the optional Default-home tile until dependent tile-ordering work is merged.
@@ -401,6 +420,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
+            int pos = h.getBindingAdapterPosition();
+            if (listener != null && pos != RecyclerView.NO_POSITION && listener.onTileLongPress(pos)) return true;
             Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
@@ -519,6 +540,48 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** A position focus can land on: an empty dock slot gives the last dock app. */
     int focusablePosition(int position) {
         return DockSlots.focusable(position, docked, emptySlots);
+    }
+
+    /**
+     * The focused dock app's banner for the top shelf, softened: drawn into a tiny bitmap and scaled back up with
+     * filtering, which blurs it for the cost of two small bitmaps instead of a blur pass (no RenderScript, ~1 GB
+     * TVs). Stretched over the screen it reads as the app's colours washing the shelf. Null without a banner.
+     */
+    Drawable shelfArtAt(int position) {
+        if (position < 0 || position >= items.size()) return null;
+        Entry e = items.get(position);
+        if (e.banner == null) return null;
+        if (!e.shelfArtLoaded) {
+            e.shelfArtLoaded = true;
+            Drawable d = e.banner.getConstantState() != null ? e.banner.getConstantState().newDrawable().mutate() : null;
+            if (d != null) {
+                Bitmap tiny = Bitmap.createBitmap(8, 5, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(tiny);
+                c.drawColor(0xFF000000);
+                d.setBounds(0, 0, 8, 5);
+                d.draw(c);
+                // Darker and more saturated, so a white banner (Netflix) tints the shelf instead of greying it.
+                android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix();
+                cm.setSaturation(1.6f);
+                android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix();
+                dim.setScale(0.55f, 0.55f, 0.55f, 1f);
+                cm.postConcat(dim);
+                android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+                paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(cm));
+                Bitmap soft = Bitmap.createBitmap(128, 80, Bitmap.Config.ARGB_8888);
+                new Canvas(soft).drawBitmap(tiny, null, new Rect(0, 0, 128, 80), paint);
+                tiny.recycle();
+                BitmapDrawable art = new BitmapDrawable(ctx.getResources(), soft);
+                art.setFilterBitmap(true);
+                e.shelfArt = art;
+            }
+        }
+        return e.shelfArt;
+    }
+
+    /** The package of the tile at this position, or "". */
+    String pkgAt(int position) {
+        return position >= 0 && position < items.size() ? items.get(position).pkg : "";
     }
 
     String labelAt(int position) {

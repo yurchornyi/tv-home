@@ -35,6 +35,18 @@
         <item name="android:drawablePadding">0dp</item>
     </style>
 
+    <!-- The round icon buttons of the top bar (network, Settings): 46dp like the profile photo, 14dp apart. -->
+    <style name="TopIconButton" parent="TopButtonBase">
+        <item name="android:layout_width">46dp</item>
+        <item name="android:layout_height">46dp</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:layout_gravity">center_vertical</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:drawablePadding">0dp</item>
+        <item name="android:background">@drawable/icon_button_bg</item>
+    </style>
+
     <style name="SettingsRow">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">52dp</item>

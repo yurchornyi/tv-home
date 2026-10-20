@@ -19,6 +19,114 @@
         android:layout_height="match_parent"
         android:alpha="0" />
 
+    <!-- Top shelf art (config.xml top_shelf_art): the focused dock app's banner, heavily softened, washing the
+         screen behind the shelf, with a fade into the background towards the dock. -->
+    <ImageView
+        android:id="@+id/heroArt"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:alpha="0"
+        android:importantForAccessibility="no" />
+
+    <View
+        android:id="@+id/heroFade"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/top_shelf_fade"
+        android:alpha="0"
+        android:importantForAccessibility="no" />
+
+    <!-- Title of the TMDB backdrop on the top shelf (shelf_feed_apps), positioned above the dock in code. -->
+    <TextView
+        android:id="@+id/shelfTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="70dp"
+        android:maxWidth="1100dp"
+        android:alpha="0"
+        android:textColor="#FFFFFFFF"
+        android:textSize="38sp"
+        android:fontFamily="@font/outfit_regular"
+        android:includeFontPadding="false"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:shadowColor="#99000000"
+        android:shadowRadius="12"
+        android:shadowDy="2" />
+
+    <!-- Now Playing card on the top shelf (NowPlaying): cover, title, artist and app, progress. Positioned above the
+         dock in code; shown instead of the posters while something plays. -->
+    <LinearLayout
+        android:id="@+id/nowPlaying"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="70dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:alpha="0"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/npCover"
+            android:layout_width="132dp"
+            android:layout_height="132dp"
+            android:background="@drawable/now_playing_cover_bg"
+            android:scaleType="centerCrop"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="26dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/now_playing"
+                android:textAllCaps="true"
+                android:letterSpacing="0.18"
+                android:textColor="#99FFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@font/outfit_medium" />
+
+            <TextView
+                android:id="@+id/npTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxWidth="900dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFFFF"
+                android:textSize="32sp"
+                android:fontFamily="@font/outfit_regular"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/npArtist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:maxWidth="900dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#B3FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="@font/outfit_regular" />
+
+            <ProgressBar
+                android:id="@+id/npProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="420dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="14dp"
+                android:max="1000"
+                android:progressDrawable="@drawable/now_playing_progress" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- Top shelf: the focused dock app's name, positioned above the dock in code. -->
     <TextView
         android:id="@+id/heroName"
@@ -49,6 +157,60 @@
             android:layout_height="wrap_content"
             android:clipChildren="false"
             android:clipToPadding="false">
+
+            <!-- Clock and temperature at the top left (config.xml top_clock, weather). Not focusable. -->
+            <LinearLayout
+                android:id="@+id/topInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentStart="true"
+                android:layout_alignBottom="@id/leftBlock"
+                android:layout_marginStart="14dp"
+                android:layout_marginBottom="11dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <TextClock
+                    android:id="@+id/topClock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="HH:mm"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="30sp"
+                    android:fontFamily="@font/outfit_light"
+                    android:includeFontPadding="false" />
+
+                <!-- Thin divider, weather symbol and temperature: one line with the clock, a step dimmer. -->
+                <View
+                    android:id="@+id/topDivider"
+                    android:layout_width="1dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
+                    android:background="#4DFFFFFF"
+                    android:visibility="gone" />
+
+                <ImageView
+                    android:id="@+id/topWeatherIcon"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="8dp"
+                    android:alpha="0.75"
+                    android:importantForAccessibility="no"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/topTemp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#BFFFFFFF"
+                    android:textSize="30sp"
+                    android:fontFamily="@font/outfit_light"
+                    android:includeFontPadding="false"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/leftBlock"
@@ -193,6 +355,7 @@
                 android:clipToPadding="false"
                 android:orientation="horizontal">
 
+
                 <TextView
                     android:id="@+id/btnInputs"
                     style="@style/TopButton"
@@ -210,6 +373,15 @@
                     android:drawableStart="@drawable/ic_wifi"
                     android:nextFocusDown="@+id/grid" />
 
+                <!-- Connected Bluetooth headphones or speaker: its own round button, opens Bluetooth settings. -->
+                <TextView
+                    android:id="@+id/btnAudio"
+                    style="@style/TopIconButton"
+                    android:contentDescription="@string/connected"
+                    android:drawableStart="@drawable/ic_headphones"
+                    android:nextFocusDown="@+id/grid"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/btnReorder"
                     style="@style/TopButtonIcon"
@@ -219,10 +391,29 @@
 
                 <TextView
                     android:id="@+id/btnSettings"
-                    style="@style/TopButton"
-                    android:text="@string/settings"
+                    style="@style/TopIconButton"
+                    android:contentDescription="@string/settings"
                     android:drawableStart="@drawable/ic_settings"
                     android:nextFocusDown="@+id/grid" />
+
+                <!-- Profile at the far right (config.xml profile_button): the photo from profile.jpg in the
+                     launcher's files folder (tools/theme.sh pushes it), a person glyph without one. Opens Accounts
+                     and profiles. -->
+                <ImageView
+                    android:id="@+id/btnProfile"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:layout_marginStart="14dp"
+                    android:layout_gravity="center_vertical"
+                    android:padding="3dp"
+                    android:background="@drawable/avatar_bg"
+                    android:src="@drawable/ic_person"
+                    android:scaleType="centerInside"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:contentDescription="@string/profiles"
+                    android:nextFocusDown="@+id/grid"
+                    android:visibility="gone" />
             </LinearLayout>
         </RelativeLayout>
 

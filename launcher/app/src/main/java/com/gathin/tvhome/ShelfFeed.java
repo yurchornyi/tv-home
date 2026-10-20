@@ -1,0 +1,241 @@
+package com.gathin.tvhome;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.util.LruCache;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * Posters for the top shelf (config.xml shelf_feed_apps): film and series backdrops from TMDB, shown while one of
+ * those dock apps is focused. Netflix gets what is popular on Netflix in the TV's region (its network for series,
+ * its watch provider for films); Kyivstar TV Ukrainian series and films, then what is popular in the region; every
+ * other listed app what is trending this week. Titles come in the TV's
+ * language. Lists are cached for six hours in preferences, images on disk, the last few decoded in memory as RGB_565
+ * (about 1.8 MB each at 1280 px), so a ~1 GB TV is not squeezed. No key (BuildConfig.TMDB_KEY) means no requests.
+ */
+final class ShelfFeed {
+
+    static final class Item {
+        final String title;
+        final String backdrop;
+
+        Item(String title, String backdrop) {
+            this.title = title;
+            this.backdrop = backdrop;
+        }
+    }
+
+    interface ItemsListener { void onItems(List<Item> items); }
+    interface ImageListener { void onImage(String backdrop, Bitmap bitmap); }
+
+    private static final String TAG = "TvHome.ShelfFeed";
+    private static final String API = "https://api.themoviedb.org/3/";
+    private static final String IMAGES = "https://image.tmdb.org/t/p/w1280";
+    private static final long MAX_AGE_MS = 6 * 60 * 60 * 1000L;
+    private static final String NETFLIX = "com.netflix.ninja";
+    private static final String KYIVSTAR = "com.kyivstar.tv.tvapp";
+
+    private final Context ctx;
+    private final String key;
+    private final String language;
+    private final String region;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final Map<String, List<Item>> lists = new HashMap<>();
+    private final Set<String> loading = new HashSet<>();
+    private final LruCache<String, Bitmap> images = new LruCache<>(3);
+
+    ShelfFeed(Context ctx, String key) {
+        this.ctx = ctx.getApplicationContext();
+        this.key = key == null ? "" : key.trim();
+        java.util.Locale l = java.util.Locale.getDefault();
+        this.language = l.getLanguage() + (l.getCountry().isEmpty() ? "" : "-" + l.getCountry());
+        this.region = l.getCountry().isEmpty() ? "US" : l.getCountry();
+    }
+
+    boolean enabled() {
+        return !key.isEmpty();
+    }
+
+    /** The cached list for this app at once if there is one, then a fresh one when the cache is old. */
+    void items(String pkg, ItemsListener listener) {
+        if (!enabled()) return;
+        String group = NETFLIX.equals(pkg) ? "netflix" : KYIVSTAR.equals(pkg) ? "ukraine" : "trending";
+        List<Item> known = lists.get(group);
+        if (known == null) {
+            known = parse(prefs().getString(group, ""));
+            if (!known.isEmpty()) lists.put(group, known);
+        }
+        if (!known.isEmpty()) listener.onItems(known);
+        boolean fresh = System.currentTimeMillis() - prefs().getLong(group + "_at", 0) < MAX_AGE_MS;
+        if ((fresh && !known.isEmpty()) || !loading.add(group)) return;
+        io.execute(() -> {
+            List<Item> got = new ArrayList<>();
+            JSONArray raw = new JSONArray();
+            try {
+                String[] paths = "netflix".equals(group)
+                        ? new String[]{"discover/tv?with_networks=213&sort_by=popularity.desc",
+                                       "discover/movie?with_watch_providers=8&watch_region=" + region + "&sort_by=popularity.desc"}
+                        : "ukraine".equals(group)
+                        // Kyivstar TV: Ukrainian series and films first, then what is popular in the region.
+                        ? new String[]{"discover/tv?with_origin_country=UA&sort_by=popularity.desc",
+                                       "discover/movie?with_origin_country=UA&sort_by=popularity.desc",
+                                       "movie/popular?region=" + region}
+                        : new String[]{"trending/all/week", "movie/popular?region=" + region};
+                for (String path : paths) collect(path, got, raw);
+            } catch (Exception e) {
+                Log.w(TAG, "feed failed: " + e);
+            }
+            main.post(() -> {
+                loading.remove(group);
+                if (got.isEmpty()) return;
+                Collections.shuffle(got);
+                lists.put(group, got);
+                prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
+                listener.onItems(got);
+            });
+        });
+    }
+
+    /** The backdrop from memory, else disk, else TMDB; the listener hears it on the main thread. */
+    void image(String backdrop, ImageListener listener) {
+        Bitmap hit = images.get(backdrop);
+        if (hit != null) {
+            listener.onImage(backdrop, hit);
+            return;
+        }
+        io.execute(() -> {
+            Bitmap b = null;
+            try {
+                File f = new File(cacheDir(), backdrop.replaceAll("[^A-Za-z0-9._-]", "_"));
+                if (!f.isFile()) {
+                    byte[] data = get(IMAGES + backdrop, false);
+                    try (FileOutputStream out = new FileOutputStream(f)) {
+                        out.write(data);
+                    }
+                    trimCache();
+                }
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inPreferredConfig = Bitmap.Config.RGB_565;
+                b = BitmapFactory.decodeFile(f.getPath(), o);
+            } catch (Exception e) {
+                Log.w(TAG, "image failed: " + e);
+            }
+            Bitmap done = b;
+            main.post(() -> {
+                if (done == null) return;
+                images.put(backdrop, done);
+                listener.onImage(backdrop, done);
+            });
+        });
+    }
+
+    private void collect(String path, List<Item> into, JSONArray raw) throws Exception {
+        String url = API + path + (path.contains("?") ? "&" : "?") + "language=" + language;
+        JSONArray results = new JSONObject(new String(get(url, true), StandardCharsets.UTF_8)).getJSONArray("results");
+        int start = into.size();
+        for (int i = 0; i < results.length() && into.size() - start < 12; i++) {
+            JSONObject r = results.getJSONObject(i);
+            String title = r.optString("title", r.optString("name", ""));
+            if (title.isEmpty()) continue;
+            // The list's backdrop often has the title painted on in English; ask for one without any text, so the
+            // shelf shows the localized title only once.
+            String type = r.optString("media_type", path.startsWith("discover/tv") ? "tv" : "movie");
+            if (!type.equals("movie") && !type.equals("tv")) continue;
+            String backdrop = textless(type, r.optLong("id"));
+            if (backdrop.isEmpty()) continue;
+            into.add(new Item(title, backdrop));
+            raw.put(new JSONObject().put("t", title).put("b", backdrop));
+        }
+    }
+
+    /** The most popular backdrop with no text on it, or "" when TMDB has none. */
+    private String textless(String type, long id) {
+        try {
+            String url = API + type + "/" + id + "/images?include_image_language=null";
+            JSONArray b = new JSONObject(new String(get(url, true), StandardCharsets.UTF_8)).getJSONArray("backdrops");
+            return b.length() > 0 ? b.getJSONObject(0).optString("file_path", "") : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static List<Item> parse(String json) {
+        List<Item> out = new ArrayList<>();
+        if (json.isEmpty()) return out;
+        try {
+            JSONArray a = new JSONArray(json);
+            for (int i = 0; i < a.length(); i++) {
+                JSONObject o = a.getJSONObject(i);
+                out.add(new Item(o.getString("t"), o.getString("b")));
+            }
+            Collections.shuffle(out);
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    /** A v4 read token (long JWT) goes in the Authorization header, a v3 key in the query. */
+    private byte[] get(String url, boolean api) throws Exception {
+        boolean bearer = key.length() > 40;
+        if (api && !bearer) url += "&api_key=" + key;
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(8000);
+        c.setReadTimeout(12000);
+        if (api && bearer) c.setRequestProperty("Authorization", "Bearer " + key);
+        try (InputStream in = c.getInputStream()) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[16384];
+            int n;
+            while ((n = in.read(buf)) > 0) {
+                out.write(buf, 0, n);
+                if (out.size() > 4 * 1024 * 1024) throw new IllegalStateException("too large");
+            }
+            return out.toByteArray();
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    private File cacheDir() {
+        File d = new File(ctx.getCacheDir(), "shelf");
+        if (!d.isDirectory()) d.mkdirs();
+        return d;
+    }
+
+    /** Keeps the newest 40 backdrops on disk (about 8 MB). */
+    private void trimCache() {
+        File[] files = cacheDir().listFiles();
+        if (files == null || files.length <= 40) return;
+        java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        for (int i = 40; i < files.length; i++) files[i].delete();
+    }
+
+    private SharedPreferences prefs() {
+        return ctx.getSharedPreferences("shelf_feed_v3", Context.MODE_PRIVATE);
+    }
+}

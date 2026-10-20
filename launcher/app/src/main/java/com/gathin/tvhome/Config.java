@@ -39,6 +39,20 @@ final class Config {
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock); on by default, false leaves the slots empty. */
     final boolean fillDock;
     final List<String> hiddenApps;
+    /** Grid order after the dock (config.xml grid_apps): these come first in this order, the rest alphabetically. */
+    final List<String> gridApps;
+    /** The focused dock app's banner across the top of the screen (config.xml top_shelf_art). */
+    final boolean topShelfArt;
+    /** Greeting, clock and date at the top left (config.xml show_clock). */
+    final boolean showClock;
+    /** Top bar pills and extras (config.xml show_inputs, show_wifi, top_clock, weather, profile_button). */
+    final boolean showInputs, showWifi, topClock, weather, profileButton;
+    /** The network pill as an icon without the network name (config.xml wifi_icon_only). */
+    final boolean wifiIconOnly;
+    /** Phone apps shown as tiles although they have no TV entry point (config.xml phone_apps). */
+    final List<String> phoneApps;
+    /** Dock apps with TMDB backdrops in the top shelf (config.xml shelf_feed_apps). */
+    final List<String> shelfFeedApps;
     final String liveTvPackage;
     final String liveTvAction;
     final String sourcePanelService;
@@ -98,12 +112,26 @@ final class Config {
                    boolean showHomeSettingsShortcut, boolean showStats, boolean appLibrary, int backgroundColor, int skyIntensity,
                    int[] settingsKeycodes, boolean settingsKeyPanel, boolean wallpaperEnabled, File wallpaper, List<File> wallpapers,
                    int wallpaperRotationMinutes, int wallpaperDim, boolean overlayApplied,
-                   Festival festival, int[] inputKeycodes, List<String> appKeys) {
+                   Festival festival, int[] inputKeycodes, List<String> appKeys, List<String> gridApps,
+                   boolean topShelfArt, boolean showClock, boolean showInputs, boolean showWifi,
+                   boolean topClock, boolean weather, boolean profileButton, List<String> phoneApps,
+                   boolean wifiIconOnly, List<String> shelfFeedApps) {
         this.inputKeycodes = inputKeycodes;
         this.appKeys = Collections.unmodifiableList(appKeys);
         this.dockApps = Collections.unmodifiableList(dockApps);
         this.fillDock = fillDock;
         this.hiddenApps = Collections.unmodifiableList(hiddenApps);
+        this.gridApps = Collections.unmodifiableList(gridApps);
+        this.topShelfArt = topShelfArt;
+        this.showClock = showClock;
+        this.showInputs = showInputs;
+        this.showWifi = showWifi;
+        this.topClock = topClock;
+        this.weather = weather;
+        this.profileButton = profileButton;
+        this.phoneApps = Collections.unmodifiableList(phoneApps);
+        this.wifiIconOnly = wifiIconOnly;
+        this.shelfFeedApps = Collections.unmodifiableList(shelfFeedApps);
         this.liveTvPackage = liveTvPackage;
         this.liveTvAction = liveTvAction;
         this.sourcePanelService = sourcePanelService;
@@ -147,6 +175,17 @@ final class Config {
         List<String> dock = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.dock_apps)));
         boolean fillDock = res.getBoolean(R.bool.fill_dock);
         List<String> hidden = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.hidden_apps)));
+        List<String> gridApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.grid_apps)));
+        boolean topShelfArt = res.getBoolean(R.bool.top_shelf_art);
+        boolean showClock = res.getBoolean(R.bool.show_clock);
+        boolean showInputs = res.getBoolean(R.bool.show_inputs);
+        boolean showWifi = res.getBoolean(R.bool.show_wifi);
+        boolean wifiIconOnly = res.getBoolean(R.bool.wifi_icon_only);
+        boolean topClock = res.getBoolean(R.bool.top_clock);
+        boolean weather = res.getBoolean(R.bool.weather);
+        boolean profileButton = res.getBoolean(R.bool.profile_button);
+        List<String> phoneApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.phone_apps)));
+        List<String> shelfFeedApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.shelf_feed_apps)));
         String liveTv = res.getString(R.string.live_tv_package).trim();
         String liveTvAction = res.getString(R.string.live_tv_action).trim();
         String panelService = res.getString(R.string.source_panel_service).trim();
@@ -183,6 +222,17 @@ final class Config {
             dock = stringList(json, "dock_apps", dock);
             fillDock = bool(json, "fill_dock", fillDock);
             hidden = stringList(json, "hidden_apps", hidden);
+            gridApps = stringList(json, "grid_apps", gridApps);
+            topShelfArt = bool(json, "top_shelf_art", topShelfArt);
+            showClock = bool(json, "show_clock", showClock);
+            showInputs = bool(json, "show_inputs", showInputs);
+            showWifi = bool(json, "show_wifi", showWifi);
+            wifiIconOnly = bool(json, "wifi_icon_only", wifiIconOnly);
+            topClock = bool(json, "top_clock", topClock);
+            weather = bool(json, "weather", weather);
+            profileButton = bool(json, "profile_button", profileButton);
+            phoneApps = stringList(json, "phone_apps", phoneApps);
+            shelfFeedApps = stringList(json, "shelf_feed_apps", shelfFeedApps);
             liveTv = string(json, "live_tv_package", liveTv);
             liveTvAction = string(json, "live_tv_action", liveTvAction);
             panelService = string(json, "source_panel_service", panelService);
@@ -239,7 +289,8 @@ final class Config {
                 shamsi, greetingName, moduleCards, reducedMotion, dockTitle, dockRow, reorderButton, vpn, homeSettings, showStats, library, background,
                 Math.max(0, Math.min(100, skyIntensity)), settingsKeycodes, settingsKeyPanel, wallpaperEnabled, wallpaper,
                 wallpapers, rotationMinutes, wallpaperDim, applied,
-                festival, inputKeycodes, appKeys);
+                festival, inputKeycodes, appKeys, gridApps, topShelfArt, showClock,
+                showInputs, showWifi, topClock, weather, profileButton, phoneApps, wifiIconOnly, shelfFeedApps);
     }
 
     private static void syncThemeChoices(SharedPreferences choices, File dir, File config) {

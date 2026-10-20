@@ -12,7 +12,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RadialGradient;
@@ -67,6 +70,11 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.net.URL;
+import java.net.HttpURLConnection;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -103,6 +111,42 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private GlassView glass;
     private View ambient;
     private TextView heroName;
+    /** Top shelf art and the fade over it (top_shelf_art). */
+    private ImageView heroArt;
+    private View heroFade;
+    private boolean topShelfArt;
+    /** The drawable the shelf shows now, to skip a crossfade to the same app. */
+    private Drawable heroArtShown;
+    /** TMDB backdrops for shelf_feed_apps: the app whose carousel runs, its list and the backdrop shown. */
+    private ShelfFeed shelfFeed;
+    private final Set<String> feedApps = new HashSet<>();
+    private String feedPkg;
+    private List<ShelfFeed.Item> feedItems;
+    private int feedIndex;
+    private float lastDockTop;
+    private TextView shelfTitle;
+    /** Now Playing card (NowPlaying), shown on the shelf instead of posters while something plays. */
+    private NowPlaying nowPlaying;
+    private View npCard;
+    private ImageView npCover;
+    private TextView npTitle, npArtist;
+    private android.widget.ProgressBar npProgress;
+    private Bitmap npCoverShown;
+    private Drawable npBackdrop;
+    private int lastHeroPosition = -1;
+    private final Runnable npTick = new Runnable() {
+        @Override public void run() {
+            updateNowPlayingProgress();
+            handler.postDelayed(this, 1000);
+        }
+    };
+    private final Runnable feedTick = new Runnable() {
+        @Override public void run() {
+            if (feedItems == null || feedItems.isEmpty()) return;
+            feedIndex = (feedIndex + 1) % feedItems.size();
+            showFeedItem();
+        }
+    };
     private int ambientColor = -1;
     private ValueAnimator ambientAnimator;
     private boolean heroShown;
@@ -110,6 +154,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean advancedEffects;
     private TextView greeting;
     private View btnInputs;
+    /** Inputs pill allowed at all (config.xml show_inputs); it still hides when there is nothing to list. */
+    private boolean showInputs;
+    /** wifi_icon_only: the network pill shows its icon alone, like the Settings button. */
+    private boolean wifiIconOnly;
+    /** The VPN's exit country (ISO code, e.g. "DE") from Cloudflare's trace, "" until known; refreshed per minute. */
+    private String vpnCountry = "";
+    private long vpnCountryAt;
+    private boolean vpnCountryBusy;
+    private final AudioDevices.Listener audioListener = this::updateAudioButton;
+    private TextView btnAudio;
+    private View btnProfile;
+    private TextView topTemp;
+    private Weather weather;
+    private final Runnable weatherTick = new Runnable() {
+        @Override public void run() {
+            refreshWeather();
+            handler.postDelayed(this, Weather.MAX_AGE_MS);
+        }
+    };
     private TextView btnWifi;
     private TextView shamsiDate;
     private TextView stats;
@@ -167,6 +230,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean reordering;
     /** Key of the tile being carried in reorder mode, or null. */
     private String movingKey;
+    /** A tile was picked up by holding OK: the release of that same OK must not put it straight down again. */
+    private boolean swallowOkUp;
+    /** Where the carried tile was picked up, so Back can put it back there. */
+    private int pickedFrom = -1;
+    /** The move was started from a tile's menu: one tile, and the mode ends as soon as it is placed or cancelled. */
+    private boolean singleMove;
     /** Tile order when reorder mode started, to save only when something moved. */
     private List<String> orderAtStart;
     private View btnReorder;
@@ -277,6 +346,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroName = findViewById(R.id.heroName);
         // dock_title false: the name above the dock never shows; the glow still follows the dock.
         if (!cfg.dockTitle) heroName.setVisibility(View.GONE);
+        heroArt = findViewById(R.id.heroArt);
+        heroFade = findViewById(R.id.heroFade);
+        topShelfArt = cfg.topShelfArt;
+        shelfTitle = findViewById(R.id.shelfTitle);
+        npCard = findViewById(R.id.nowPlaying);
+        npCover = findViewById(R.id.npCover);
+        npCover.setClipToOutline(true);
+        npTitle = findViewById(R.id.npTitle);
+        npArtist = findViewById(R.id.npArtist);
+        npProgress = findViewById(R.id.npProgress);
+        nowPlaying = new NowPlaying(this, this::onNowPlayingChanged);
+        feedApps.addAll(cfg.shelfFeedApps);
+        shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY);
+        if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
         greeting = findViewById(R.id.greeting);
         greetingColor = greeting.getCurrentTextColor();
         btnWifi = findViewById(R.id.btnWifi);
@@ -427,6 +510,40 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         btnInputs = findViewById(R.id.btnInputs);
         View btnSettings = findViewById(R.id.btnSettings);
+        showInputs = cfg.showInputs;
+        if (!showInputs) btnInputs.setVisibility(View.GONE);
+        if (!cfg.showWifi) btnWifi.setVisibility(View.GONE);
+        wifiIconOnly = cfg.wifiIconOnly;
+        if (wifiIconOnly) {
+            // The same round 46dp button as Settings (TopIconButton); it widens into a capsule for the VPN badge.
+            LinearLayout.LayoutParams wlp = (LinearLayout.LayoutParams) btnWifi.getLayoutParams();
+            wlp.width = (int) (46 * density);
+            wlp.height = (int) (46 * density);
+            wlp.setMarginStart((int) (14 * density));
+            wlp.gravity = Gravity.CENTER_VERTICAL;
+            btnWifi.setLayoutParams(wlp);
+            btnWifi.setBackgroundResource(R.drawable.icon_button_bg);
+            btnWifi.setPaddingRelative((int) (12 * density), 0, (int) (12 * density), 0);
+            btnWifi.setCompoundDrawablePadding(0);
+            btnWifi.setMaxWidth(Integer.MAX_VALUE);
+        }
+        if (cfg.topClock || cfg.weather) {
+            findViewById(R.id.topInfo).setVisibility(View.VISIBLE);
+            if (!cfg.topClock) findViewById(R.id.topClock).setVisibility(View.GONE);
+        }
+        topTemp = findViewById(R.id.topTemp);
+        if (cfg.weather) {
+            weather = new Weather(this);
+            showWeather(weather.cached());
+        }
+        btnAudio = findViewById(R.id.btnAudio);
+        btnAudio.setOnClickListener(v -> openAccessories());
+        btnProfile = findViewById(R.id.btnProfile);
+        if (cfg.profileButton) {
+            btnProfile.setVisibility(View.VISIBLE);
+            btnProfile.setOnClickListener(v -> open(systemIntent("android.settings.USER_SETTINGS")));
+            loadProfilePhoto();
+        }
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
         btnWifi.setOnLongClickListener(v -> {
@@ -453,9 +570,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnWifi;
+            int firstButton = firstPill().getId();
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
+            // The profile photo, when shown, is the last control of the bar.
+            if (btnProfile.getVisibility() == View.VISIBLE) {
+                if (rtlMenuBar) leftButton = R.id.btnProfile;
+                else rightButton = R.id.btnProfile;
+            }
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
@@ -463,8 +585,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
+        btnProfile.setOnKeyListener(pillKeys);
+        btnAudio.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
+            for (View button : new View[]{btnInputs, btnAudio, btnWifi, btnReorder, btnSettings, btnProfile}) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
                         .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
                         .setDuration(160).start());
@@ -539,6 +663,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        nowPlaying.start();
+        AudioDevices.addListener(audioListener);
+        AudioDevices.refresh(this);
+        updateAudioButton();
+        if (weather != null) {
+            handler.removeCallbacks(weatherTick);
+            handler.post(weatherTick);
+        }
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true);
@@ -584,6 +716,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             heroShown = false;
             heroName.setAlpha(0f);
             ambient.setAlpha(0f);
+            hideShelfArt(false);
         }
         reloadTiles();
         if (animate && animations && !reducedMotion) grid.scheduleLayoutAnimation();
@@ -646,7 +779,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopAmbientAnimation();
         heroName.animate().cancel();
         ambient.animate().cancel();
+        heroArt.animate().cancel();
+        heroFade.animate().cancel();
+        stopFeed();
         handler.removeCallbacks(minuteTick);
+        handler.removeCallbacks(weatherTick);
+        AudioDevices.removeListener(audioListener);
+        nowPlaying.stop();
+        hideNowPlaying(false);
         stopStats();
         if (diya != null) diya.stop();
         cancelPendingFocusScroll();
@@ -724,6 +864,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int code = event.getKeyCode();
         boolean ok = code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER
                 || code == KeyEvent.KEYCODE_NUMPAD_ENTER;
+        if (swallowOkUp && ok) {
+            // The held OK that picked the tile up: eat its repeats and release, and clear the pressed look.
+            if (!down) {
+                swallowOkUp = false;
+                View f = getCurrentFocus();
+                if (f != null) f.setPressed(false);
+            }
+            return true;
+        }
         boolean back = code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE;
         if (movingKey != null) {
             switch (code) {
@@ -735,7 +884,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     return true;
                 default:
                     if (ok || back) {
-                        if (!down) drop();
+                        if (!down) {
+                            // OK places the tile here; Back cancels the move and returns it to where it was.
+                            if (back) cancelMove();
+                            else drop();
+                            if (singleMove) endReorder();
+                        }
                         return true;
                     }
                     return super.dispatchKeyEvent(event);
@@ -853,7 +1007,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void pickUp(int pos) {
         if (pos >= adapter.movableCount()) return;   // the "Default home" tile stays put
         movingKey = adapter.keyAt(pos);
+        pickedFrom = pos;
         dimOthers();
+    }
+
+    /** Back while carrying: the tile goes back to where it was picked up. */
+    private void cancelMove() {
+        int from = adapter.positionOf(movingKey);
+        int to = pickedFrom;
+        drop();
+        if (from >= 0 && to >= 0 && from != to) {
+            keepScroll(() -> adapter.move(from, to));
+            refocusAfterLayout(to);
+        }
     }
 
     /** Puts the carried tile down where it is; the mode stays on. */
@@ -882,6 +1048,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Ends the mode and saves the order if it changed since the mode started. */
     private void endReorder() {
         if (!reordering) return;
+        swallowOkUp = false;
+        singleMove = false;
+        pickedFrom = -1;
         dockEditing = false;
         dockEditSlot = -1;
         drop();
@@ -1054,6 +1223,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- top shelf -------------------------------------------------------------------------------
 
     private void showHero(int position, float dockTopInRoot) {
+        lastDockTop = dockTopInRoot;
+        lastHeroPosition = position;
+        if (!showNowPlaying() && !showFeed(position) && !showShelfArt(position)) hideShelfArt(animations);
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - heroName.getHeight();
@@ -1170,6 +1342,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * show (every tile has its name underneath).
      */
     private void showGlowOnly(int position) {
+        hideShelfArt(animations);
         int color = adapter.ambientColorAt(position);
         stopAmbientAnimation();
         heroName.animate().cancel();
@@ -1192,7 +1365,215 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }).start();
     }
 
+    /**
+     * Washes the screen behind the shelf with the dock app's softened banner, crossfading from the previous app.
+     * The views are full screen and never resized, so nothing relayouts the grid while focus moves.
+     * False when the shelf art is off or the app has no banner.
+     */
+    private boolean showShelfArt(int position) {
+        if (!topShelfArt) return false;
+        Drawable art = adapter.shelfArtAt(position);
+        if (art == null) return false;
+        if (art == heroArtShown && heroArt.getAlpha() > 0f) return true;
+        heroArt.animate().cancel();
+        heroFade.animate().cancel();
+        boolean wasShown = heroArtShown != null && heroArt.getAlpha() > 0f;
+        heroArtShown = art;
+        if (!animations || reducedMotion) {
+            heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
+                heroArt.setImageDrawable(art);
+            heroArt.setAlpha(1f);
+            heroFade.setAlpha(1f);
+            return true;
+        }
+        heroFade.animate().alpha(1f).setDuration(200).start();
+        if (wasShown) {
+            heroArt.animate().alpha(0f).setDuration(120).withEndAction(() -> {
+                heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
+                heroArt.setImageDrawable(art);
+                heroArt.animate().alpha(1f).setDuration(260).start();
+            }).start();
+        } else {
+            heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
+                heroArt.setImageDrawable(art);
+            heroArt.animate().alpha(1f).setDuration(320).start();
+        }
+        return true;
+    }
+
+    /**
+     * Starts the TMDB carousel when the focused dock app is in shelf_feed_apps: a backdrop every 8 s with its title
+     * above the dock. Until the first backdrop arrives the softened banner stands in. False for other apps.
+     */
+    private boolean showFeed(int position) {
+        String pkg = adapter.pkgAt(position);
+        if (!topShelfArt || !shelfFeed.enabled() || !feedApps.contains(pkg)) {
+            stopFeed();
+            return false;
+        }
+        positionShelfTitle();
+        if (pkg.equals(feedPkg)) return true;
+        stopFeed();
+        feedPkg = pkg;
+        if (heroArtShown == null) showShelfArt(position);
+        shelfFeed.items(pkg, items -> {
+            if (!pkg.equals(feedPkg)) return;
+            boolean first = feedItems == null;
+            feedItems = items;
+            if (first) {
+                feedIndex = 0;
+                showFeedItem();
+            }
+        });
+        return true;
+    }
+
+    private void positionShelfTitle() {
+        shelfTitle.setY(lastDockTop - 34 * density - shelfTitle.getHeight());
+    }
+
+    /** Shows feedItems[feedIndex], crossfading picture and title, then schedules the next one. */
+    private void showFeedItem() {
+        handler.removeCallbacks(feedTick);
+        if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return;
+        ShelfFeed.Item item = feedItems.get(feedIndex % feedItems.size());
+        String pkg = feedPkg;
+        shelfFeed.image(item.backdrop, (backdrop, bitmap) -> {
+            if (!pkg.equals(feedPkg)) return;
+            BitmapDrawable art = new BitmapDrawable(getResources(), bitmap);
+            heroArt.animate().cancel();
+            heroFade.animate().cancel();
+            shelfTitle.animate().cancel();
+            heroFade.setAlpha(1f);
+            boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
+            Runnable swap = () -> {
+                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                heroArt.setImageDrawable(art);
+                heroArtShown = art;
+                shelfTitle.setText(item.title);
+                positionShelfTitle();
+                if (animate) {
+                    heroArt.animate().alpha(1f).setDuration(450).start();
+                    shelfTitle.animate().alpha(1f).setDuration(450).start();
+                } else {
+                    heroArt.setAlpha(1f);
+                    shelfTitle.setAlpha(1f);
+                }
+            };
+            if (animate) {
+                heroArt.animate().alpha(0f).setDuration(250).withEndAction(swap).start();
+                shelfTitle.animate().alpha(0f).setDuration(250).start();
+            } else {
+                swap.run();
+            }
+            handler.postDelayed(feedTick, 8000);
+            // Fetch the next backdrop now, so the swap does not wait on the network.
+            ShelfFeed.Item next = feedItems.get((feedIndex + 1) % feedItems.size());
+            shelfFeed.image(next.backdrop, (b, bmp) -> { });
+        });
+    }
+
+    private void stopFeed() {
+        handler.removeCallbacks(feedTick);
+        if (feedPkg == null) return;
+        feedPkg = null;
+        feedItems = null;
+        shelfTitle.animate().cancel();
+        shelfTitle.animate().alpha(0f).setDuration(160).start();
+    }
+
+    /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
+    private void onNowPlayingChanged() {
+        if (lastHeroPosition >= 0 && lastHeroPosition < COLUMNS && heroShown && grid.hasFocus()) {
+            showHero(lastHeroPosition, lastDockTop);
+        } else if (nowPlaying.track() == null) {
+            hideNowPlaying(animations);
+        }
+    }
+
+    /**
+     * The Now Playing card while a track plays: its cover sharp on the left and blurred across the shelf, title,
+     * artist with the app, a progress bar ticking each second. False when nothing plays.
+     */
+    private boolean showNowPlaying() {
+        NowPlaying.Track t = nowPlaying.track();
+        if (t == null) {
+            hideNowPlaying(animations);
+            return false;
+        }
+        stopFeed();
+        shelfTitle.animate().cancel();
+        shelfTitle.setAlpha(0f);
+        npTitle.setText(t.title);
+        npArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
+        if (t.cover != npCoverShown) {
+            npCoverShown = t.cover;
+            npCover.setImageBitmap(t.cover);
+            npBackdrop = t.cover != null ? NowPlaying.soft(this, t.cover) : null;
+        }
+        npCover.setVisibility(t.cover != null ? View.VISIBLE : View.GONE);
+        if (npBackdrop != null && heroArtShown != npBackdrop) {
+            heroArt.animate().cancel();
+            heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
+            heroArt.setImageDrawable(npBackdrop);
+            heroArtShown = npBackdrop;
+            heroFade.setAlpha(1f);
+            if (animations && !reducedMotion) heroArt.animate().alpha(1f).setDuration(400).start();
+            else heroArt.setAlpha(1f);
+        }
+        npCard.setVisibility(View.VISIBLE);
+        npCard.post(() -> npCard.setY(lastDockTop - 34 * density - npCard.getHeight()));
+        if (npCard.getAlpha() < 1f) {
+            npCard.animate().cancel();
+            if (animations && !reducedMotion) npCard.animate().alpha(1f).setDuration(350).start();
+            else npCard.setAlpha(1f);
+        }
+        updateNowPlayingProgress();
+        handler.removeCallbacks(npTick);
+        handler.postDelayed(npTick, 1000);
+        return true;
+    }
+
+    private void updateNowPlayingProgress() {
+        NowPlaying.Track t = nowPlaying.track();
+        if (t == null || t.duration <= 0) {
+            npProgress.setVisibility(View.GONE);
+            return;
+        }
+        npProgress.setVisibility(View.VISIBLE);
+        npProgress.setProgress((int) Math.min(1000, nowPlaying.position() * 1000 / t.duration));
+    }
+
+    private void hideNowPlaying(boolean animate) {
+        handler.removeCallbacks(npTick);
+        if (npCard.getVisibility() != View.VISIBLE) return;
+        npCard.animate().cancel();
+        if (animate) {
+            npCard.animate().alpha(0f).setDuration(200).withEndAction(() -> npCard.setVisibility(View.GONE)).start();
+        } else {
+            npCard.setAlpha(0f);
+            npCard.setVisibility(View.GONE);
+        }
+    }
+
+    private void hideShelfArt(boolean animate) {
+        hideNowPlaying(animate);
+        stopFeed();
+        if (heroArtShown == null) return;
+        heroArtShown = null;
+        heroArt.animate().cancel();
+        heroFade.animate().cancel();
+        if (animate) {
+            heroArt.animate().alpha(0f).setDuration(reducedMotion ? 100 : 200).start();
+            heroFade.animate().alpha(0f).setDuration(reducedMotion ? 100 : 200).start();
+        } else {
+            heroArt.setAlpha(0f);
+            heroFade.setAlpha(0f);
+        }
+    }
+
     private void hideHero() {
+        hideShelfArt(animations);
         if (!heroShown) return;
         stopAmbientAnimation();
         heroName.animate().cancel();
@@ -1437,8 +1818,60 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hideHero();
     }
 
+    /** Hold OK on a tile: starts reorder mode with that tile already picked up, so the arrows move it at once. */
+    @Override public boolean onTileLongPress(int position) {
+        if (reordering || position >= adapter.movableCount()) return false;
+        String key = adapter.keyAt(position);
+        String pkg = adapter.pkgAt(position);
+        RecyclerView.ViewHolder vh = grid.findViewHolderForAdapterPosition(position);
+        View anchor = vh != null ? vh.itemView.findViewById(R.id.card) : null;
+        if (key == null || anchor == null) return false;
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        addSettingsMenuRow(rows, popup, R.string.reorder, () -> startSingleMove(key));
+        addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> hideFromHome(pkg));
+        addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(new Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg))));
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
+        // Under the tile, or over it when the tile sits low on the screen.
+        int[] at = new int[2];
+        anchor.getLocationOnScreen(at);
+        boolean above = at[1] + anchor.getHeight() + panel.getMeasuredHeight() + 20 * density > root.getHeight();
+        if (above) {
+            popup.showAsDropDown(anchor, 0, -anchor.getHeight() - panel.getMeasuredHeight() - (int) (10 * density),
+                    Gravity.START);
+        } else {
+            dropIn(popup, panel, anchor, Gravity.START);
+        }
+        rows.getChildAt(0).requestFocus();
+        return true;
+    }
+
+    /** Move from the tile menu: pick that tile up; OK places it, Back puts it back, either way the mode ends. */
+    private void startSingleMove(String key) {
+        if (reordering || !beginReorder()) return;
+        int pos = adapter.positionOf(key);
+        if (pos < 0) {
+            endReorder();
+            return;
+        }
+        singleMove = true;
+        focusTile(pos);
+        pickUp(pos);
+        Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+    }
+
+    /** Hide from the tile menu: the app leaves Home (the App library at the end of the grid brings it back). */
+    private void hideFromHome(String pkg) {
+        if (pkg.isEmpty()) return;
+        if (LibraryApps.save(this, pkg, false)) reloadApps(false);
+        else Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_SHORT).show();
+    }
+
     @Override public void onLibraryUp() {
-        if (adapter.appCount() == 0) { btnWifi.requestFocus(); return; }
+        if (adapter.appCount() == 0) { firstPill().requestFocus(); return; }
         int lastRow = ((adapter.appCount() - 1) / COLUMNS) * COLUMNS;
         focusTile(Math.min(lastRow + lastFocused % COLUMNS, adapter.appCount() - 1));
     }
@@ -1494,7 +1927,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelPendingFocusScroll();
         if (adapter.appCount() == 0) {
             if (adapter.isLibraryAt(0)) focusLibrary();
-            else btnWifi.requestFocus();
+            else firstPill().requestFocus();
             return;
         }
         final int pos = adapter.focusablePosition(Math.max(0, Math.min(position, adapter.appCount() - 1)));
@@ -1596,6 +2029,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         } catch (Exception ignored) {
+        }
+        if (wifiIconOnly) {
+            // The name goes to accessibility only; the icon says Wi-Fi or Ethernet, dimmed while offline.
+            // With a VPN up the button widens just enough for the exit country's flag next to the icon.
+            btnWifi.setContentDescription(text);
+            btnWifi.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0);
+            btnWifi.setAlpha(online ? 1f : 0.45f);
+            ViewGroup.LayoutParams wlp = btnWifi.getLayoutParams();
+            if (vpn) {
+                requestVpnCountry();
+                btnWifi.setText(vpnCountry.isEmpty() ? getString(R.string.vpn) : flagOf(vpnCountry));
+                btnWifi.setCompoundDrawablePadding((int) (8 * density));
+                btnWifi.setPaddingRelative((int) (12 * density), 0, (int) (14 * density), 0);
+                wlp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+            } else {
+                vpnCountry = "";
+                vpnCountryAt = 0;
+                btnWifi.setText("");
+                btnWifi.setCompoundDrawablePadding(0);
+                btnWifi.setPaddingRelative((int) (12 * density), 0, (int) (12 * density), 0);
+                wlp.width = (int) (46 * density);
+            }
+            btnWifi.setLayoutParams(wlp);
+            return;
         }
         // With a VPN app configured, a VPN that is down matters too: show a red "VPN off" capsule then.
         boolean vpnDown = !vpn && online && !vpnApp.isEmpty();
@@ -1711,7 +2168,150 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         }
-        btnInputs.setVisibility(any ? View.VISIBLE : View.GONE);
+        btnInputs.setVisibility(any && showInputs ? View.VISIBLE : View.GONE);
+    }
+
+    /** The leftmost visible pill of the top bar (Settings is always there). */
+    private View firstPill() {
+        for (View v : new View[]{btnInputs, btnWifi, btnAudio, btnReorder}) {
+            if (v.getVisibility() == View.VISIBLE) return v;
+        }
+        return findViewById(R.id.btnSettings);
+    }
+
+    /** profile.jpg (or .png) in the launcher's files folder, cut to a circle; the person glyph stays without one. */
+    private void loadProfilePhoto() {
+        File dir = getExternalFilesDir(null);
+        if (dir == null) return;
+        for (String name : new String[]{"profile.jpg", "profile.png"}) {
+            File f = new File(dir, name);
+            if (!f.isFile()) continue;
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inSampleSize = 1;
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(f.getPath(), bounds);
+            while (Math.min(bounds.outWidth, bounds.outHeight) / (o.inSampleSize * 2) >= 160) o.inSampleSize *= 2;
+            Bitmap src = BitmapFactory.decodeFile(f.getPath(), o);
+            if (src == null) continue;
+            int size = Math.min(src.getWidth(), src.getHeight());
+            Bitmap round = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            BitmapShader shader = new BitmapShader(src, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+            Matrix m = new Matrix();
+            m.setTranslate(-(src.getWidth() - size) / 2f, -(src.getHeight() - size) / 2f);
+            shader.setLocalMatrix(m);
+            p.setShader(shader);
+            new Canvas(round).drawCircle(size / 2f, size / 2f, size / 2f, p);
+            src.recycle();
+            ((ImageView) btnProfile).setScaleType(ImageView.ScaleType.FIT_CENTER);
+            ((ImageView) btnProfile).setImageBitmap(round);
+            return;
+        }
+    }
+
+    /**
+     * Asks Cloudflare's public trace endpoint which country this connection exits from (its "loc=" line), at most
+     * once a minute while a VPN is up, and redraws the network button with it.
+     */
+    private void requestVpnCountry() {
+        long now = System.currentTimeMillis();
+        if (vpnCountryBusy || now - vpnCountryAt < 60_000) return;
+        vpnCountryBusy = true;
+        vpnCountryAt = now;
+        new Thread(() -> {
+            String loc = "";
+            HttpURLConnection c = null;
+            try {
+                c = (HttpURLConnection) new URL("https://www.cloudflare.com/cdn-cgi/trace").openConnection();
+                c.setConnectTimeout(6000);
+                c.setReadTimeout(6000);
+                BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8));
+                for (String line; (line = r.readLine()) != null; ) {
+                    if (line.startsWith("loc=")) loc = line.substring(4).trim().toUpperCase(Locale.ROOT);
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (c != null) c.disconnect();
+            }
+            String found = loc.matches("[A-Z]{2}") ? loc : "";
+            handler.post(() -> {
+                vpnCountryBusy = false;
+                if (!found.equals(vpnCountry)) {
+                    vpnCountry = found;
+                    updateWifiLabel();
+                }
+            });
+        }, "vpn-country").start();
+    }
+
+    /** "DE" -> the German flag (two regional indicator symbols). */
+    private static String flagOf(String code) {
+        return new String(Character.toChars(0x1F1E6 + code.charAt(0) - 'A'))
+                + new String(Character.toChars(0x1F1E6 + code.charAt(1) - 'A'));
+    }
+
+    /** The round headphones (or speaker) button next to Settings, only while such a device is connected. */
+    private void updateAudioButton() {
+        String name = AudioDevices.connected();
+        boolean on = name != null;
+        if (on) {
+            btnAudio.setCompoundDrawablesRelativeWithIntrinsicBounds(AudioDevices.icon(AudioDevices.speaker()), 0, 0, 0);
+            btnAudio.setContentDescription(name);
+        }
+        if (on == (btnAudio.getVisibility() == View.VISIBLE)) return;
+        if (!on && btnAudio.hasFocus()) btnWifi.requestFocus();
+        btnAudio.setVisibility(on ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * The headphones button's panel: the connected device with its battery, then pairing and Settings. Google TV's own
+     * Remotes and accessories page only opens for apps that may write secure settings, so the launcher shows its own.
+     */
+    private void openAccessories() {
+        String name = AudioDevices.connected();
+        if (name == null) return;
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (300 * density));
+        addInputRow(rows, popup, AudioDevices.icon(AudioDevices.speaker()), name, TvInputManager.INPUT_STATE_CONNECTED, () -> { });
+        int level = AudioDevices.battery();
+        if (level >= 0) {
+            TextView status = rows.getChildAt(rows.getChildCount() - 1).findViewById(R.id.status);
+            status.setText(getString(R.string.connected) + " · " + level + "%");
+        }
+        addSeparator(rows);
+        addSettingsMenuRow(rows, popup, R.string.add_accessory, () -> open(new Intent("com.google.android.intent.action.CONNECT_INPUT")));
+        addSettingsMenuRow(rows, popup, R.string.tv_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (300 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, btnAudio, Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    private void refreshWeather() {
+        if (weather != null) weather.refresh(this::showWeather);
+    }
+
+    /** A Weather reading ("code|temperature") as symbol and degrees after the clock; nothing when there is none. */
+    private void showWeather(String reading) {
+        int bar = reading.indexOf('|');
+        boolean shown = bar > 0;
+        if (shown) {
+            try {
+                ((ImageView) findViewById(R.id.topWeatherIcon))
+                        .setImageResource(Weather.icon(Integer.parseInt(reading.substring(0, bar))));
+                topTemp.setText(Integer.parseInt(reading.substring(bar + 1)) + "°");
+            } catch (NumberFormatException e) {
+                shown = false;
+            }
+        }
+        int v = shown ? View.VISIBLE : View.GONE;
+        topTemp.setVisibility(v);
+        findViewById(R.id.topWeatherIcon).setVisibility(v);
+        // The divider only separates two things: it shows when the clock is there too.
+        findViewById(R.id.topDivider).setVisibility(shown && findViewById(R.id.topClock).getVisibility() == View.VISIBLE
+                ? View.VISIBLE : View.GONE);
     }
 
     /** The Live TV app's launch intent: its leanback entry point, or the configured action if it has none. */
@@ -1739,7 +2339,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(i);
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
+            // SecurityException: some system screens only open for privileged apps; never take Home down for it.
             Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
         }
     }
