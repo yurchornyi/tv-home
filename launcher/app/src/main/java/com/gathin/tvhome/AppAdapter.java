@@ -184,6 +184,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final List<String> favourites;
     private final List<String> gridApps;
     private final List<String> phoneApps;
+    private final boolean darkTiles;
+    private final List<String> tileColorsKept;
+    private final List<String> iconTiles;
+    private final java.util.Map<String, int[]> tileDeepColors = new HashMap<>();
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -207,6 +211,24 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.favourites = cfg.dockApps;
         this.gridApps = cfg.gridApps;
         this.phoneApps = cfg.phoneApps;
+        this.darkTiles = cfg.darkTiles;
+        this.tileColorsKept = cfg.tileColorsKept;
+        this.iconTiles = cfg.iconTiles;
+        for (String entry : cfg.tileDeepColors) {
+            String[] parts = entry.split(":", 2);
+            if (parts.length != 2) continue;
+            String[] hex = parts[1].split(",");
+            int[] colors = new int[hex.length];
+            int n = 0;
+            for (String h : hex) {
+                try {
+                    colors[n++] = Integer.parseInt(h.trim().replace("#", ""), 16) & 0xFFFFFF;
+                } catch (NumberFormatException ignored) {
+                    n--;
+                }
+            }
+            tileDeepColors.put(parts[0].trim(), java.util.Arrays.copyOf(colors, n));
+        }
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
         this.animations = cfg.animations;
@@ -312,6 +334,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     private Drawable loadBanner(PackageManager pm, ResolveInfo ri) {
+        // icon_tiles: no banner, so the tile shows the app's icon and name on the dark tile.
+        if (iconTiles.contains(ri.activityInfo.packageName)) return null;
         int id = ri.activityInfo.banner;
         if (id == 0) id = ri.activityInfo.applicationInfo.banner;
         Drawable banner = null;
@@ -326,7 +350,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         if (banner == null) banner = ri.activityInfo.loadBanner(pm);
         // A square "banner" counts as none: the tile shows the app's icon and name instead of a blur.
-        return banner != null && isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight()) ? banner : null;
+        if (banner == null || !isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight())) return null;
+        String pkg = ri.activityInfo.packageName;
+        if (!darkTiles || tileColorsKept.contains(pkg)) return banner;
+        int[] deep = tileDeepColors.get(pkg);
+        return DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
     }
 
     /**

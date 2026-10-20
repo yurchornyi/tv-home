@@ -1556,7 +1556,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             else heroArt.setAlpha(1f);
         }
         npCard.setVisibility(View.VISIBLE);
-        npCard.post(() -> npCard.setY(lastDockTop - 34 * density - npCard.getHeight()));
+        npCard.post(() -> {
+            float y = lastDockTop - 34 * density - npCard.getHeight();
+            if (Math.abs(npCard.getY() - y) > 1) npCard.setY(y);
+        });
         if (npCard.getAlpha() < 1f) {
             npCard.animate().cancel();
             if (animations && !reducedMotion) npCard.animate().alpha(1f).setDuration(350).start();

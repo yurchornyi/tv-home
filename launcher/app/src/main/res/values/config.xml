@@ -23,16 +23,16 @@
          follows alphabetically. Missing apps are skipped. An order set on the TV (hold OK on a tile, or the
          reorder mode) takes precedence; a theme can set "grid_apps". -->
     <string-array name="grid_apps">
-        <!-- Films, TV and sport -->
+        <!-- Video, sport and game streaming -->
         <item>com.setanta.app</item>
         <item>tv.twitch.android.app</item>
         <item>com.kick.mobile</item>
-        <!-- Music, players, game streaming -->
+        <item>tv.parsec.client</item>
+        <!-- Music and players -->
         <item>com.spotify.tv.android</item>
         <item>com.apple.android.music</item>
         <item>net.gtvbox.videoplayer</item>
         <item>com.brouken.player</item>
-        <item>tv.parsec.client</item>
         <!-- Internet and VPN -->
         <item>com.phlox.tvwebbrowser</item>
         <item>com.surfshark.vpnclient.android</item>
@@ -43,6 +43,8 @@
         <item>dev.vodik7.tvquickactions</item>
         <item>com.desktop.launcher</item>
         <item>com.android.tv.settings</item>
+        <!-- Not yet settled: the Apple Music TV app being built -->
+        <item>com.megarohas.amtv</item>
     </string-array>
 
     <!-- Top shelf art: the focused dock app's banner fills the top of the screen, as on Apple TV, instead of
@@ -76,6 +78,25 @@
         <item>com.netflix.ninja</item>
         <item>rezkatv.web.app</item>
         <item>com.kyivstar.tv.tvapp</item>
+    </string-array>
+
+    <!-- Light app banners (a white Netflix or HDRezka card) get a dark background, keeping their coloured logo, so
+         every tile looks part of one dark home. A theme can set "dark_tiles". -->
+    <bool name="dark_tiles">true</bool>
+    <!-- Background colours to deepen by hand on a coloured banner, as "package:RRGGBB,RRGGBB". A theme can set
+         "tile_deep_colors". -->
+    <string-array name="tile_deep_colors">
+        <item>com.phlox.tvwebbrowser:5FACFF,FFF700</item>
+        <item>com.brouken.player:3DDC84</item>
+        <item>com.desktop.launcher:6BA2FE,527FFE,3B7CFF</item>
+    </string-array>
+    <!-- Apps shown as their icon on a dark tile instead of their banner (a banner that cannot be calmed down well).
+         A theme can set "icon_tiles". -->
+    <string-array name="icon_tiles">
+    </string-array>
+    <!-- Apps whose banner keeps its own colours even with dark_tiles. A theme can set "tile_colors_kept". -->
+    <string-array name="tile_colors_kept">
+        <item>tv.twitch.android.app</item>
     </string-array>
 
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->

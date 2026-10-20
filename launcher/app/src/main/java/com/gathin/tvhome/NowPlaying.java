@@ -142,9 +142,14 @@ final class NowPlaying {
         }
         if (closed) found = null;
         Track next = found == null ? null : describe(found);
+        boolean same = next != null && track != null && next.title.equals(track.title) && next.artist.equals(track.artist);
+        // Players resend the same cover as a new bitmap with every metadata update; keep the first one for the
+        // track, so the card does not rebuild its backdrop (a visible flicker) on each update.
+        if (same && track.cover != null) {
+            next = new Track(next.title, next.artist, next.app, next.pkg, track.cover, next.duration, next.playing);
+        }
         boolean changed = next == null ? track != null
-                : track == null || !next.title.equals(track.title) || !next.artist.equals(track.artist)
-                        || next.cover != track.cover || next.playing != track.playing;
+                : !same || next.playing != track.playing || (track.cover == null && next.cover != null);
         current = found;
         track = next;
         if (changed) listener.onNowPlayingChanged();
