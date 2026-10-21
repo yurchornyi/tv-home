@@ -93,6 +93,13 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   android.display`, and the main log shows `setupwraith/.RecoveryActivity` being started every
   200 ms or so. If you're already in the loop:
   `tools/tv.py 'pm enable --user 0 com.google.android.apps.tv.launcherx'`.
+- **The stock launcher comes back after standby**, seen on an XGIMI projector (Google TV 14): on wake the
+  vendor's system service starts `com.google.android.apps.tv.launcherx/.home.HomeActivity` by name, and
+  the package, disabled a week earlier, was found enabled again. A disabled package can be re-enabled by
+  anything with the permission; one removed for the user cannot. Keep its data and remove it instead:
+  `tools/tv.py 'pm uninstall -k --user 0 com.google.android.apps.tv.launcherx'`. The explicit start then
+  fails quietly and Home stays on the new launcher. To bring it back:
+  `tools/tv.py 'pm install-existing --user 0 com.google.android.apps.tv.launcherx'`.
 - **No on-screen keyboard** after switching launchers, seen on Xiaomi: the default input method
   pointed at a Baidu keyboard that isn't installed. Fix:
   `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`
