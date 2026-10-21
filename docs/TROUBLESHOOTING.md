@@ -104,6 +104,12 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   `shelf_channel_apps`) only while a launcher it knows is installed, and Google's counts even disabled.
   `launcher/install-channels-stub.sh` installs an empty app named `com.tv.leanback.launcher`, a name SmartTube
   accepts, and then removes Google's launcher for the user; the channels keep coming.
+- **Keeping every TV's launcher current** without ADB: the launcher checks `update_url` (config.xml; by
+  default this fork's GitHub releases) every six hours, or at once when the Settings menu opens, downloads a
+  newer build and offers "Update to X" in that menu; Android asks once to confirm. Publish with
+  `launcher/release.sh 2.7 "what changed"` from the machine that signs the builds (the debug key in
+  `~/.android/debug.keystore`): a build signed elsewhere is refused as foreign. `tools/kyivstar-channels.py`
+  refreshes the Kyivstar TV channel list before a release when needed.
 - **No on-screen keyboard** after switching launchers, seen on Xiaomi: the default input method
   pointed at a Baidu keyboard that isn't installed. Fix:
   `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`
