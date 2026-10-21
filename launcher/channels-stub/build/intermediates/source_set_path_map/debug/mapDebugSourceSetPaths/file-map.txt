@@ -1,0 +1,7 @@
+com.tv.leanback.launcher.channels-stub-pngs-0 /Users/chornyi/Projects/tv-home/launcher/channels-stub/build/generated/res/pngs/debug
+com.tv.leanback.launcher.channels-stub-resValues-1 /Users/chornyi/Projects/tv-home/launcher/channels-stub/build/generated/res/resValues/debug
+com.tv.leanback.launcher.channels-stub-packageDebugResources-2 /Users/chornyi/Projects/tv-home/launcher/channels-stub/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.tv.leanback.launcher.channels-stub-packageDebugResources-3 /Users/chornyi/Projects/tv-home/launcher/channels-stub/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.tv.leanback.launcher.channels-stub-debug-4 /Users/chornyi/Projects/tv-home/launcher/channels-stub/build/intermediates/merged_res/debug/mergeDebugResources
+com.tv.leanback.launcher.channels-stub-debug-5 /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/debug/res
+com.tv.leanback.launcher.channels-stub-main-6 /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/res

@@ -79,6 +79,10 @@
     <string name="app_library">App library</string>
     <!-- The top shelf button that opens the film or video shown. -->
     <string name="watch_now">Watch</string>
+    <string name="live_badge">LIVE</string>
+    <!-- Tile menu: the top shelf's posters for this app on or off. -->
+    <string name="shelf_posters_hide">Hide posters on the shelf</string>
+    <string name="shelf_posters_show">Show posters on the shelf</string>
     <string name="library_empty">No launchable apps found</string>
     <string name="library_on_home">On Home</string>
     <string name="library_add_home">Add to Home</string>

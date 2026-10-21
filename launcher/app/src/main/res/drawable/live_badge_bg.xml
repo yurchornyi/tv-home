@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The red LIVE pill over the shelf title. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#F2E0243B" />
+    <corners android:radius="6dp" />
+</shape>

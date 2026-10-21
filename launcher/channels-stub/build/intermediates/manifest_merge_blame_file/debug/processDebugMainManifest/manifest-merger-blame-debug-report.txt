@@ -1,0 +1,43 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.tv.leanback.launcher"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="34" />
+10    <!--
+11     Only the package name matters (channels-stub/build.gradle). The activity exists so other apps can see the
+12         package at all: since Android 11 an app sees only the packages it names or those with an activity for an
+13         intent it declares, and SmartTube declares ACTION_MAIN. No launcher category, so no tile anywhere; opened
+14         by mistake it closes at once.
+15    -->
+16    <application
+16-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:7:5-19:19
+17        android:allowBackup="false"
+17-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:9:9-36
+18        android:debuggable="true"
+19        android:extractNativeLibs="false"
+20        android:label="TV Home channels stub" >
+20-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:8:9-46
+21        <activity
+21-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:10:9-18:20
+22            android:name="com.tv.leanback.launcher.Nothing"
+22-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:11:13-36
+23            android:excludeFromRecents="true"
+23-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:13:13-46
+24            android:exported="true"
+24-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:12:13-36
+25            android:theme="@android:style/Theme.NoDisplay" >
+25-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:14:13-59
+26            <intent-filter>
+26-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:15:13-17:29
+27                <action android:name="android.intent.action.MAIN" />
+27-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:16:17-69
+27-->/Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:16:25-66
+28            </intent-filter>
+29        </activity>
+30    </application>
+31
+32</manifest>

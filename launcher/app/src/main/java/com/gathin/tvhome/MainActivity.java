@@ -135,6 +135,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView shelfTitle;
     /** The Watch pill under the shelf title: opens the film or video shown (openFeedItem). */
     private TextView shelfOpen;
+    private TextView shelfLive;
+    /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
+    private final Set<String> postersOff = new HashSet<>();
     /** Now Playing card (NowPlaying), shown on the shelf instead of posters while something plays. */
     private NowPlaying nowPlaying;
     private View npCard;
@@ -370,6 +373,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         topShelfArt = cfg.topShelfArt;
         shelfTitle = findViewById(R.id.shelfTitle);
         shelfOpen = findViewById(R.id.shelfOpen);
+        shelfLive = findViewById(R.id.shelfLive);
+        postersOff.addAll(getSharedPreferences("shelf", MODE_PRIVATE).getStringSet("posters_off", Collections.emptySet()));
         shelfOpen.setOnClickListener(v -> openFeedItem());
         shelfOpen.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -410,11 +415,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         npProgress = findViewById(R.id.npProgress);
         nowPlaying = new NowPlaying(this, this::onNowPlayingChanged);
         npPlay = findViewById(R.id.npPlay);
-        npButtons = new View[]{findViewById(R.id.npPrev), npPlay, findViewById(R.id.npNext), findViewById(R.id.npClose)};
-        npButtons[0].setOnClickListener(v -> nowPlaying.previous());
+        npButtons = new View[]{findViewById(R.id.npPrev), npPlay, findViewById(R.id.npNext), findViewById(R.id.npOpen),
+                findViewById(R.id.npClose)};
+        findViewById(R.id.npOpen).setOnClickListener(v -> {
+            NowPlaying.Track t = nowPlaying.track();
+            if (!nowPlaying.openPlayer() && t != null) launchApp(t.pkg);
+        });
+        findViewById(R.id.npPrev).setOnClickListener(v -> nowPlaying.previous());
         npPlay.setOnClickListener(v -> nowPlaying.playPause());
-        npButtons[2].setOnClickListener(v -> nowPlaying.next());
-        npButtons[3].setOnClickListener(v -> nowPlaying.close());
+        findViewById(R.id.npNext).setOnClickListener(v -> nowPlaying.next());
+        findViewById(R.id.npClose).setOnClickListener(v -> nowPlaying.close());
         // The row is a dead end at both sides; Down goes back to the dock tile Up came from.
         View.OnKeyListener npKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -1534,7 +1544,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean showFeed(int position) {
         String pkg = adapter.pkgAt(position);
         boolean fromChannels = channelApps.contains(pkg) && channelFeed.enabled();
-        if (!topShelfArt || !(fromChannels || (shelfFeed.enabled() && feedApps.contains(pkg)))) {
+        if (!topShelfArt || postersOff.contains(pkg)
+                || !(fromChannels || (shelfFeed.enabled() && feedApps.contains(pkg)))) {
             stopFeed();
             return false;
         }
@@ -1572,7 +1583,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfOpen.setY(openTop);
         int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
         shelfTitle.measure(widthSpec, unspecified);
-        shelfTitle.setY(openTop - 14 * density - shelfTitle.getMeasuredHeight());
+        float titleTop = openTop - 14 * density - shelfTitle.getMeasuredHeight();
+        shelfTitle.setY(titleTop);
+        shelfLive.measure(unspecified, unspecified);
+        shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
     }
 
     /** Opens what the shelf shows: the video itself, the film's page where the app has one, else the app. */
@@ -1631,7 +1645,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (shelfOpen.hasFocus()) focusTile(lastFocused % COLUMNS);
             shelfOpen.animate().cancel();
             if (animate) {
-                shelfOpen.animate().alpha(0f).setDuration(160).withEndAction(() -> shelfOpen.setVisibility(View.GONE)).start();
+                shelfOpen.animate().alpha(0f).setDuration(160).withEndAction(() -> {
+                    if (shelfOpen.getAlpha() == 0f) shelfOpen.setVisibility(View.GONE);   // not when cancelled by a show
+                }).start();
             } else {
                 shelfOpen.setAlpha(0f);
                 shelfOpen.setVisibility(View.GONE);
@@ -1661,9 +1677,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
                 shelfTitle.setText(item.title);
+                shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
-                if (animate) shelfTitle.animate().alpha(1f).setDuration(400).start();
-                else shelfTitle.setAlpha(1f);
+                shelfLive.animate().cancel();
+                if (animate) {
+                    shelfTitle.animate().alpha(1f).setDuration(400).start();
+                    shelfLive.animate().alpha(1f).setDuration(400).start();
+                } else {
+                    shelfTitle.setAlpha(1f);
+                    shelfLive.setAlpha(1f);
+                }
                 showShelfOpen(true, animate);
             };
             // Whatever is on the shelf now (the app's softened banner, or the previous backdrop, even one still
@@ -1688,6 +1711,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     if (heroArtShown == art && heroArt.getDrawable() == cross) heroArt.setImageDrawable(art);
                 }, 760);
                 if (shelfTitle.getAlpha() > 0f) {
+                    shelfLive.animate().alpha(0f).setDuration(220).start();
                     shelfTitle.animate().alpha(0f).setDuration(220).withEndAction(title).start();
                 } else {
                     title.run();
@@ -1714,6 +1738,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         feedItems = null;
         shelfTitle.animate().cancel();
         shelfTitle.animate().alpha(0f).setDuration(160).start();
+        shelfLive.animate().cancel();
+        shelfLive.animate().alpha(0f).setDuration(160).start();
         showShelfOpen(false, true);
     }
 
@@ -1748,6 +1774,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopFeed();
         shelfTitle.animate().cancel();
         shelfTitle.setAlpha(0f);
+        shelfLive.setAlpha(0f);
         showShelfOpen(false, false);
         npTitle.setText(t.title);
         npPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
@@ -1767,15 +1794,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (animations && !reducedMotion) heroArt.animate().alpha(1f).setDuration(400).start();
             else heroArt.setAlpha(1f);
         }
+        boolean arriving = npCard.getVisibility() != View.VISIBLE || npCard.getAlpha() < 1f;
         npCard.setVisibility(View.VISIBLE);
         npCard.post(() -> {
             float y = lastDockTop - 34 * density - npCard.getHeight();
             if (Math.abs(npCard.getY() - y) > 1) npCard.setY(y);
         });
-        if (npCard.getAlpha() < 1f) {
+        if (arriving) {
             npCard.animate().cancel();
-            if (animations && !reducedMotion) npCard.animate().alpha(1f).setDuration(350).start();
-            else npCard.setAlpha(1f);
+            if (animations && !reducedMotion) {
+                // Like the island on a phone: a small pill at the cover's end swells into the card with a
+                // little give, its contents arriving as it opens.
+                npCard.setPivotX(0f);
+                npCard.setPivotY(npCard.getHeight() > 0 ? npCard.getHeight() / 2f : 60 * density);
+                npCard.setScaleX(0.28f);
+                npCard.setScaleY(0.55f);
+                npCard.setAlpha(0f);
+                npCard.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(520)
+                        .setInterpolator(new android.view.animation.OvershootInterpolator(1.1f)).start();
+            } else {
+                npCard.setScaleX(1f);
+                npCard.setScaleY(1f);
+                npCard.setAlpha(1f);
+            }
         }
         updateNowPlayingProgress();
         handler.removeCallbacks(npTick);
@@ -1797,8 +1838,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacks(npTick);
         if (npCard.getVisibility() != View.VISIBLE) return;
         npCard.animate().cancel();
-        if (animate) {
-            npCard.animate().alpha(0f).setDuration(200).withEndAction(() -> npCard.setVisibility(View.GONE)).start();
+        if (animate && !reducedMotion) {
+            // Music over: the card draws back into a pill and is gone.
+            npCard.setPivotX(0f);
+            npCard.setPivotY(npCard.getHeight() / 2f);
+            npCard.animate().alpha(0f).scaleX(0.28f).scaleY(0.55f).setDuration(340)
+                    .setInterpolator(new android.view.animation.AccelerateInterpolator(1.4f))
+                    .withEndAction(() -> {
+                        if (npCard.getAlpha() > 0f) return;   // cancelled by a new show
+                        npCard.setVisibility(View.GONE);
+                        npCard.setScaleX(1f);
+                        npCard.setScaleY(1f);
+                    }).start();
+        } else if (animate) {
+            npCard.animate().alpha(0f).setDuration(200).withEndAction(() -> {
+                if (npCard.getAlpha() == 0f) npCard.setVisibility(View.GONE);
+            }).start();
         } else {
             npCard.setAlpha(0f);
             npCard.setVisibility(View.GONE);
@@ -2093,6 +2148,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (240 * density));
         addSettingsMenuRow(rows, popup, R.string.reorder, () -> startSingleMove(key));
+        if (feedApps.contains(pkg) || channelApps.contains(pkg)) {
+            boolean off = postersOff.contains(pkg);
+            addSettingsMenuRow(rows, popup, off ? R.string.shelf_posters_show : R.string.shelf_posters_hide, () -> {
+                if (off) postersOff.remove(pkg);
+                else postersOff.add(pkg);
+                getSharedPreferences("shelf", MODE_PRIVATE).edit().putStringSet("posters_off", new HashSet<>(postersOff)).apply();
+                if (off) stopFeed();   // so the carousel starts afresh on the next focus
+                showHero(position, lastDockTop);
+            });
+        }
         addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> hideFromHome(pkg));
         addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> open(new Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg))));

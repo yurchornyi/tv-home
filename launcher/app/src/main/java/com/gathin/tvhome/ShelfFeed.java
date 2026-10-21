@@ -47,13 +47,20 @@ final class ShelfFeed {
         /** TMDB kind ("movie" or "tv") and id, for a lookup of where it plays; "" and 0 for a channel program. */
         final String type;
         final long id;
+        /** A live stream (a program's live flag): the shelf marks it. */
+        final boolean live;
 
         Item(String title, String backdrop, String open, String type, long id) {
+            this(title, backdrop, open, type, id, false);
+        }
+
+        Item(String title, String backdrop, String open, String type, long id, boolean live) {
             this.title = title;
             this.backdrop = backdrop;
             this.open = open;
             this.type = type == null ? "" : type;
             this.id = id;
+            this.live = live;
         }
     }
 

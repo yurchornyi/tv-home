@@ -84,14 +84,15 @@ final class ChannelFeed {
                     .appendQueryParameter("package", pkg).build();
             try (Cursor c = ctx.getContentResolver().query(programsUri,
                     new String[]{TvContract.PreviewPrograms.COLUMN_CHANNEL_ID, TvContract.PreviewPrograms.COLUMN_TITLE,
-                            TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, TvContract.PreviewPrograms.COLUMN_INTENT_URI},
+                            TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, TvContract.PreviewPrograms.COLUMN_INTENT_URI,
+                            TvContract.PreviewPrograms.COLUMN_LIVE},
                     null, null, null)) {
                 while (c != null && c.moveToNext()) {
                     if (!channels.contains(c.getLong(0))) continue;
                     String title = c.getString(1);
                     String poster = c.getString(2);
                     if (title == null || title.isEmpty() || poster == null || !poster.startsWith("http")) continue;
-                    out.add(new ShelfFeed.Item(title, poster, c.getString(3), "", 0));
+                    out.add(new ShelfFeed.Item(title, poster, c.getString(3), "", 0, c.getInt(4) != 0));
                 }
             }
         } catch (SecurityException | IllegalArgumentException e) {

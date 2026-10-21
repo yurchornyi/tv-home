@@ -236,6 +236,27 @@ final class NowPlaying {
         }
     }
 
+    /** Opens the player's own screen for what plays (its session activity), or false when it offers none. */
+    boolean openPlayer() {
+        if (current == null) return false;
+        try {
+            android.app.PendingIntent pi = current.getSessionActivity();
+            if (pi == null) return false;
+            // The player is in the background; its activity may start only because Home (in front) says so.
+            android.os.Bundle options = null;
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                options = android.app.ActivityOptions.makeBasic()
+                        .setPendingIntentBackgroundActivityStartMode(
+                                android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED).toBundle();
+            }
+            pi.send(ctx, 0, null, null, null, null, options);
+            return true;
+        } catch (RuntimeException | android.app.PendingIntent.CanceledException e) {
+            android.util.Log.w("TvHome.NowPlaying", "player screen: " + e);
+            return false;
+        }
+    }
+
     /** Stops the player and hides the card until something plays again. */
     void close() {
         send(c -> {

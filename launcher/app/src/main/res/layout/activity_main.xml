@@ -56,6 +56,26 @@
         android:shadowRadius="12"
         android:shadowDy="2" />
 
+    <!-- A red LIVE pill above the title while the shelf shows a live stream (ChannelFeed item.live). -->
+    <TextView
+        android:id="@+id/shelfLive"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="70dp"
+        android:alpha="0"
+        android:visibility="gone"
+        android:background="@drawable/live_badge_bg"
+        android:paddingStart="9dp"
+        android:paddingEnd="9dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="12sp"
+        android:letterSpacing="0.12"
+        android:fontFamily="@font/outfit_medium"
+        android:includeFontPadding="false"
+        android:text="@string/live_badge" />
+
     <!-- Opens what the shelf shows (ShelfFeed/ChannelFeed item): Up from the dock lands here, Left/Right turn the
          pages, OK opens. Positioned under the title in code; hidden while nothing is shown. -->
     <TextView
@@ -174,9 +194,16 @@
                     android:drawableStart="@drawable/ic_np_next" />
 
                 <TextView
-                    android:id="@+id/npClose"
+                    android:id="@+id/npOpen"
                     style="@style/TopIconButton"
                     android:layout_marginStart="28dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_open" />
+
+                <TextView
+                    android:id="@+id/npClose"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="14dp"
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_close" />
             </LinearLayout>
