@@ -114,6 +114,13 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   music plays (Spotify, SmartTube...) the full-screen player with the cover and a backdrop in its colours. Pick
   it in Settings → System → Screensaver, or over adb:
   `tools/tv.py 'settings put secure screensaver_components com.gathin.tvhome/.ClockDream'`.
+- **One build, a projector and a TV**: `launcher/app/src/main/assets/profiles.json` holds per-device overrides
+  of config.xml keys (the XGIMI entry hides the Inputs pill; the default entry shows it), matched by the model,
+  device, product or manufacturer Android reports. Add an entry for a new TV instead of a second config.xml.
+- **Keeping the owner's choices across TVs or a reset**: the launcher writes backup.json (tile order, Home
+  additions and removals, shelf poster switches, channel choices) to its external files folder whenever they
+  change. `TV_HOST=<ip> tools/backup-settings.sh <name>` pulls it into `backups/<name>.json` to commit;
+  `tools/restore-settings.sh <name>` pushes it to a TV, which takes it in at the next start.
 - **No on-screen keyboard** after switching launchers, seen on Xiaomi: the default input method
   pointed at a Baidu keyboard that isn't installed. Fix:
   `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`

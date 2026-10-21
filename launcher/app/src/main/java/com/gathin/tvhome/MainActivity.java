@@ -359,6 +359,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         setContentView(R.layout.activity_main);
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
+        Backup.importIfChanged(this);   // a backup.json put in the files folder (restore) before anything reads
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
         settingsKeyPanel = cfg.settingsKeyPanel;
@@ -938,6 +939,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         endReorder();   // Home or another app while reordering keeps the order so far
+        Backup.export(this);
         wallpaperPlayer.stop();
         stopAmbientAnimation();
         heroName.animate().cancel();

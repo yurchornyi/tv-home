@@ -1,0 +1,18 @@
+[
+  {
+    "_": "Per-device overrides of config.xml (DeviceProfile). Keys are the same as a theme's config.json. The first entry matching Build.MODEL / DEVICE / PRODUCT / MANUFACTURER (substring, any case) wins; the one with \"default\": true applies to every other device.",
+    "name": "XGIMI XK10T projector",
+    "model": ["XK10T"],
+    "device": ["altai"],
+    "config": {
+      "show_inputs": false
+    }
+  },
+  {
+    "name": "Any TV",
+    "default": true,
+    "config": {
+      "show_inputs": true
+    }
+  }
+]

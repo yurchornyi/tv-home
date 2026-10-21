@@ -57,7 +57,7 @@
     <!-- Top bar. show_inputs / show_wifi: the Inputs and network pills. top_clock: a clock at the top right.
          weather: the temperature next to it, from the TV's own location and Open-Meteo (needs the internet).
          profile_button: a profile button at the top left that opens Accounts and profiles. A theme can set each. -->
-    <bool name="show_inputs">false</bool>
+    <bool name="show_inputs">true</bool>
     <bool name="show_wifi">true</bool>
     <!-- The network pill as a small round icon (Wi-Fi or Ethernet) without the network name. -->
     <bool name="wifi_icon_only">true</bool>

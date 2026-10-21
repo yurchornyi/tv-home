@@ -242,9 +242,20 @@ final class Config {
 
         File dir = dir(ctx);
         File file = dir != null ? new File(dir, FILE_NAME) : null;
-        JSONObject json = read(file);
-        if (json != null) {
+        JSONObject theme = read(file);
+        // The device's profile first (assets/profiles.json), the theme on top of it.
+        JSONObject json = DeviceProfile.load(ctx);
+        if (theme != null) {
             applied = true;
+            if (json == null) json = theme;
+            else {
+                for (java.util.Iterator<String> it = theme.keys(); it.hasNext(); ) {
+                    String k = it.next();
+                    try { json.put(k, theme.get(k)); } catch (org.json.JSONException ignored) { }
+                }
+            }
+        }
+        if (json != null) {
             dock = stringList(json, "dock_apps", dock);
             fillDock = bool(json, "fill_dock", fillDock);
             hidden = stringList(json, "hidden_apps", hidden);
