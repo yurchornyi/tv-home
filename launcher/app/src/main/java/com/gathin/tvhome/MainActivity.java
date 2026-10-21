@@ -3038,6 +3038,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         String update = updater.readyVersion();
         if (update != null) addSettingsMenuRow(rows, popup, getString(R.string.update_to, update), updater::install);
+        else updater.check(true);   // opening this menu is as good a moment as any to look for one
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);

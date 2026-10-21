@@ -59,12 +59,18 @@ final class Updater {
 
     /** Looks for a newer build at most every six hours; tells the listener once one is downloaded. */
     void check() {
+        check(false);
+    }
+
+    /** now: opening the Settings menu asks at once (at most every few minutes), not on the six-hour clock. */
+    void check(boolean now) {
         if (!enabled() || busy) return;
         if (readyVersion() != null) {
             listener.onUpdateReady(readyVersion());
             return;
         }
-        if (System.currentTimeMillis() - prefs().getLong("checked_at", 0) < CHECK_MS) return;
+        long since = System.currentTimeMillis() - prefs().getLong("checked_at", 0);
+        if (since < (now ? 3 * 60 * 1000L : CHECK_MS)) return;
         busy = true;
         new Thread(() -> {
             try {
@@ -100,14 +106,15 @@ final class Updater {
                     PackageInstaller.SessionParams.MODE_FULL_INSTALL);
             params.setAppPackageName(ctx.getPackageName());
             int id = installer.createSession(params);
-            try (PackageInstaller.Session session = installer.openSession(id);
-                 InputStream in = new FileInputStream(apk);
-                 OutputStream out = session.openWrite("tv-home.apk", 0, apk.length())) {
-                byte[] buf = new byte[65536];
-                int n;
-                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                session.fsync(out);
-                out.close();
+            try (PackageInstaller.Session session = installer.openSession(id)) {
+                // The stream must be closed before the commit (a second close would fail with EBADF).
+                try (InputStream in = new FileInputStream(apk);
+                     OutputStream out = session.openWrite("tv-home.apk", 0, apk.length())) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    session.fsync(out);
+                }
                 Intent done = new Intent(ctx, UpdateReceiver.class).setAction(UpdateReceiver.ACTION);
                 PendingIntent pi = PendingIntent.getBroadcast(ctx, id, done,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
