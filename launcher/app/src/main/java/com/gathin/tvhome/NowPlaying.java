@@ -51,6 +51,8 @@ final class NowPlaying {
     private Track track;
     /** The card was closed: stays hidden until something plays again. */
     private boolean closed;
+    /** When it was closed: a player answering the pause with a last "playing" state must not reopen it. */
+    private long closedAt;
 
     private final MediaController.Callback callback = new MediaController.Callback() {
         @Override public void onPlaybackStateChanged(PlaybackState state) { pick(); }
@@ -130,6 +132,9 @@ final class NowPlaying {
                 found = c;
                 break;
             }
+        }
+        if (found != null && closed && SystemClock.elapsedRealtime() - closedAt < 2500) {
+            found = null;   // the player's own echo of the close, not a new play
         }
         if (found != null) {
             closed = false;
@@ -259,11 +264,9 @@ final class NowPlaying {
 
     /** Stops the player and hides the card until something plays again. */
     void close() {
-        send(c -> {
-            c.pause();
-            c.stop();
-        });
+        send(MediaController.TransportControls::pause);
         closed = true;
+        closedAt = SystemClock.elapsedRealtime();
         pick();
     }
 
