@@ -2280,9 +2280,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
             return;
         }
-        if ("rezkatv.web.app".equals(pkg)) {
-            // HDRezka opens its search for the title; with one match it goes straight to the film.
-            open(new Intent(Intent.ACTION_VIEW, Uri.parse("https://hdrezka.ag/search/?do=search&subaction=search&q="
+        if (pkg.startsWith("rezkatv.web.app")) {
+            // HDRezka and KIK (its newer build) open their search for the title; with one match it goes straight to
+            // the film. KIK takes Android's own search request; the older app its site's search link.
+            Intent search = new Intent(Intent.ACTION_SEARCH).putExtra(android.app.SearchManager.QUERY, item.title).setPackage(pkg);
+            if (search.resolveActivity(getPackageManager()) != null) open(search);
+            else open(new Intent(Intent.ACTION_VIEW, Uri.parse("https://hdrezka.ag/search/?do=search&subaction=search&q="
                     + Uri.encode(item.title))).setPackage(pkg));
             return;
         }
@@ -2915,7 +2918,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void openPick(ShelfFeed.Item item) {
-        if (installed("rezkatv.web.app")) openItem("rezkatv.web.app", item);
+        if (installed("rezkatv.web.app.uk")) openItem("rezkatv.web.app.uk", item);
+        else if (installed("rezkatv.web.app")) openItem("rezkatv.web.app", item);
         else if (installed("com.netflix.ninja")) openItem("com.netflix.ninja", item);
         else if (installed("org.smarttube.stable")) openUri("https://www.youtube.com/results?search_query="
                 + Uri.encode(item.title + " trailer"), "org.smarttube.stable");
