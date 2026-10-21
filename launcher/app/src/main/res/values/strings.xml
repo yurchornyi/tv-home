@@ -87,7 +87,7 @@
     <!-- Tile menu: an app's shelf shows its live channels or posters; the picker for the channels. -->
     <string name="shelf_mode_channels">Shelf: channels</string>
     <string name="shelf_mode_posters">Shelf: posters</string>
-    <string name="choose_channels">Choose channels…</string>
+    <string name="choose_channels">Choose channels</string>
     <string name="channels_auto_on">Automatic order: on</string>
     <string name="channels_auto_off">Automatic order: off</string>
     <string name="channels_on_shelf">Channels on the shelf: %s</string>
@@ -97,7 +97,7 @@
     <string name="search">Search</string>
     <string name="search_hint">App, channel or film</string>
     <string name="search_nothing">Nothing found</string>
-    <string name="search_listening">Listening…</string>
+    <string name="search_listening">Listening</string>
     <string name="search_not_heard">Did not catch that: say it again, or type</string>
     <string name="search_no_voice">Voice input is not available on this TV</string>
     <string name="search_app">App</string>
@@ -108,8 +108,8 @@
     <!-- The top shelf's row of what was opened last (Recents). -->
     <string name="continue_row">Continue</string>
     <!-- Sleep timer (SleepTimer, SleepService): the Settings menu rows and the note under the clock. -->
-    <string name="sleep_timer">Sleep timer…</string>
-    <string name="sleep_timer_left">Sleep timer: %d min…</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_timer_left">Sleep timer: %d min</string>
     <string name="sleep_minutes">%d min</string>
     <string name="sleep_off">Turn the timer off</string>
     <string name="sleep_set">The TV goes to sleep in %d min</string>

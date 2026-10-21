@@ -82,7 +82,7 @@
     <string name="update_failed">Не вдалося встановити оновлення</string>
     <string name="shelf_mode_channels">Полиця: канали</string>
     <string name="shelf_mode_posters">Полиця: постери</string>
-    <string name="choose_channels">Вибрати канали…</string>
+    <string name="choose_channels">Вибрати канали</string>
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
     <string name="channels_auto_off">Автоматичний порядок: вимк.</string>
     <string name="channels_on_shelf">Канали на полиці: %s</string>
@@ -91,7 +91,7 @@
     <string name="search">Пошук</string>
     <string name="search_hint">Програма, канал чи фільм</string>
     <string name="search_nothing">Нічого не знайдено</string>
-    <string name="search_listening">Слухаю…</string>
+    <string name="search_listening">Слухаю</string>
     <string name="search_not_heard">Не почув: скажіть ще раз або наберіть</string>
     <string name="search_no_voice">Голосовий ввід на цьому ТБ недоступний</string>
     <string name="search_app">Програма</string>
@@ -100,8 +100,8 @@
     <string name="search_series">Серіал · %s</string>
     <string name="search_video">Відео · %s</string>
     <string name="continue_row">Продовжити</string>
-    <string name="sleep_timer">Таймер сну…</string>
-    <string name="sleep_timer_left">Таймер сну: %d хв…</string>
+    <string name="sleep_timer">Таймер сну</string>
+    <string name="sleep_timer_left">Таймер сну: %d хв</string>
     <string name="sleep_minutes">%d хв</string>
     <string name="sleep_off">Вимкнути таймер</string>
     <string name="sleep_set">ТБ засне через %d хв</string>

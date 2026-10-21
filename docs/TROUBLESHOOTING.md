@@ -188,7 +188,7 @@ model, build, current user and the relevant redacted lines, not the raw dump.
 
 ## The sleep timer does nothing when it runs out
 
-The timer (Settings menu → Sleep timer…) puts the TV to sleep through the launcher's `SleepService`, an
+The timer (Settings menu → Sleep timer) puts the TV to sleep through the launcher's `SleepService`, an
 accessibility service. Android switches such services off on every reinstall; `build-and-install.sh` turns it back
 on each time. If it was installed another way, enable it once:
 
