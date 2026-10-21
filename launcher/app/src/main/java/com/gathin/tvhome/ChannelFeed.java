@@ -40,6 +40,12 @@ final class ChannelFeed {
         return ctx.checkSelfPermission("android.permission.READ_TV_LISTINGS") == PackageManager.PERMISSION_GRANTED;
     }
 
+    /** The programs read last for this app, without a new read; empty when none were. */
+    List<ShelfFeed.Item> cached(String pkg) {
+        List<ShelfFeed.Item> known = lists.get(pkg);
+        return known == null ? java.util.Collections.emptyList() : known;
+    }
+
     /** The app's programs, shuffled; the cached list at once when it is fresh, else read on a worker thread. */
     void items(String pkg, ShelfFeed.ItemsListener listener) {
         if (!enabled()) return;

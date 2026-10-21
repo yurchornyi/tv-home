@@ -160,14 +160,35 @@ final class NowPlaying {
         boolean same = next != null && track != null && next.title.equals(track.title) && next.artist.equals(track.artist);
         // Players resend the same cover as a new bitmap with every metadata update; keep the first one for the
         // track, so the card does not rebuild its backdrop (a visible flicker) on each update.
+        // A different picture (Spotify first sends its own logo, the album's cover a moment later) replaces it.
+        boolean coverChanged = false;
         if (same && track.cover != null) {
-            next = new Track(next.title, next.artist, next.app, next.pkg, track.cover, next.duration, next.playing);
+            if (next.cover == null || sameImage(track.cover, next.cover)) {
+                next = new Track(next.title, next.artist, next.app, next.pkg, track.cover, next.duration, next.playing);
+            } else coverChanged = true;
         }
         boolean changed = next == null ? track != null
-                : !same || next.playing != track.playing || (track.cover == null && next.cover != null);
+                : !same || next.playing != track.playing || (track.cover == null && next.cover != null) || coverChanged;
         current = found;
         track = next;
         if (changed) listener.onNowPlayingChanged();
+    }
+
+    /** The same picture, by size and a handful of pixels: a resent copy of the cover, not a new one. */
+    private static boolean sameImage(Bitmap a, Bitmap b) {
+        if (a == b) return true;
+        try {
+            if (a.getWidth() != b.getWidth() || a.getHeight() != b.getHeight()) return false;
+            int w = a.getWidth(), h = a.getHeight();
+            for (int i = 1; i < 5; i++) {
+                for (int j = 1; j < 5; j++) {
+                    if (a.getPixel(w * i / 5, h * j / 5) != b.getPixel(w * i / 5, h * j / 5)) return false;
+                }
+            }
+            return true;
+        } catch (RuntimeException e) {   // a recycled or hardware bitmap: treat it as new
+            return false;
+        }
     }
 
     /** The track this session reports, or null when it has no metadata or title any more. */

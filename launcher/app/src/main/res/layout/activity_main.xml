@@ -471,6 +471,38 @@
                 android:orientation="horizontal">
 
 
+                <!-- Search over apps, channels and the shelves (SearchDialog); hold OK for voice. -->
+                <TextView
+                    android:id="@+id/btnSearch"
+                    style="@style/TopButton"
+                    android:text="@string/search"
+                    android:drawableStart="@drawable/ic_search"
+                    android:nextFocusDown="@+id/grid" />
+
+                <!-- The pill, stretched into a text field while searching (MainActivity.openSearch); hidden otherwise. -->
+                <EditText
+                    android:id="@+id/searchField"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="10dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="20dp"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/search_field_bg"
+                    android:textColor="#FFFFFFFF"
+                    android:textColorHint="#80FFFFFF"
+                    android:hint="@string/search_hint"
+                    android:textSize="15sp"
+                    android:fontFamily="@font/outfit_medium"
+                    android:drawableStart="@drawable/ic_search"
+                    android:drawablePadding="9dp"
+                    android:drawableTint="#E6FFFFFF"
+                    android:singleLine="true"
+                    android:inputType="text|textNoSuggestions"
+                    android:imeOptions="actionSearch|flagNoExtractUi"
+                    android:importantForAutofill="no"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/btnInputs"
                     style="@style/TopButton"
@@ -616,35 +648,41 @@
                 android:max="1000"
                 android:progressDrawable="@drawable/now_playing_progress" />
 
-            <!-- What the remote does here: Left and Right skip, OK pauses or plays. -->
+            <!-- Previous, play/pause, next: focusable, Left and Right move between them, OK presses; the media keys
+                 work too, and Back brings Home back. -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:alpha="0.85">
+                android:clipChildren="false"
+                android:clipToPadding="false">
 
-                <ImageView
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_np_prev"
-                    android:contentDescription="@null" />
+                <TextView
+                    android:id="@+id/ambientPrev"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="0dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_prev" />
 
-                <ImageView
+                <TextView
                     android:id="@+id/ambientPlay"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginStart="36dp"
-                    android:layout_marginEnd="36dp"
-                    android:src="@drawable/ic_np_pause"
-                    android:contentDescription="@null" />
+                    style="@style/TopIconButton"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="22dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_pause" />
 
-                <ImageView
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@drawable/ic_np_next"
-                    android:contentDescription="@null" />
+                <TextView
+                    android:id="@+id/ambientNext"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="22dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_next" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

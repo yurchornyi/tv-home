@@ -104,6 +104,18 @@ final class ShelfFeed {
         return !key.isEmpty();
     }
 
+    /** What is cached for this app right now, without any fetch; empty when nothing is. */
+    List<Item> cached(String pkg) {
+        if (!enabled()) return java.util.Collections.emptyList();
+        String group = NETFLIX.equals(pkg) ? "netflix" : KYIVSTAR.equals(pkg) ? "ukraine" : "trending";
+        List<Item> known = lists.get(group);
+        if (known == null) {
+            known = parse(prefs().getString(group, ""));
+            if (!known.isEmpty()) lists.put(group, known);
+        }
+        return known;
+    }
+
     /** The cached list for this app at once if there is one, then a fresh one when the cache is old. */
     void items(String pkg, ItemsListener listener) {
         if (!enabled()) return;

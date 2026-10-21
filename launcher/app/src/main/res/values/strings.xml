@@ -93,6 +93,27 @@
     <string name="channels_on_shelf">Channels on the shelf: %s</string>
     <string name="channels_hint">OK ticks a channel, Back keeps the choice</string>
     <string name="channels_empty">Hold OK on the tile to choose channels</string>
+    <!-- Search (SearchDialog): the pill, the field's hint, the voice button, and the kinds of match. -->
+    <string name="search">Search</string>
+    <string name="search_hint">App, channel or film</string>
+    <string name="search_nothing">Nothing found</string>
+    <string name="search_no_voice">Voice input is not available on this TV</string>
+    <string name="search_app">App</string>
+    <string name="search_channel">Channel · %s</string>
+    <string name="search_film">Film · %s</string>
+    <string name="search_series">Series · %s</string>
+    <string name="search_video">Video · %s</string>
+    <!-- The top shelf's row of what was opened last (Recents). -->
+    <string name="continue_row">Continue</string>
+    <!-- Sleep timer (SleepTimer, SleepService): the Settings menu rows and the note under the clock. -->
+    <string name="sleep_timer">Sleep timer…</string>
+    <string name="sleep_timer_left">Sleep timer: %d min…</string>
+    <string name="sleep_minutes">%d min</string>
+    <string name="sleep_off">Turn the timer off</string>
+    <string name="sleep_set">The TV goes to sleep in %d min</string>
+    <string name="sleep_in">sleep in %d min</string>
+    <string name="sleep_service_off">The sleep service is off: run build-and-install.sh again, or turn on Sleep timer under Accessibility</string>
+    <string name="sleep_service_description">Puts the TV to sleep when the launcher\'s sleep timer runs out.</string>
     <!-- Tile menu: the top shelf's posters for this app on or off. -->
     <string name="shelf_posters_hide">Hide posters on the shelf</string>
     <string name="shelf_posters_show">Show posters on the shelf</string>

@@ -183,3 +183,17 @@ TV 12) the line is `[TclAppBoot] ... calleeComponent = 'com.gathin.tvhome/.HomeK
 (`appops set com.gathin.tvhome APP_AUTO_START allow`) made the service bind on its own after a restart;
 toggling the service off and on in Accessibility works until the next restart. When reporting, give the
 model, build, current user and the relevant redacted lines, not the raw dump.
+
+## The sleep timer does nothing when it runs out
+
+The timer (Settings menu → Sleep timer…) puts the TV to sleep through the launcher's `SleepService`, an
+accessibility service. Android switches such services off on every reinstall; `build-and-install.sh` turns it back
+on each time. If it was installed another way, enable it once:
+
+```
+adb shell settings put secure enabled_accessibility_services com.gathin.tvhome/.SleepService
+adb shell settings put secure accessibility_enabled 1
+```
+
+(or tick "Sleep timer" under Settings → Accessibility). The launcher says so with a message when the timer is set
+while the service is off.

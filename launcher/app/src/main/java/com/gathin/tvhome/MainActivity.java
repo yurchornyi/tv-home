@@ -83,6 +83,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -141,13 +142,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private LinearLayout shelfChannels;
     private LiveChannels liveChannels;
     private Updater updater;
+    /** What was opened last (Recents), for the Continue row on the top shelf and the Search pill. */
+    private Recents recents;
+    /** Search in the top bar: the pill widens into this field; the matches are tiles in the shelf's row (searching). */
+    private android.widget.EditText searchField;
+    private boolean searching;
+    private int searchPillWidth;
+    private List<SearchIndex.Result> searchAll;
+    private View btnSearch;
+    /** A voice query waiting for Home to be resumed, then searched. */
+    private String pendingSearch;
+    /** The Continue row: shown over the dock tile focused when Home came up, until focus moves to another tile. */
+    private boolean continueMode;
+    private int continueAnchor = -1;
+    private static final String CONTINUE = "\u0000continue";
+    private static final int VOICE_REQUEST = 43;
     /** The full-screen Now Playing (ambient screen), opened from the card's expand button. */
     private View ambientScreen;
     private AmbientView ambientBg;
     private ImageView ambientCover;
     private TextView ambientTitle, ambientArtist;
     private android.widget.ProgressBar ambientProgress;
-    private ImageView ambientPlay;
+    private TextView ambientPlay;
     /** The cover's slow turn in space while the full-screen player shows. */
     private android.animation.ValueAnimator ambientTurn;
     private Bitmap ambientCoverShown;
@@ -399,6 +415,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfChannelsScroll = findViewById(R.id.shelfChannelsScroll);
         shelfChannels = findViewById(R.id.shelfChannels);
         liveChannels = new LiveChannels(this);
+        recents = new Recents(this);
         ambientScreen = findViewById(R.id.ambientScreen);
         ambientBg = findViewById(R.id.ambientBg);
         ambientCover = findViewById(R.id.ambientCover);
@@ -406,6 +423,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientArtist = findViewById(R.id.ambientArtist);
         ambientProgress = findViewById(R.id.ambientProgress);
         ambientPlay = findViewById(R.id.ambientPlay);
+        ambientPlay.setOnClickListener(v -> nowPlaying.playPause());
+        findViewById(R.id.ambientPrev).setOnClickListener(v -> nowPlaying.previous());
+        findViewById(R.id.ambientNext).setOnClickListener(v -> nowPlaying.next());
+        View.OnKeyListener ambientKeys = (v, keyCode, event) -> {
+            // The row's ends: Left on Previous and Right on Next stay put; Up and Down stay on the row.
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == R.id.ambientPrev;
+            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.ambientNext;
+        };
+        for (int id : new int[]{R.id.ambientPrev, R.id.ambientPlay, R.id.ambientNext}) {
+            findViewById(id).setOnKeyListener(ambientKeys);
+        }
         ambientCover.setOutlineProvider(new android.view.ViewOutlineProvider() {
             @Override public void getOutline(View v, android.graphics.Outline o) {
                 o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 18 * density);
@@ -644,6 +674,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         btnInputs = findViewById(R.id.btnInputs);
         View btnSettings = findViewById(R.id.btnSettings);
+        btnSearch = findViewById(R.id.btnSearch);
+        searchField = findViewById(R.id.searchField);
+        btnSearch.setOnClickListener(v -> openSearch(""));
+        searchField.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence c, int a, int b, int n) { }
+            @Override public void onTextChanged(CharSequence c, int a, int b, int n) { }
+            @Override public void afterTextChanged(android.text.Editable e) { if (searching) showSearchResults(e.toString()); }
+        });
+        searchField.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+                    || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) return focusSearchResult();
+            return false;
+        });
+        searchField.setOnKeyListener((v, code, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (code == KeyEvent.KEYCODE_DPAD_DOWN) return focusSearchResult();
+            if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) { closeSearch(true); return true; }
+            if (code == KeyEvent.KEYCODE_DPAD_UP) return true;
+            // Left at the start or Right at the end of the text would wander off to the clock or the next pill.
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT) return searchField.getSelectionStart() == 0;
+            return code == KeyEvent.KEYCODE_DPAD_RIGHT && searchField.getSelectionEnd() == searchField.length();
+        });
+        searchField.setOnLongClickListener(v -> {
+            startVoice();
+            return true;
+        });
+        btnSearch.setOnLongClickListener(v -> {
+            startVoice();
+            return true;
+        });
         showInputs = cfg.showInputs;
         if (!showInputs) btnInputs.setVisibility(View.GONE);
         if (!cfg.showWifi) btnWifi.setVisibility(View.GONE);
@@ -715,6 +776,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
+        btnSearch.setOnKeyListener(pillKeys);
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
@@ -722,7 +784,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnProfile.setOnKeyListener(pillKeys);
         btnAudio.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnAudio, btnWifi, btnReorder, btnSettings, btnProfile}) {
+            for (View button : new View[]{btnSearch, btnInputs, btnAudio, btnWifi, btnReorder, btnSettings, btnProfile}) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
                         .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
                         .setDuration(160).start());
@@ -797,7 +859,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        continueMode = true;
+        continueAnchor = -1;
+        if (CONTINUE.equals(channelsPkg)) stopChannels(false);   // rebuilt with the newest entry first
         updater.check();
+        if (pendingSearch != null) {
+            String q = pendingSearch;
+            pendingSearch = null;
+            handler.post(() -> { if (hasWindowFocus() && !isFinishing()) openSearch(q); });
+        }
         nowPlaying.start();
         AudioDevices.addListener(audioListener);
         AudioDevices.refresh(this);
@@ -833,6 +903,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if (requestCode == VOICE_REQUEST) {
+            java.util.ArrayList<String> heard = data == null ? null
+                    : data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+            pendingSearch = resultCode == RESULT_OK && heard != null && !heard.isEmpty() ? heard.get(0) : "";
+        }
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
@@ -960,6 +1035,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (cardPrompt != null) cardPrompt.dismiss();
         if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
+        closeSearch(false);
     }
 
     @Override
@@ -1036,26 +1112,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (ambientScreen.getVisibility() == View.VISIBLE) {
-            // The remote drives the music here: OK pauses or plays, Left and Right skip; any other key brings
-            // Home back and goes no further (it only meant "wake").
-            if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+            // The full-screen player: its buttons take the arrows and OK, the media keys work from anywhere, Back
+            // (or Home) brings Home back.
+            boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
             switch (event.getKeyCode()) {
-                case KeyEvent.KEYCODE_DPAD_CENTER: case KeyEvent.KEYCODE_ENTER: case KeyEvent.KEYCODE_NUMPAD_ENTER:
                 case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: case KeyEvent.KEYCODE_MEDIA_PLAY: case KeyEvent.KEYCODE_MEDIA_PAUSE:
-                    nowPlaying.playPause();
+                    if (down) nowPlaying.playPause();
                     return true;
-                case KeyEvent.KEYCODE_DPAD_RIGHT: case KeyEvent.KEYCODE_MEDIA_NEXT:
-                    nowPlaying.next();
+                case KeyEvent.KEYCODE_MEDIA_NEXT:
+                    if (down) nowPlaying.next();
                     return true;
-                case KeyEvent.KEYCODE_DPAD_LEFT: case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
-                    nowPlaying.previous();
+                case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                    if (down) nowPlaying.previous();
+                    return true;
+                case KeyEvent.KEYCODE_BACK: case KeyEvent.KEYCODE_ESCAPE:
+                    if (!down) hideAmbient();
                     return true;
                 default:
-                    hideAmbient();
+                    if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER || event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                            || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT
+                            || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN) {
+                        if (!ambientScreen.hasFocus()) ambientPlay.requestFocus();
+                        return super.dispatchKeyEvent(event);
+                    }
                     return true;
             }
         }
         if (handleSettingsKey(event)) return true;
+        int key = event.getKeyCode();
+        if (key == KeyEvent.KEYCODE_SEARCH || key == KeyEvent.KEYCODE_VOICE_ASSIST || key == KeyEvent.KEYCODE_ASSIST) {
+            // The remote's microphone: say what to open.
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) startVoice();
+            return true;
+        }
         if (!reordering) return super.dispatchKeyEvent(event);
         if (dockEditing) return dispatchDockEdit(event);
         boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
@@ -1340,7 +1429,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onBackPressed() {
-        // Home screen: Back goes nowhere.
+        // Home screen: Back goes nowhere, except out of a search.
+        if (searching) closeSearch(true);
     }
 
     // ---- glass highlight -------------------------------------------------------------------------
@@ -1364,6 +1454,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onTileFocused(int position, View card) {
+        if (continueMode && continueAnchor >= 0 && position != continueAnchor) continueMode = false;
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
@@ -1431,8 +1522,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showHero(int position, float dockTopInRoot) {
         lastDockTop = dockTopInRoot;
         lastHeroPosition = position;
+        if (searching) return;
         if (!showNowPlaying()) {
-            boolean channels = showChannels(position);   // the row sits over the posters, so both may show
+            boolean channels = continueRow(position) || showChannels(position);   // the row sits over the posters, so both may show
             if (!showFeed(position) && !channels && !showShelfArt(position)) hideShelfArt(animations);
         }
         String label = adapter.labelAt(position);
@@ -1676,6 +1768,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (ambientScreen.getVisibility() == View.VISIBLE) return;
         ambientScreen.setVisibility(View.VISIBLE);
         ambientBg.start();
+        ambientPlay.requestFocus();
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (animations && !reducedMotion) {
             // The cover turns a little in space and floats, as if hung in the light.
@@ -1712,7 +1805,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (t == null) return;
         ambientTitle.setText(t.title);
         ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
-        ambientPlay.setImageResource(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play);
+        ambientPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         if (t.cover == null) {
             hideAmbient();   // a track without a cover has no full-screen player
             return;
@@ -1727,6 +1820,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void hideAmbient() {
         if (ambientScreen.getVisibility() != View.VISIBLE) return;
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Focus back on the card's expand button, where the player was opened from, else on the dock.
+        if (ambientScreen.hasFocus()) {
+            View expand = findViewById(R.id.npExpand);
+            if (npCard.getVisibility() == View.VISIBLE && npCard.getAlpha() > 0f) expand.requestFocus();
+            else focusTile(Math.max(0, lastFocused));
+        }
         if (ambientTurn != null) {
             ambientTurn.cancel();
             ambientTurn = null;
@@ -1843,12 +1942,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
             return false;
         });
-        if (c != null) tile.setOnClickListener(v -> {
-            liveChannels.recordOpen(pkg, c.id);
-            android.util.Log.i("TvHome", "open channel " + c.name + " in " + pkg);
-            open(new Intent(Intent.ACTION_VIEW, Uri.parse(c.open)).setPackage(pkg));
-        });
+        if (c != null) tile.setOnClickListener(v -> openChannel(pkg, c));
         return tile;
+    }
+
+    private void openChannel(String pkg, LiveChannels.Channel c) {
+        liveChannels.recordOpen(pkg, c.id);
+        recents.channel(pkg, c);
+        android.util.Log.i("TvHome", "open channel " + c.name + " in " + pkg);
+        open(new Intent(Intent.ACTION_VIEW, Uri.parse(c.open)).setPackage(pkg));
     }
 
     private void stopChannels(boolean animate) {
@@ -1881,17 +1983,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Opens what the shelf shows: the video itself, the film's page where the app has one, else the app. */
     private void openFeedItem() {
         if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return;
-        ShelfFeed.Item item = feedItems.get(feedIndex % feedItems.size());
-        String pkg = feedPkg;
+        openItem(feedPkg, feedItems.get(feedIndex % feedItems.size()));
+    }
+
+    /** Opens a shelf item (also from Search and the Continue row) and remembers it. */
+    private void openItem(String pkg, ShelfFeed.Item item) {
+        recents.item(pkg, item);
         if (item.open != null) {
-            try {
-                Intent i = item.open.startsWith("intent:") ? Intent.parseUri(item.open, Intent.URI_INTENT_SCHEME)
-                        : new Intent(Intent.ACTION_VIEW, Uri.parse(item.open));
-                if (i.getPackage() == null && i.getComponent() == null) i.setPackage(pkg);
-                open(i);
-            } catch (java.net.URISyntaxException e) {
-                launchApp(pkg);
-            }
+            openUri(item.open, pkg);
             return;
         }
         if ("com.netflix.ninja".equals(pkg) && item.id > 0 && shelfFeed.enabled()) {
@@ -1910,6 +2009,419 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         launchApp(pkg);
+    }
+
+    /** An intent: or plain URI into its app; the app itself when the URI is broken. */
+    private void openUri(String uri, String pkg) {
+        try {
+            Intent i = uri.startsWith("intent:") ? Intent.parseUri(uri, Intent.URI_INTENT_SCHEME)
+                    : new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+            if (i.getPackage() == null && i.getComponent() == null) i.setPackage(pkg);
+            open(i);
+        } catch (java.net.URISyntaxException e) {
+            launchApp(pkg);
+        }
+    }
+
+    // ---- the Continue row ---------------------------------------------------------------------------
+
+    /**
+     * What was opened last, newest first, as a row of tiles over the dock tile Home came up on; it gives way to that
+     * app's own shelf as soon as focus moves to another tile. False when there is nothing to continue.
+     */
+    private boolean continueRow(int position) {
+        if (!continueMode || !topShelfArt) return false;
+        if (continueAnchor < 0) continueAnchor = position;
+        if (position != continueAnchor) return false;
+        List<Recents.Entry> entries = new ArrayList<>();
+        for (Recents.Entry e : recents.all()) {
+            if (installed(e.pkg)) entries.add(e);
+            if (entries.size() == 8) break;
+        }
+        if (entries.isEmpty()) {
+            continueMode = false;
+            return false;
+        }
+        if (CONTINUE.equals(channelsPkg)) return true;
+        channelsPkg = CONTINUE;
+        showShelfOpen(false, animations);
+        shelfChannels.removeAllViews();
+        shelfChannelsScroll.scrollTo(0, 0);
+        TextView label = new TextView(this);
+        label.setText(R.string.continue_row);
+        label.setTextColor(0xB3FFFFFF);
+        label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+        label.setTypeface(getResources().getFont(R.font.outfit_medium));
+        label.setAllCaps(true);
+        label.setLetterSpacing(0.18f);
+        label.setRotation(-90f);
+        label.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams((int) (84 * density), (int) (84 * density));
+        llp.setMarginStart((int) (-30 * density));
+        llp.setMarginEnd((int) (-24 * density));
+        label.setLayoutParams(llp);
+        shelfChannels.addView(label);
+        for (Recents.Entry e : entries) shelfChannels.addView(continueTile(e));
+        shelfChannelsScroll.setVisibility(View.VISIBLE);
+        shelfChannelsScroll.animate().cancel();
+        shelfChannelsScroll.post(() -> shelfChannelsScroll.setY(lastDockTop - 14 * density - shelfChannelsScroll.getHeight()));
+        if (animations && !reducedMotion) shelfChannelsScroll.animate().alpha(1f).setDuration(300).start();
+        else shelfChannelsScroll.setAlpha(1f);
+        return true;
+    }
+
+    private boolean installed(String pkg) {
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** A Continue tile: a channel's logo, a film's backdrop with its title, or an app's banner. */
+    private View continueTile(Recents.Entry e) {
+        View tile;
+        if (Recents.Entry.CHANNEL.equals(e.kind)) {
+            tile = channelTile(new LiveChannels.Channel(e.key, e.title, e.image, e.open), e.pkg);
+        } else {
+            tile = channelTile(new LiveChannels.Channel(e.key, e.title, null, e.open), e.pkg);
+            android.widget.FrameLayout f = (android.widget.FrameLayout) tile;
+            TextView name = (TextView) f.getChildAt(0);
+            if (Recents.Entry.APP.equals(e.kind)) {
+                Drawable banner = null;
+                try {
+                    banner = getPackageManager().getApplicationBanner(e.pkg);
+                    if (banner == null) banner = getPackageManager().getApplicationIcon(e.pkg);
+                } catch (Exception ignored) {
+                }
+                if (banner != null) {
+                    ImageView art = new ImageView(this);
+                    art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    art.setImageDrawable(banner);
+                    f.addView(art, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT));
+                    name.setVisibility(View.GONE);
+                }
+            } else if (e.image != null) {
+                ImageView art = new ImageView(this);
+                art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                f.addView(art, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+                // The title along the bottom, over a dark gradient, once the picture is in.
+                name.setGravity(Gravity.BOTTOM | Gravity.START);
+                name.setMaxLines(2);
+                name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+                name.setPadding((int) (10 * density), 0, (int) (10 * density), (int) (7 * density));
+                shelfFeed.image(e.image, (url, bmp) -> {
+                    if (bmp == null || art.getParent() == null) return;
+                    art.setImageBitmap(bmp);
+                    name.setBackground(new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0xC0000000}));
+                });
+            }
+        }
+        tile.setOnClickListener(v -> openEntry(e));
+        return tile;
+    }
+
+    private void openEntry(Recents.Entry e) {
+        android.util.Log.i("TvHome", "continue " + e.kind + " " + e.title + " in " + e.pkg);
+        switch (e.kind) {
+            case Recents.Entry.CHANNEL:
+                openChannel(e.pkg, new LiveChannels.Channel(e.key, e.title, e.image, e.open));
+                break;
+            case Recents.Entry.ITEM: {
+                String type = "";
+                long id = 0;
+                if (e.open == null) {
+                    String[] parts = e.key.split(":", 3);
+                    if (parts.length == 3) {
+                        type = parts[0];
+                        try { id = Long.parseLong(parts[1]); } catch (NumberFormatException ignored) { }
+                    }
+                }
+                openItem(e.pkg, new ShelfFeed.Item(e.title, e.image, e.open, type, id));
+                break;
+            }
+            default:
+                recents.app(e.pkg, e.title);
+                launchApp(e.pkg);
+        }
+    }
+
+    // ---- search -------------------------------------------------------------------------------------
+
+    /**
+     * Search in place: the Search pill stretches left along the top bar, as far as the clock, and becomes the text
+     * field (the TV's keyboard comes up by itself); the matches appear as tiles in the shelf's row under it. A query
+     * from voice is searched at once. Back puts everything back.
+     */
+    private void openSearch(String query) {
+        if (appLibrary != null) appLibrary.close();
+        if (openPopup != null) openPopup.dismiss();
+        if (searching) {
+            searchField.setText(query);
+            searchField.setSelection(query.length());
+            if (query.isEmpty() || !focusSearchResult()) searchField.requestFocus();
+            return;
+        }
+        searching = true;
+        searchAll = searchIndex();
+        hideHero();
+        hideGlass();
+        View topInfo = findViewById(R.id.topInfo);
+        View leftBlock = findViewById(R.id.leftBlock);
+        // From the pill's right edge to just past the clock (or the greeting block when the clock is not up there).
+        int leftEdge = topInfo.getVisibility() == View.VISIBLE ? topInfo.getRight() + (int) (28 * density)
+                : leftBlock.getLeft() + (int) (320 * density);
+        int target = Math.max(btnSearch.getWidth(), btnSearch.getRight()
+                + ((View) btnSearch.getParent()).getLeft() - leftEdge);
+        searchPillWidth = btnSearch.getWidth();
+        searchField.setText("");
+        searchField.setVisibility(View.VISIBLE);
+        LinearLayout.LayoutParams flp = (LinearLayout.LayoutParams) searchField.getLayoutParams();
+        flp.width = searchPillWidth;
+        searchField.setLayoutParams(flp);
+        btnSearch.setVisibility(View.GONE);
+        searchField.requestFocus();
+        Runnable done = () -> {
+            if (!searching) return;
+            if (!query.isEmpty()) {
+                searchField.setText(query);
+                searchField.setSelection(query.length());
+                if (!focusSearchResult()) searchField.requestFocus();
+            } else {
+                android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+                if (imm != null) imm.showSoftInput(searchField, 0);
+            }
+        };
+        if (animations && !reducedMotion) {
+            ValueAnimator grow = ValueAnimator.ofInt(searchPillWidth, target);
+            grow.setDuration(320);
+            grow.setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f));
+            grow.addUpdateListener(a -> {
+                flp.width = (int) a.getAnimatedValue();
+                searchField.setLayoutParams(flp);
+            });
+            grow.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(android.animation.Animator a) { done.run(); }
+            });
+            grow.start();
+        } else {
+            flp.width = target;
+            searchField.setLayoutParams(flp);
+            done.run();
+        }
+    }
+
+    /** The matches for what is typed, as tiles in the shelf's row right under the top bar. */
+    private void showSearchResults(String query) {
+        List<SearchIndex.Result> found = SearchIndex.filter(searchAll, query);
+        shelfChannels.removeAllViews();
+        shelfChannelsScroll.scrollTo(0, 0);
+        if (found.isEmpty()) {
+            if (!query.trim().isEmpty()) {
+                TextView none = new TextView(this);
+                none.setText(R.string.search_nothing);
+                none.setTextColor(0x8CFFFFFF);
+                none.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+                none.setTypeface(getResources().getFont(R.font.outfit_regular));
+                none.setGravity(Gravity.CENTER_VERTICAL);
+                none.setPadding((int) (6 * density), 0, 0, 0);
+                none.setMinHeight((int) (84 * density));
+                shelfChannels.addView(none);
+            }
+        } else {
+            for (SearchIndex.Result r : found) shelfChannels.addView(searchTile(r));
+        }
+        channelsPkg = "\u0000search";
+        shelfChannelsScroll.setVisibility(View.VISIBLE);
+        shelfChannelsScroll.animate().cancel();
+        shelfChannelsScroll.post(() -> {
+            View bar = (View) findViewById(R.id.topButtons).getParent();
+            shelfChannelsScroll.setY(bar.getBottom() + ((View) bar.getParent()).getTop() + 16 * density);
+        });
+        shelfChannelsScroll.setAlpha(1f);
+    }
+
+    /** A match as a tile: its picture (an app's banner or icon, a channel's logo, a film's backdrop) and its name. */
+    private View searchTile(SearchIndex.Result r) {
+        View tile = channelTile(new LiveChannels.Channel(r.title, r.title, r.icon == null ? r.image : null, null), "");
+        android.widget.FrameLayout f = (android.widget.FrameLayout) tile;
+        TextView name = (TextView) f.getChildAt(0);
+        if (r.icon != null) {
+            ImageView art = new ImageView(this);
+            art.setImageDrawable(r.icon);
+            if (r.fill) art.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            else {
+                art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                int pad = (int) (18 * density);
+                art.setPadding(pad, pad, pad, pad);
+            }
+            f.addView(art, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            name.setVisibility(View.GONE);
+        } else if (r.fill && r.image != null) {
+            // A backdrop: channelTile would fit a logo with room around it; a film fills the tile, its title along the bottom.
+            ImageView logo = (ImageView) f.getChildAt(1);
+            logo.setPadding(0, 0, 0, 0);
+            logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            name.setGravity(Gravity.BOTTOM | Gravity.START);
+            name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+            name.setPadding((int) (10 * density), 0, (int) (10 * density), (int) (7 * density));
+            shelfFeed.image(r.image, (url, bmp) -> {
+                if (bmp == null || logo.getParent() == null) return;
+                name.setVisibility(View.VISIBLE);
+                name.setBackground(new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0xC0000000}));
+            });
+        }
+        tile.setOnClickListener(v -> {
+            closeSearch(false);
+            r.open.run();
+        });
+        tile.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_BACK) { closeSearch(true); return true; }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) { searchField.requestFocus(); return true; }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
+            int i = shelfChannels.indexOfChild(v);
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return i == 0;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
+            return false;
+        });
+        return tile;
+    }
+
+    /** Focus on the first match, the keyboard put away so the tiles are all in view; false without matches. */
+    private boolean focusSearchResult() {
+        if (!searching || shelfChannels.getChildCount() == 0 || !shelfChannels.getChildAt(0).isFocusable()) return false;
+        shelfChannels.getChildAt(0).requestFocus();
+        android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+        if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
+        return true;
+    }
+
+    /** The field shrinks back into the pill and the shelf shows the focused dock app again. */
+    private void closeSearch(boolean refocus) {
+        if (!searching) return;
+        searching = false;
+        searchAll = null;
+        android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+        if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
+        stopChannels(animations);
+        LinearLayout.LayoutParams flp = (LinearLayout.LayoutParams) searchField.getLayoutParams();
+        Runnable done = () -> {
+            searchField.setVisibility(View.GONE);
+            searchField.setText("");
+            btnSearch.setVisibility(View.VISIBLE);
+            if (refocus) btnSearch.requestFocus();
+        };
+        if (animations && !reducedMotion && searchField.getVisibility() == View.VISIBLE && refocus) {
+            ValueAnimator shrink = ValueAnimator.ofInt(flp.width, searchPillWidth);
+            shrink.setDuration(260);
+            shrink.setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f));
+            shrink.addUpdateListener(a -> {
+                flp.width = (int) a.getAnimatedValue();
+                searchField.setLayoutParams(flp);
+            });
+            shrink.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(android.animation.Animator a) { done.run(); }
+            });
+            shrink.start();
+        } else {
+            done.run();
+        }
+        if (refocus) {
+            // The shelf for the dock tile that was focused before, without moving focus there.
+            if (lastFocused < COLUMNS && lastFocused >= 0 && adapter.appCount() > 0) showHero(lastFocused, lastDockTop);
+        }
+    }
+
+    /** Everything Search can find: the installed apps, the shipped live channels, the films and videos on the shelves. */
+    private List<SearchIndex.Result> searchIndex() {
+        List<SearchIndex.Result> out = new ArrayList<>();
+        android.content.pm.PackageManager pm = getPackageManager();
+        Map<String, android.content.pm.ResolveInfo> apps = new java.util.LinkedHashMap<>();
+        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(category), 0)) {
+                if (info.activityInfo == null || !info.activityInfo.exported) continue;
+                String pkg = info.activityInfo.packageName;
+                if (!pkg.equals(getPackageName()) && !apps.containsKey(pkg)) apps.put(pkg, info);
+            }
+        }
+        Map<String, String> labels = new java.util.HashMap<>();
+        for (Map.Entry<String, android.content.pm.ResolveInfo> e : apps.entrySet()) {
+            String pkg = e.getKey();
+            String label;
+            Drawable icon;
+            try {
+                label = Cards.cleanLabel(String.valueOf(e.getValue().loadLabel(pm)), pkg);
+                icon = e.getValue().loadIcon(pm);
+            } catch (RuntimeException unavailable) {
+                continue;
+            }
+            labels.put(pkg, label);
+            Drawable banner = null;
+            try { banner = pm.getApplicationBanner(pkg); } catch (Exception ignored) { }
+            out.add(new SearchIndex.Result(label, getString(R.string.search_app), banner != null ? banner : icon, null,
+                    banner != null, 0, () -> {
+                recents.app(pkg, label);
+                launchApp(pkg);
+            }));
+        }
+        for (String pkg : liveChannelPackages()) {
+            String app = labels.get(pkg);
+            if (app == null) continue;   // not installed
+            for (LiveChannels.Channel c : liveChannels.all(pkg)) {
+                out.add(new SearchIndex.Result(c.name, getString(R.string.search_channel, app), null, c.logo, false, 1,
+                        () -> openChannel(pkg, c)));
+            }
+        }
+        for (String pkg : feedApps) {
+            String app = labels.get(pkg);
+            if (app == null) continue;
+            for (ShelfFeed.Item item : shelfFeed.cached(pkg)) {
+                out.add(new SearchIndex.Result(item.title, getString("tv".equals(item.type) ? R.string.search_series
+                        : R.string.search_film, app), null, item.backdrop, true, 2, () -> openItem(pkg, item)));
+            }
+        }
+        for (String pkg : channelApps) {
+            String app = labels.get(pkg);
+            if (app == null) continue;
+            for (ShelfFeed.Item item : channelFeed.cached(pkg)) {
+                out.add(new SearchIndex.Result(item.title, getString(R.string.search_video, app), null, item.backdrop, true, 3,
+                        () -> openItem(pkg, item)));
+            }
+        }
+        return out;
+    }
+
+    /** The apps the launcher ships channel lists for (assets/channels). */
+    private List<String> liveChannelPackages() {
+        List<String> out = new ArrayList<>();
+        try {
+            for (String f : getAssets().list("channels")) {
+                if (f.endsWith(".json")) out.add(f.substring(0, f.length() - 5));
+            }
+        } catch (java.io.IOException ignored) {
+        }
+        return out;
+    }
+
+    /** The TV's voice input; what it hears is searched when Home is back. */
+    private void startVoice() {
+        Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, getString(R.string.search_hint))
+                .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        try {
+            startActivityForResult(i, VOICE_REQUEST);
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Toast.makeText(this, R.string.search_no_voice, Toast.LENGTH_SHORT).show();
+            if (!searching) openSearch("");
+        }
     }
 
     private void launchApp(String pkg) {
@@ -2432,6 +2944,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         return true;
     }
 
+    @Override public void onTileOpened(String pkg, String label) {
+        recents.app(pkg, label);
+    }
+
     @Override public void onLibraryFocused() {
         libraryFocusPending = false;
         hideGlass();
@@ -2632,6 +3148,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             greeting.setTextColor(greetingColor);
         }
         if (shamsi) shamsiDate.setText(Shamsi.today());
+        // A sleep timer running: said after the greeting, so it is never forgotten.
+        int left = SleepTimer.minutesLeft(this);
+        if (left > 0) greeting.setText(greeting.getText() + "   ·   " + getString(R.string.sleep_in, left));
     }
 
     /** Shows the Wi-Fi network name on the button when we can read it, otherwise the connection type. */
@@ -2824,7 +3343,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The leftmost visible pill of the top bar (Settings is always there). */
     private View firstPill() {
-        for (View v : new View[]{btnInputs, btnWifi, btnAudio, btnReorder}) {
+        for (View v : new View[]{btnSearch, btnInputs, btnWifi, btnAudio, btnReorder}) {
             if (v.getVisibility() == View.VISIBLE) return v;
         }
         return findViewById(R.id.btnSettings);
@@ -3198,11 +3717,44 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
+        int left = SleepTimer.minutesLeft(this);
+        addSettingsMenuRow(rows, popup, left > 0 ? getString(R.string.sleep_timer_left, left) : getString(R.string.sleep_timer),
+                this::showSleepMenu);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
                 ? Gravity.START : Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    /** The sleep timer's choices (SleepTimer): in so many minutes the TV goes to standby. */
+    private void showSleepMenu() {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        for (int minutes : new int[]{15, 30, 45, 60, 90, 120}) {
+            addSettingsMenuRow(rows, popup, getString(R.string.sleep_minutes, minutes), () -> {
+                if (!SleepService.running()) {
+                    Toast.makeText(this, R.string.sleep_service_off, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                SleepTimer.set(this, minutes);
+                updateGreeting();
+                Toast.makeText(this, getString(R.string.sleep_set, minutes), Toast.LENGTH_SHORT).show();
+            });
+        }
+        if (SleepTimer.endsAt(this) != 0) {
+            addSeparator(rows);
+            addSettingsMenuRow(rows, popup, R.string.sleep_off, () -> {
+                SleepTimer.cancel(this);
+                updateGreeting();
+            });
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.START : Gravity.END);
         rows.getChildAt(0).requestFocus();
     }
 

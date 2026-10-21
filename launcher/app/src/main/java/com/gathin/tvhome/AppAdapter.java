@@ -58,6 +58,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         boolean onTileLongPress(int position);
 
         void onLibraryRequested();
+        /** A tile opened its app. */
+        default void onTileOpened(String pkg, String label) { }
         void onLibraryFocused();
         void onLibraryUp();
     }
@@ -491,6 +493,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         android.util.Log.i("TvHome", "tile opens " + e.pkg);
         try {
             ctx.startActivity(i);
+            listener.onTileOpened(e.pkg, e.label);
             if (advancedEffects && ctx instanceof Activity) {
                 ((Activity) ctx).overridePendingTransition(R.anim.app_open_enter, R.anim.app_open_exit);
             }

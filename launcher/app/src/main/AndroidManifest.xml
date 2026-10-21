@@ -138,6 +138,24 @@
                 android:resource="@xml/input_key_service" />
         </service>
 
+        <!-- The sleep timer (SleepTimer): the alarm's receiver, and the accessibility service that puts the TV to
+             sleep. build-and-install enables the service. -->
+        <receiver
+            android:name=".SleepReceiver"
+            android:exported="false" />
+        <service
+            android:name=".SleepService"
+            android:exported="true"
+            android:label="@string/sleep_timer"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/sleep_service" />
+        </service>
+
         <!-- Media sessions for the Now Playing card (NowPlaying). build-and-install allows it as a listener. -->
         <service
             android:name=".NowPlayingListener"
