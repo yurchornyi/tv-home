@@ -25,7 +25,7 @@ public class GlassView extends View {
     /** Glow colour as 0xRRGGBB: white normally, a festival's accent (diya gold) while a festive skin is on. */
     private int glowRgb = 0xFFFFFF;
     /** Glow strength: the white glow stays faint, a coloured one needs more alpha to read as warm light. */
-    private int glowAlpha = 0x30;
+    private int glowAlpha = 0x22;
 
     public GlassView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -33,7 +33,8 @@ public class GlassView extends View {
         radius = 20f * density;
         rim.setStyle(Paint.Style.STROKE);
         rim.setStrokeWidth(1.5f * density);
-        rim.setColor(0xCCFFFFFF);
+        // A thin, quiet edge: Apple TV lifts the tile with a shadow rather than drawing a bright frame around it.
+        rim.setColor(0x8CFFFFFF);
         glow.setStyle(Paint.Style.STROKE);
         // Cache the slab as a texture. The spring only changes translation, so the GPU can
         // move it without replaying clipPath and the glow on every frame. That path is
@@ -45,8 +46,8 @@ public class GlassView extends View {
     void setAccent(int argb) {
         if (argb == 0) {
             glowRgb = 0xFFFFFF;
-            glowAlpha = 0x30;
-            rim.setColor(0xCCFFFFFF);
+            glowAlpha = 0x22;
+            rim.setColor(0x8CFFFFFF);
         } else {
             glowRgb = argb & 0xFFFFFF;
             glowAlpha = 0x70;

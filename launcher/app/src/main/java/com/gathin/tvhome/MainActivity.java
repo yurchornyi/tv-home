@@ -121,6 +121,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ShelfFeed shelfFeed;
     private final Set<String> feedApps = new HashSet<>();
     private String feedPkg;
+    /** The backdrop the carousel shows now (the one the next dissolves from). */
+    private Drawable feedArt;
     /** Android's package change counter at the last tile rebuild, and when that was (appsMayHaveChanged). */
     private int packageSeq;
     private long tilesBuiltAt;
@@ -539,8 +541,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 s.setSpring(new SpringForce().setStiffness(1400f).setDampingRatio(0.95f));
                 s.setMinimumVisibleChange(1.5f);
             } else {
-                s.setSpring(new SpringForce().setStiffness(advancedEffects ? 320f : 260f)
-                        .setDampingRatio(advancedEffects ? 0.76f : 0.58f));
+                // Quick and almost settled, like the focus moving on Apple TV: no wobble after it lands.
+                s.setSpring(new SpringForce().setStiffness(advancedEffects ? 520f : 260f)
+                        .setDampingRatio(advancedEffects ? 0.86f : 0.58f));
             }
         }
 
@@ -776,10 +779,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hideShelfArt(false);
         }
         if (rebuild) reloadTiles();
-        if (animate && animations && !reducedMotion) {
-            grid.scheduleLayoutAnimation();
-            if (!rebuild) grid.requestLayout();   // nothing was rebound: start the entrance anyway
-        }
+        // The tiles rise in once, when Home starts. Coming back from an app they are simply there, as on Apple TV.
+        if (animate && animations && !reducedMotion && !enteredOnce) grid.scheduleLayoutAnimation();
+        enteredOnce = true;
 
         if (restoreFocus) {
             // Keep a focused footer at the end even when the app count changes.
@@ -1215,6 +1217,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private int refocusGen;
+    /** The tiles' entrance has played (reloadApps). */
+    private boolean enteredOnce;
 
     @Override
     public void onBackPressed() {
@@ -1537,25 +1541,47 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             shelfTitle.animate().cancel();
             heroFade.setAlpha(1f);
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
-            Runnable swap = () -> {
-                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                heroArt.setImageDrawable(art);
-                heroArtShown = art;
+            Runnable title = () -> {
                 shelfTitle.setText(item.title);
                 positionShelfTitle();
-                if (animate) {
-                    heroArt.animate().alpha(1f).setDuration(450).start();
-                    shelfTitle.animate().alpha(1f).setDuration(450).start();
-                } else {
-                    heroArt.setAlpha(1f);
-                    shelfTitle.setAlpha(1f);
-                }
+                if (animate) shelfTitle.animate().alpha(1f).setDuration(400).start();
+                else shelfTitle.setAlpha(1f);
             };
-            if (animate) {
-                heroArt.animate().alpha(0f).setDuration(250).withEndAction(swap).start();
+            if (animate && feedArt != null && heroArtShown == feedArt) {
+                // One backdrop dissolves into the next, as the top shelf does on Apple TV: both stay on screen,
+                // nothing dips to black in between.
+                android.graphics.drawable.TransitionDrawable cross = new android.graphics.drawable.TransitionDrawable(
+                        new Drawable[]{feedArt, art});
+                cross.setCrossFadeEnabled(true);
+                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                heroArt.setImageDrawable(cross);
+                heroArt.setAlpha(1f);
+                cross.startTransition(700);
+                heroArtShown = art;
+                feedArt = art;
+                // Once the dissolve is over, hold the new picture alone, so the old bitmap can go.
+                handler.postDelayed(() -> {
+                    if (heroArtShown == art && heroArt.getDrawable() == cross) heroArt.setImageDrawable(art);
+                }, 760);
+                shelfTitle.animate().alpha(0f).setDuration(220).withEndAction(title).start();
+            } else if (animate) {
+                // From the app's softened banner: fade it out, then the first backdrop in.
+                heroArt.animate().alpha(0f).setDuration(250).withEndAction(() -> {
+                    heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    heroArt.setImageDrawable(art);
+                    heroArtShown = art;
+                    feedArt = art;
+                    heroArt.animate().alpha(1f).setDuration(450).start();
+                    title.run();
+                }).start();
                 shelfTitle.animate().alpha(0f).setDuration(250).start();
             } else {
-                swap.run();
+                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                heroArt.setImageDrawable(art);
+                heroArt.setAlpha(1f);
+                heroArtShown = art;
+                feedArt = art;
+                title.run();
             }
             handler.postDelayed(feedTick, 8000);
             // Fetch the next backdrop now, so the swap does not wait on the network.
@@ -1567,6 +1593,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
         feedGen++;
+        feedArt = null;
         if (feedPkg == null) return;
         feedPkg = null;
         feedItems = null;
