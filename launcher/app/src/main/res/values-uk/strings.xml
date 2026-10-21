@@ -83,6 +83,8 @@
     <string name="shelf_mode_channels">Полиця: канали</string>
     <string name="shelf_mode_posters">Полиця: постери</string>
     <string name="choose_channels">Вибрати канали…</string>
+    <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
+    <string name="channels_auto_off">Автоматичний порядок: вимк.</string>
     <string name="channels_on_shelf">Канали на полиці: %s</string>
     <string name="channels_hint">OK додає або прибирає канал, Назад зберігає вибір</string>
     <string name="channels_empty">Утримуйте OK на плитці, щоб вибрати канали</string>

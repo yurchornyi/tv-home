@@ -88,6 +88,8 @@
     <string name="shelf_mode_channels">Shelf: channels</string>
     <string name="shelf_mode_posters">Shelf: posters</string>
     <string name="choose_channels">Choose channels…</string>
+    <string name="channels_auto_on">Automatic order: on</string>
+    <string name="channels_auto_off">Automatic order: off</string>
     <string name="channels_on_shelf">Channels on the shelf: %s</string>
     <string name="channels_hint">OK ticks a channel, Back keeps the choice</string>
     <string name="channels_empty">Hold OK on the tile to choose channels</string>

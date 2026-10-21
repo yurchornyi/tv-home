@@ -2456,7 +2456,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 stopFeed();
                 showHero(position, lastDockTop);
             });
-            if (channelMode) addSettingsMenuRow(rows, popup, R.string.choose_channels, () -> openChannelPicker(pkg, position));
+            if (channelMode) {
+                addSettingsMenuRow(rows, popup, R.string.choose_channels, () -> openChannelPicker(pkg, position));
+                boolean auto = liveChannels.automatic(pkg);
+                addSettingsMenuRow(rows, popup, auto ? R.string.channels_auto_on : R.string.channels_auto_off, () -> {
+                    liveChannels.setAutomatic(pkg, !auto);
+                    stopChannels(false);
+                    showHero(position, lastDockTop);
+                });
+            }
         }
         if (!channelMode && (feedApps.contains(pkg) || channelApps.contains(pkg))) {
             boolean off = postersOff.contains(pkg);

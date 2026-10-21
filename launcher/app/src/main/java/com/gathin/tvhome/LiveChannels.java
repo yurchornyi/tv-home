@@ -114,13 +114,24 @@ final class LiveChannels {
         prefs().edit().putString("use_" + pkg, new JSONObject(use).toString()).apply();
     }
 
+    /** The row sorts itself by use and adds channels opened often (the tile menu's "automatic" switch). */
+    boolean automatic(String pkg) {
+        return prefs().getBoolean("auto_" + pkg, true);
+    }
+
+    void setAutomatic(String pkg, boolean on) {
+        prefs().edit().putBoolean("auto_" + pkg, on).apply();
+    }
+
     /**
-     * What the shelf shows: the chosen channels, the most opened first, then up to three others opened often
-     * enough to earn a place; with nothing chosen, the eight most opened. Empty until a choice or an opening.
+     * What the shelf shows. Automatic: the chosen channels, the most opened first, then up to three others opened
+     * often enough to earn a place; with nothing chosen, the eight most opened. Not automatic: the chosen ones in
+     * the order they were chosen, nothing else. Empty until a choice or an opening.
      */
     List<Channel> row(String pkg) {
-        Map<String, Integer> use = uses(pkg);
         List<Channel> chosen = chosen(pkg);
+        if (!automatic(pkg)) return chosen;
+        Map<String, Integer> use = uses(pkg);
         List<Channel> out = new ArrayList<>(chosen);
         java.util.Comparator<Channel> byUse = (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0));
         Collections.sort(out, byUse);   // stable: equal counts keep the chosen order
