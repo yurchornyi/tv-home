@@ -99,6 +99,9 @@
     <string name="search_film">Фільм · %s</string>
     <string name="search_series">Серіал · %s</string>
     <string name="search_video">Відео · %s</string>
+    <string name="ai_thinking">Думаю</string>
+    <string name="ai_picking">Підбираю</string>
+    <string name="ai_no_picks">Нічого не знайшлося, скажіть інакше</string>
     <string name="continue_row">Продовжити</string>
     <string name="access_now_playing">Дозволити «Зараз грає»</string>
     <string name="access_permissions">Дозволити постери й погоду</string>

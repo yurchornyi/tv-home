@@ -1,3 +1,5 @@
+import { command, picks, about, HttpError } from './ai.js';
+
 // The launcher's TMDB requests go through here (ShelfFeed, config.xml tmdb_proxy), so the TMDB key lives only in
 // this Worker's secret (TMDB_KEY) and never in the APK or on GitHub. Only the few read-only paths the top shelf
 // uses are passed on; answers are cached at Cloudflare's edge for six hours, so every TV asking the same list
@@ -13,10 +15,38 @@ const PASSED = ['language', 'region', 'with_networks', 'with_watch_providers', '
   'sort_by', 'include_image_language', 'page'];
 const TTL = 6 * 60 * 60;
 
+const AI_ROUTES = { '/ai/command': command, '/ai/picks': picks, '/ai/about': about };
+
+/** POST /ai/*: JSON in, JSON out; each TV (by address) gets a few a minute, so a stranger cannot run up the bill. */
+async function ai(request, env, path) {
+  const json = (o, status = 200) => new Response(JSON.stringify(o), {
+    status, headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
+  if (!env.ANTHROPIC_KEY) return json({ error: 'not configured' }, 503);
+  const who = request.headers.get('cf-connecting-ip') || 'unknown';
+  if (env.AI_LIMIT) {
+    const { success } = await env.AI_LIMIT.limit({ key: who });
+    if (!success) return json({ error: 'slow down' }, 429);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'bad json' }, 400);
+  }
+  try {
+    return json(await AI_ROUTES[path](env, body || {}));
+  } catch (e) {
+    if (e instanceof HttpError) return json({ error: e.message }, e.status);
+    return json({ error: 'failed' }, 500);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
-    if (request.method !== 'GET') return new Response('GET only', { status: 405 });
     const url = new URL(request.url);
+    if (request.method === 'POST' && AI_ROUTES[url.pathname]) return ai(request, env, url.pathname);
+    if (request.method !== 'GET') return new Response('GET only', { status: 405 });
     if (!ALLOWED.some((re) => re.test(url.pathname))) return new Response('Not found', { status: 404 });
     if (!env.TMDB_KEY) return new Response('Not configured', { status: 503 });
 

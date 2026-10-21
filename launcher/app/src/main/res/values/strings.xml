@@ -106,6 +106,9 @@
     <string name="search_series">Series · %s</string>
     <string name="search_video">Video · %s</string>
     <!-- The top shelf's row of what was opened last (Recents). -->
+    <string name="ai_thinking">Thinking</string>
+    <string name="ai_picking">Picking for you</string>
+    <string name="ai_no_picks">Nothing came up, try saying it another way</string>
     <string name="continue_row">Continue</string>
     <!-- Sleep timer (SleepTimer, SleepService): the Settings menu rows and the note under the clock. -->
     <string name="access_now_playing">Allow Now Playing</string>

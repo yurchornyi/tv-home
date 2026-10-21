@@ -120,6 +120,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private Drawable heroArtShown;
     /** TMDB backdrops for shelf_feed_apps: the app whose carousel runs, its list and the backdrop shown. */
     private ShelfFeed shelfFeed;
+    /** The AI features through the Worker (AiClient): spoken commands, picks, the shelf poster's two lines. */
+    private AiClient ai;
+    /** A line under the search row: "thinking", why a pick fits, or what the AI could not do. */
+    private TextView searchNote;
+    /** Two lines on the film the shelf shows (AiClient.about), between its title and the Watch pill. */
+    private TextView shelfAbout;
     private final Set<String> feedApps = new HashSet<>();
     /** Apps whose own home-screen channel programs fill the shelf (shelf_channel_apps), read by channelFeed. */
     private final Set<String> channelApps = new HashSet<>();
@@ -465,6 +471,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroFade = findViewById(R.id.heroFade);
         topShelfArt = cfg.topShelfArt;
         shelfTitle = findViewById(R.id.shelfTitle);
+        shelfAbout = findViewById(R.id.shelfAbout);
+        searchNote = findViewById(R.id.searchNote);
         shelfOpen = findViewById(R.id.shelfOpen);
         shelfLive = findViewById(R.id.shelfLive);
         shelfChannelsScroll = findViewById(R.id.shelfChannelsScroll);
@@ -588,6 +596,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         feedApps.addAll(cfg.shelfFeedApps);
         channelApps.addAll(cfg.shelfChannelApps);
         shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY, getString(R.string.tmdb_proxy));
+        ai = new AiClient(this, getString(R.string.tmdb_proxy));
         channelFeed = new ChannelFeed(this);
         if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
         greeting = findViewById(R.id.greeting);
@@ -765,7 +774,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         searchField.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                     || actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
-                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) return focusSearchResult();
+                    || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                if (focusSearchResult()) return true;
+                String typed = searchField.getText().toString().trim();
+                if (!typed.isEmpty() && ai.enabled()) {
+                    runAiCommand(typed);
+                    return true;
+                }
+                return false;
+            }
             return false;
         });
         searchField.setOnKeyListener((v, code, event) -> {
@@ -1153,6 +1170,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         handler.removeCallbacksAndMessages(null);
         if (shelfFeed != null) shelfFeed.close();
+        if (ai != null) ai.close();
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -1868,8 +1886,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         shelfOpen.setY(openTop);
         int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
+        float above = openTop;
+        if (shelfAbout.getVisibility() == View.VISIBLE) {
+            shelfAbout.measure(View.MeasureSpec.makeMeasureSpec(shelfAbout.getMaxWidth(), View.MeasureSpec.AT_MOST), unspecified);
+            above = openTop - 14 * density - shelfAbout.getMeasuredHeight();
+            shelfAbout.setY(above);
+            above += 4 * density;
+        }
         shelfTitle.measure(widthSpec, unspecified);
-        float titleTop = openTop - 14 * density - shelfTitle.getMeasuredHeight();
+        float titleTop = above - 14 * density - shelfTitle.getMeasuredHeight();
         shelfTitle.setY(titleTop);
         shelfLive.measure(unspecified, unspecified);
         shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
@@ -2450,6 +2475,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!searching) return;
         searching = false;
         searchAll = null;
+        aiGen++;
+        showSearchNote(null);
         stopListening(true);
         android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
         if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
@@ -2671,7 +2698,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (done) {
                     stopListening(false);
                     android.util.Log.i("TvHome", "heard: " + words);
-                    if (!focusSearchResult()) {
+                    if (ai.enabled()) {
+                        runAiCommand(words);   // what was meant, not only the names that match
+                    } else if (!focusSearchResult()) {
                         // Nothing matched what was heard: the keyboard, to put it right.
                         if (imm != null) imm.showSoftInput(searchField, 0);
                     }
@@ -2704,6 +2733,244 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         mic.animate().cancel();
         mic.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
         if (!closing) searchField.setHint(R.string.search_hint);
+    }
+
+    // ---- AI: spoken commands and picks -----------------------------------------------------------------
+
+    /** Bumped when search closes or a newer command starts, so a late answer does nothing. */
+    private int aiGen;
+
+    /**
+     * What was said (or typed and found nothing) sent to the AI with what this TV has: the installed apps, the
+     * live channels, the titles on its shelves. Its one action is carried out here; with no answer the plain
+     * search results stay, as without AI.
+     */
+    private void runAiCommand(String words) {
+        int gen = ++aiGen;
+        showSearchNote(getString(R.string.ai_thinking));
+        JSONObjectBuilder b = new JSONObjectBuilder();
+        Map<String, String> labels = installedLabels();
+        for (Map.Entry<String, String> e : labels.entrySet()) b.add("apps", "pkg", e.getKey(), "label", e.getValue());
+        for (String pkg : liveChannelPackages()) {
+            if (!labels.containsKey(pkg)) continue;
+            for (LiveChannels.Channel c : liveChannels.all(pkg)) b.add("channels", "id", c.id, "name", c.name, "app", pkg);
+        }
+        for (Map.Entry<String, List<ShelfFeed.Item>> e : shelfTitles(labels).entrySet()) {
+            for (ShelfFeed.Item item : e.getValue()) b.addTitle(item.title, e.getKey(), item.live);
+        }
+        ai.command(b.done(words), a -> {
+            if (gen != aiGen || !searching) return;
+            showSearchNote(null);
+            if (a == null || !doAiAction(a)) {
+                if (!focusSearchResult()) {
+                    android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+                    if (imm != null) imm.showSoftInput(searchField, 0);
+                }
+            }
+        });
+    }
+
+    /** Carries out the AI's action; false when it could not, so the plain results stay. */
+    private boolean doAiAction(org.json.JSONObject a) {
+        String action = a.optString("action"), app = a.optString("app"), query = a.optString("query").trim();
+        android.util.Log.i("TvHome", "ai: " + action + " " + app + " " + query + " " + a.optString("title"));
+        switch (action) {
+            case "open_channel":
+                for (LiveChannels.Channel c : liveChannels.all(app)) {
+                    if (c.id.equals(a.optString("channel_id"))) {
+                        closeSearch(false);
+                        openChannel(app, c);
+                        return true;
+                    }
+                }
+                return false;
+            case "open_title": {
+                List<ShelfFeed.Item> items = shelfTitles(installedLabels()).get(app);
+                if (items == null) return false;
+                for (ShelfFeed.Item item : items) {
+                    if (item.title.equals(a.optString("title"))) {
+                        closeSearch(false);
+                        openItem(app, item);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            case "youtube_search": {
+                String pkg = installed(app) ? app : installed("org.smarttube.stable") ? "org.smarttube.stable"
+                        : "com.google.android.youtube.tv";
+                if (!installed(pkg) || query.isEmpty()) return false;
+                closeSearch(false);
+                openUri("https://www.youtube.com/results?search_query=" + Uri.encode(query), pkg);
+                return true;
+            }
+            case "spotify": {
+                String pkg = installed(app) ? app : "com.spotify.tv.android";
+                if (!installed(pkg)) return false;
+                closeSearch(false);
+                if (query.isEmpty()) launchApp(pkg);
+                else openUri("spotify:search:" + Uri.encode(query), pkg);
+                return true;
+            }
+            case "picks":
+                showPicks(query.isEmpty() ? searchField.getText().toString() : query);
+                return true;
+            case "open_app":
+                if (!installed(app)) return false;
+                closeSearch(false);
+                recents.app(app, installedLabels().getOrDefault(app, app));
+                launchApp(app);
+                return true;
+            case "search":
+                if (query.isEmpty()) return false;
+                searchField.setText(query);
+                searchField.setSelection(query.length());
+                return focusSearchResult();
+            case "none":
+                showSearchNote(a.optString("say"));
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Films or series for a mood or company (AiClient.picks), as backdrop tiles in the search row; the focused one
+     * says why in the line under the row, OK opens it (HDRezka finds it by name, else Netflix).
+     */
+    private void showPicks(String request) {
+        int gen = ++aiGen;
+        showSearchNote(getString(R.string.ai_picking));
+        shelfChannels.removeAllViews();
+        ai.picks(request, a -> {
+            if (gen != aiGen || !searching) return;
+            org.json.JSONArray picks = a == null ? null : a.optJSONArray("picks");
+            if (picks == null || picks.length() == 0) {
+                showSearchNote(getString(R.string.ai_no_picks));
+                return;
+            }
+            showSearchNote(null);
+            shelfChannels.removeAllViews();
+            shelfChannelsScroll.scrollTo(0, 0);
+            for (int i = 0; i < picks.length(); i++) {
+                org.json.JSONObject p = picks.optJSONObject(i);
+                if (p == null) continue;
+                ShelfFeed.Item item = new ShelfFeed.Item(p.optString("title"), p.optString("backdrop"), null,
+                        p.optString("type"), p.optLong("id"));
+                String why = p.optString("why");
+                View tile = searchTile(new SearchIndex.Result(item.title, "", null, item.backdrop, true, 2, () -> openPick(item)));
+                View.OnFocusChangeListener was = tile.getOnFocusChangeListener();
+                tile.setOnFocusChangeListener((v, focused) -> {
+                    if (was != null) was.onFocusChange(v, focused);
+                    if (focused) showSearchNote(why);
+                });
+                if (animations && !reducedMotion) {
+                    tile.setAlpha(0f);
+                    tile.setTranslationY(14 * density);
+                    tile.animate().alpha(1f).translationY(0f).setDuration(320).setStartDelay(i * 45L).setInterpolator(EASE).start();
+                }
+                shelfChannels.addView(tile);
+            }
+            channelsPkg = "\u0000search";
+            shelfChannelsScroll.setVisibility(View.VISIBLE);
+            shelfChannelsScroll.setAlpha(1f);
+            shelfChannelsScroll.post(() -> {
+                View bar = (View) findViewById(R.id.topButtons).getParent();
+                shelfChannelsScroll.setY(bar.getBottom() + ((View) bar.getParent()).getTop() + 16 * density);
+                focusSearchResult();
+            });
+        });
+    }
+
+    private void openPick(ShelfFeed.Item item) {
+        if (installed("rezkatv.web.app")) openItem("rezkatv.web.app", item);
+        else if (installed("com.netflix.ninja")) openItem("com.netflix.ninja", item);
+        else if (installed("org.smarttube.stable")) openUri("https://www.youtube.com/results?search_query="
+                + Uri.encode(item.title + " trailer"), "org.smarttube.stable");
+    }
+
+    /** The line under the search row: a hint while the AI works, why a pick fits; null hides it. */
+    private void showSearchNote(String text) {
+        if (text == null || text.isEmpty()) {
+            searchNote.animate().cancel();
+            searchNote.setVisibility(View.GONE);
+            return;
+        }
+        searchNote.setText(text);
+        if (searchNote.getVisibility() != View.VISIBLE) {
+            searchNote.setVisibility(View.VISIBLE);
+            searchNote.setAlpha(0f);
+            searchNote.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
+        }
+        searchNote.post(() -> {
+            View bar = (View) findViewById(R.id.topButtons).getParent();
+            float rowTop = bar.getBottom() + ((View) bar.getParent()).getTop() + 16 * density;
+            float rowBottom = rowTop + (shelfChannelsScroll.getVisibility() == View.VISIBLE ? shelfChannelsScroll.getHeight() : 0);
+            searchNote.setY(rowBottom + 10 * density);
+        });
+    }
+
+    /** Package to label of every app with a launcher entry. */
+    private Map<String, String> installedLabels() {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        android.content.pm.PackageManager pm = getPackageManager();
+        for (String category : new String[]{Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            for (android.content.pm.ResolveInfo info : pm.queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(category), 0)) {
+                if (info.activityInfo == null || !info.activityInfo.exported) continue;
+                String pkg = info.activityInfo.packageName;
+                if (pkg.equals(getPackageName()) || out.containsKey(pkg)) continue;
+                try {
+                    out.put(pkg, Cards.cleanLabel(String.valueOf(info.loadLabel(pm)), pkg));
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
+        return out;
+    }
+
+    /** What the shelves hold now, per installed app: TMDB lists and the apps' own channel programs. */
+    private Map<String, List<ShelfFeed.Item>> shelfTitles(Map<String, String> labels) {
+        Map<String, List<ShelfFeed.Item>> out = new java.util.LinkedHashMap<>();
+        for (String pkg : channelApps) if (labels.containsKey(pkg)) out.put(pkg, new ArrayList<>(channelFeed.cached(pkg)));
+        for (String pkg : feedApps) if (labels.containsKey(pkg)) out.put(pkg, new ArrayList<>(shelfFeed.cached(pkg)));
+        return out;
+    }
+
+    /** The command request's JSON, built without a checked exception at every step. */
+    private static final class JSONObjectBuilder {
+        private final org.json.JSONObject o = new org.json.JSONObject();
+        private int titles;
+
+        void add(String list, String... kv) {
+            try {
+                org.json.JSONObject e = new org.json.JSONObject();
+                for (int i = 0; i + 1 < kv.length; i += 2) e.put(kv[i], kv[i + 1]);
+                org.json.JSONArray a = o.optJSONArray(list);
+                if (a == null) o.put(list, a = new org.json.JSONArray());
+                a.put(e);
+            } catch (org.json.JSONException ignored) {
+            }
+        }
+
+        void addTitle(String title, String app, boolean live) {
+            if (titles++ >= 80) return;
+            add("titles", "title", title, "app", app);
+            if (live) {
+                org.json.JSONArray a = o.optJSONArray("titles");
+                try {
+                    a.getJSONObject(a.length() - 1).put("live", true);
+                } catch (org.json.JSONException ignored) {
+                }
+            }
+        }
+
+        org.json.JSONObject done(String text) {
+            try {
+                o.put("text", text).put("lang", AiClient.language());
+            } catch (org.json.JSONException ignored) {
+            }
+            return o;
+        }
     }
 
     /** The TV's own voice screen, for a TV without a recognition service the launcher can use directly. */
@@ -2783,6 +3050,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
                 shelfTitle.setText(item.title);
+                showAbout(item, gen);
                 shelfOpen.setText(item == continueItem ? R.string.continue_row : R.string.watch_now);
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
@@ -2837,9 +3105,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
     }
 
+    /**
+     * Two lines on the film the shelf shows, what it is about and whether it is worth it (AiClient.about), under
+     * its title; only for TMDB titles (not an app's own videos), faded in once they arrive.
+     */
+    private void showAbout(ShelfFeed.Item item, int gen) {
+        shelfAbout.animate().cancel();
+        shelfAbout.setAlpha(0f);
+        shelfAbout.setVisibility(View.GONE);
+        positionShelfTitle();
+        if (item.type.isEmpty() || item.id <= 0 || !ai.enabled()) return;
+        ai.about(item.type, item.id, a -> {
+            if (a == null || gen != feedGen || !item.title.contentEquals(shelfTitle.getText())) return;
+            String about = a.optString("about").trim(), verdict = a.optString("verdict").trim();
+            if (about.isEmpty()) return;
+            shelfAbout.setText(verdict.isEmpty() ? about : about + "\n" + verdict);
+            shelfAbout.setVisibility(View.VISIBLE);
+            positionShelfTitle();
+            if (animations && !reducedMotion) shelfAbout.animate().alpha(1f).setDuration(400).setInterpolator(EASE).start();
+            else shelfAbout.setAlpha(1f);
+        });
+    }
+
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
         feedGen++;
+        shelfAbout.animate().cancel();
+        shelfAbout.setAlpha(0f);
+        shelfAbout.setVisibility(View.GONE);
         if (feedPkg == null) return;
         feedPkg = null;
         feedItems = null;
