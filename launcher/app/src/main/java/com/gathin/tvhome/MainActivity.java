@@ -951,6 +951,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             handler.post(() -> { if (hasWindowFocus() && !isFinishing()) openSearch(q); });
         }
         nowPlaying.start();
+        nowPlaying.stopPausedVideo();   // a film left paused must not wake on the headphones' Play
         AudioDevices.addListener(audioListener);
         AudioDevices.refresh(this);
         updateAudioButton();
