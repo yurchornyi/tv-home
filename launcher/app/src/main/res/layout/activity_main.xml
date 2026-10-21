@@ -43,17 +43,37 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="70dp"
-        android:maxWidth="1100dp"
+        android:maxWidth="500dp"
         android:alpha="0"
         android:textColor="#FFFFFFFF"
-        android:textSize="38sp"
-        android:fontFamily="@font/outfit_regular"
+        android:textSize="30sp"
+        android:fontFamily="@font/outfit_medium"
         android:includeFontPadding="false"
-        android:singleLine="true"
+        android:maxLines="2"
+        android:lineSpacingMultiplier="1.08"
         android:ellipsize="end"
         android:shadowColor="#99000000"
         android:shadowRadius="12"
         android:shadowDy="2" />
+
+    <!-- Opens what the shelf shows (ShelfFeed/ChannelFeed item): Up from the dock lands here, Left/Right turn the
+         pages, OK opens. Positioned under the title in code; hidden while nothing is shown. -->
+    <TextView
+        android:id="@+id/shelfOpen"
+        style="@style/TopButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="70dp"
+        android:alpha="0"
+        android:visibility="gone"
+        android:focusable="true"
+        android:textSize="16sp"
+        android:minHeight="42dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="22dp"
+        android:drawablePadding="10dp"
+        android:text="@string/watch_now"
+        android:drawableStart="@drawable/ic_np_play" />
 
     <!-- Now Playing card on the top shelf (NowPlaying): cover, title, artist and app, progress. Positioned above the
          dock in code; shown instead of the posters while something plays. -->

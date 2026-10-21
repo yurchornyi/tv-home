@@ -120,6 +120,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** TMDB backdrops for shelf_feed_apps: the app whose carousel runs, its list and the backdrop shown. */
     private ShelfFeed shelfFeed;
     private final Set<String> feedApps = new HashSet<>();
+    /** Apps whose own home-screen channel programs fill the shelf (shelf_channel_apps), read by channelFeed. */
+    private final Set<String> channelApps = new HashSet<>();
+    private ChannelFeed channelFeed;
     private String feedPkg;
     /** Android's package change counter at the last tile rebuild, and when that was (appsMayHaveChanged). */
     private int packageSeq;
@@ -130,6 +133,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private int feedIndex;
     private float lastDockTop;
     private TextView shelfTitle;
+    /** The Watch pill under the shelf title: opens the film or video shown (openFeedItem). */
+    private TextView shelfOpen;
     /** Now Playing card (NowPlaying), shown on the shelf instead of posters while something plays. */
     private NowPlaying nowPlaying;
     private View npCard;
@@ -364,6 +369,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroFade = findViewById(R.id.heroFade);
         topShelfArt = cfg.topShelfArt;
         shelfTitle = findViewById(R.id.shelfTitle);
+        shelfOpen = findViewById(R.id.shelfOpen);
+        shelfOpen.setOnClickListener(v -> openFeedItem());
+        shelfOpen.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_BACK) {
+                focusTile(lastFocused % COLUMNS);
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                firstPill().requestFocus();
+                return true;
+            }
+            // Left and Right turn the pages while the carousel waits.
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                if (feedItems != null && !feedItems.isEmpty()) {
+                    int n = feedItems.size();
+                    feedIndex = ((feedIndex + (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : 1)) % n + n) % n;
+                    showFeedItem();
+                }
+                return true;
+            }
+            return false;
+        });
+        shelfOpen.setOnFocusChangeListener((v, focused) -> {
+            // Choosing: the carousel stands still, the dock's highlight steps aside; it moves on again after.
+            if (focused) {
+                hideGlass();
+                handler.removeCallbacks(feedTick);
+            } else if (feedPkg != null) {
+                handler.removeCallbacks(feedTick);
+                handler.postDelayed(feedTick, 8000);
+            }
+        });
         npCard = findViewById(R.id.nowPlaying);
         npCover = findViewById(R.id.npCover);
         npCover.setClipToOutline(true);
@@ -394,7 +432,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         for (View b : npButtons) b.setOnKeyListener(npKeys);
         feedApps.addAll(cfg.shelfFeedApps);
+        channelApps.addAll(cfg.shelfChannelApps);
         shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY);
+        channelFeed = new ChannelFeed(this);
         if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
         greeting = findViewById(R.id.greeting);
         greetingColor = greeting.getCurrentTextColor();
@@ -1493,7 +1533,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     private boolean showFeed(int position) {
         String pkg = adapter.pkgAt(position);
-        if (!topShelfArt || !shelfFeed.enabled() || !feedApps.contains(pkg)) {
+        boolean fromChannels = channelApps.contains(pkg) && channelFeed.enabled();
+        if (!topShelfArt || !(fromChannels || (shelfFeed.enabled() && feedApps.contains(pkg)))) {
             stopFeed();
             return false;
         }
@@ -1506,7 +1547,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // first backdrop dissolves in over it.
         if (heroArtShown == null || fromOtherFeed) showShelfArt(position);
         int gen = feedGen;
-        shelfFeed.items(pkg, items -> {
+        ShelfFeed.ItemsListener onItems = items -> {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
             boolean first = feedItems == null;
             feedItems = items;
@@ -1514,12 +1555,88 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 feedIndex = 0;
                 showFeedItem();
             }
-        });
+        };
+        if (fromChannels) channelFeed.items(pkg, onItems);
+        else shelfFeed.items(pkg, onItems);
         return true;
     }
 
+    /**
+     * Bottom-left over the dock: the Watch pill just above the dock, the title above it; a long title wraps to a
+     * second line and grows upwards.
+     */
     private void positionShelfTitle() {
-        shelfTitle.setY(lastDockTop - 34 * density - shelfTitle.getHeight());
+        int unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+        shelfOpen.measure(unspecified, unspecified);
+        float openTop = lastDockTop - 26 * density - shelfOpen.getMeasuredHeight();
+        shelfOpen.setY(openTop);
+        int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
+        shelfTitle.measure(widthSpec, unspecified);
+        shelfTitle.setY(openTop - 14 * density - shelfTitle.getMeasuredHeight());
+    }
+
+    /** Opens what the shelf shows: the video itself, the film's page where the app has one, else the app. */
+    private void openFeedItem() {
+        if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return;
+        ShelfFeed.Item item = feedItems.get(feedIndex % feedItems.size());
+        String pkg = feedPkg;
+        if (item.open != null) {
+            try {
+                Intent i = item.open.startsWith("intent:") ? Intent.parseUri(item.open, Intent.URI_INTENT_SCHEME)
+                        : new Intent(Intent.ACTION_VIEW, Uri.parse(item.open));
+                if (i.getPackage() == null && i.getComponent() == null) i.setPackage(pkg);
+                open(i);
+            } catch (java.net.URISyntaxException e) {
+                launchApp(pkg);
+            }
+            return;
+        }
+        if ("com.netflix.ninja".equals(pkg) && item.id > 0 && shelfFeed.enabled()) {
+            shelfOpen.setAlpha(0.5f);
+            shelfFeed.netflixId(item.type, item.id, id -> {
+                shelfOpen.setAlpha(1f);
+                if (id.isEmpty()) launchApp(pkg);
+                else open(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.netflix.com/title/" + id)).setPackage(pkg));
+            });
+            return;
+        }
+        if ("rezkatv.web.app".equals(pkg)) {
+            // HDRezka opens its search for the title; with one match it goes straight to the film.
+            open(new Intent(Intent.ACTION_VIEW, Uri.parse("https://hdrezka.ag/search/?do=search&subaction=search&q="
+                    + Uri.encode(item.title))).setPackage(pkg));
+            return;
+        }
+        launchApp(pkg);
+    }
+
+    private void launchApp(String pkg) {
+        Intent i = getPackageManager().getLeanbackLaunchIntentForPackage(pkg);
+        if (i == null) i = getPackageManager().getLaunchIntentForPackage(pkg);
+        if (i != null) open(i);
+    }
+
+    /** The Watch pill in or out with the shelf's title. */
+    private void showShelfOpen(boolean show, boolean animate) {
+        if (show) {
+            if (shelfOpen.getVisibility() != View.VISIBLE) {
+                shelfOpen.setVisibility(View.VISIBLE);
+                shelfOpen.setAlpha(0f);
+            }
+            if (shelfOpen.getAlpha() < 1f) {
+                shelfOpen.animate().cancel();
+                if (animate) shelfOpen.animate().alpha(1f).setDuration(400).start();
+                else shelfOpen.setAlpha(1f);
+            }
+        } else if (shelfOpen.getVisibility() == View.VISIBLE) {
+            if (shelfOpen.hasFocus()) focusTile(lastFocused % COLUMNS);
+            shelfOpen.animate().cancel();
+            if (animate) {
+                shelfOpen.animate().alpha(0f).setDuration(160).withEndAction(() -> shelfOpen.setVisibility(View.GONE)).start();
+            } else {
+                shelfOpen.setAlpha(0f);
+                shelfOpen.setVisibility(View.GONE);
+            }
+        }
     }
 
     /** Shows feedItems[feedIndex], crossfading picture and title, then schedules the next one. */
@@ -1547,6 +1664,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 positionShelfTitle();
                 if (animate) shelfTitle.animate().alpha(1f).setDuration(400).start();
                 else shelfTitle.setAlpha(1f);
+                showShelfOpen(true, animate);
             };
             // Whatever is on the shelf now (the app's softened banner, or the previous backdrop, even one still
             // dissolving in) is the picture the new one dissolves from.
@@ -1596,6 +1714,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         feedItems = null;
         shelfTitle.animate().cancel();
         shelfTitle.animate().alpha(0f).setDuration(160).start();
+        showShelfOpen(false, true);
     }
 
     /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
@@ -1629,6 +1748,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopFeed();
         shelfTitle.animate().cancel();
         shelfTitle.setAlpha(0f);
+        showShelfOpen(false, false);
         npTitle.setText(t.title);
         npPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         npArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
@@ -1928,6 +2048,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 // Dock row: the Now Playing buttons when the card is up, otherwise the top bar.
                 if (npCard.getVisibility() == View.VISIBLE && npCard.getAlpha() > 0f) {
                     npPlay.requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                    return true;
+                }
+                // A poster on the shelf: its Watch pill.
+                if (shelfOpen.getVisibility() == View.VISIBLE && shelfOpen.getAlpha() > 0f && feedPkg != null) {
+                    shelfOpen.requestFocus();
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
                 }

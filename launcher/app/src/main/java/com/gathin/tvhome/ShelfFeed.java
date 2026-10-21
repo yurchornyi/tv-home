@@ -42,12 +42,22 @@ final class ShelfFeed {
     static final class Item {
         final String title;
         final String backdrop;
+        /** A URI that opens it in its app (a program's intent_uri), or null. */
+        final String open;
+        /** TMDB kind ("movie" or "tv") and id, for a lookup of where it plays; "" and 0 for a channel program. */
+        final String type;
+        final long id;
 
-        Item(String title, String backdrop) {
+        Item(String title, String backdrop, String open, String type, long id) {
             this.title = title;
             this.backdrop = backdrop;
+            this.open = open;
+            this.type = type == null ? "" : type;
+            this.id = id;
         }
     }
+
+    interface IdListener { void onId(String id); }
 
     interface ItemsListener { void onItems(List<Item> items); }
     /** bitmap is null when the backdrop could not be loaded. */
@@ -154,9 +164,11 @@ final class ShelfFeed {
         io.execute(() -> {
             Bitmap b = null;
             try {
-                File f = new File(cacheDir(), backdrop.replaceAll("[^A-Za-z0-9._-]", "_"));
+                String name = backdrop.replaceAll("[^A-Za-z0-9._-]", "_");
+                if (name.length() > 120) name = name.substring(name.length() - 120);   // a URL is long, the end is the file
+                File f = new File(cacheDir(), name);
                 if (!f.isFile()) {
-                    byte[] data = get(IMAGES + backdrop, false);
+                    byte[] data = backdrop.startsWith("http") ? getPicture(backdrop) : get(IMAGES + backdrop, false);
                     try (FileOutputStream out = new FileOutputStream(f)) {
                         out.write(data);
                     }
@@ -206,8 +218,9 @@ final class ShelfFeed {
             if (!type.equals("movie") && !type.equals("tv")) continue;
             String backdrop = textless(type, r.optLong("id"));
             if (backdrop.isEmpty()) continue;
-            into.add(new Item(title, backdrop));
-            raw.put(new JSONObject().put("t", title).put("b", backdrop));
+            long id = r.optLong("id");
+            into.add(new Item(title, backdrop, null, type, id));
+            raw.put(new JSONObject().put("t", title).put("b", backdrop).put("ty", type).put("id", id));
         }
     }
 
@@ -229,12 +242,62 @@ final class ShelfFeed {
             JSONArray a = new JSONArray(json);
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
-                out.add(new Item(o.getString("t"), o.getString("b")));
+                out.add(new Item(o.getString("t"), o.getString("b"), null, o.optString("ty", ""), o.optLong("id")));
             }
             Collections.shuffle(out);
         } catch (Exception ignored) {
         }
         return out;
+    }
+
+    /**
+     * The Netflix title id of a TMDB film or series, through its Wikidata entry (Netflix ID, P1874): "" when it
+     * has none there. Cached for good once known; the listener hears it on the main thread.
+     */
+    void netflixId(String type, long id, IdListener listener) {
+        String key = "nf_" + type + "_" + id;
+        String known = prefs().getString(key, null);
+        if (known != null) {
+            listener.onId(known);
+            return;
+        }
+        if (io.isShutdown()) return;
+        io.execute(() -> {
+            String found = "";
+            try {
+                JSONObject ext = new JSONObject(new String(get(API + type + "/" + id + "/external_ids?x=1", true),
+                        StandardCharsets.UTF_8));
+                String q = ext.optString("wikidata_id", "");
+                if (!q.isEmpty()) {
+                    String url = "https://www.wikidata.org/w/api.php?action=wbgetclaims&property=P1874&format=json&entity=" + q;
+                    JSONObject claims = new JSONObject(new String(get(url, false), StandardCharsets.UTF_8)).getJSONObject("claims");
+                    JSONArray p = claims.optJSONArray("P1874");
+                    if (p != null && p.length() > 0) {
+                        found = p.getJSONObject(0).getJSONObject("mainsnak").getJSONObject("datavalue").optString("value", "");
+                    }
+                }
+                prefs().edit().putString(key, found).apply();
+            } catch (Exception e) {
+                Log.w(TAG, "netflix id failed: " + e);
+            }
+            String got = found;
+            main.post(() -> listener.onId(got));
+        });
+    }
+
+    /**
+     * A picture by its own URL (ChannelFeed posters). A YouTube thumbnail comes as a small letterboxed frame; its
+     * full-size one is at maxresdefault, which some videos lack, then the given one will do.
+     */
+    private byte[] getPicture(String url) throws Exception {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(https?://i\\.ytimg\\.com/vi(?:_webp)?/[^/]+/)[a-z]+\\.(jpg|webp)").matcher(url);
+        if (m.matches()) {
+            try {
+                return get(m.group(1) + "maxresdefault." + m.group(2), false);
+            } catch (Exception ignored) {
+            }
+        }
+        return get(url, false);
     }
 
     /** A v4 read token (long JWT) goes in the Authorization header, a v3 key in the query. */
@@ -274,6 +337,6 @@ final class ShelfFeed {
     }
 
     private SharedPreferences prefs() {
-        return ctx.getSharedPreferences("shelf_feed_v3", Context.MODE_PRIVATE);
+        return ctx.getSharedPreferences("shelf_feed_v4", Context.MODE_PRIVATE);
     }
 }

@@ -53,6 +53,8 @@ final class Config {
     final List<String> phoneApps;
     /** Dock apps with TMDB backdrops in the top shelf (config.xml shelf_feed_apps). */
     final List<String> shelfFeedApps;
+    /** Dock apps whose own home-screen channel programs fill the top shelf (config.xml shelf_channel_apps). */
+    final List<String> shelfChannelApps;
     /** Light banners redrawn on a dark background (config.xml dark_tiles). */
     final boolean darkTiles;
     /** Apps whose banner is never darkened (config.xml tile_colors_kept). */
@@ -123,7 +125,7 @@ final class Config {
                    Festival festival, int[] inputKeycodes, List<String> appKeys, List<String> gridApps,
                    boolean topShelfArt, boolean showClock, boolean showInputs, boolean showWifi,
                    boolean topClock, boolean weather, boolean profileButton, List<String> phoneApps,
-                   boolean wifiIconOnly, List<String> shelfFeedApps,
+                   boolean wifiIconOnly, List<String> shelfFeedApps, List<String> shelfChannelApps,
                    boolean darkTiles, List<String> tileColorsKept, List<String> tileDeepColors,
                    List<String> iconTiles) {
         this.inputKeycodes = inputKeycodes;
@@ -142,6 +144,7 @@ final class Config {
         this.phoneApps = Collections.unmodifiableList(phoneApps);
         this.wifiIconOnly = wifiIconOnly;
         this.shelfFeedApps = Collections.unmodifiableList(shelfFeedApps);
+        this.shelfChannelApps = Collections.unmodifiableList(shelfChannelApps);
         this.darkTiles = darkTiles;
         this.tileColorsKept = Collections.unmodifiableList(tileColorsKept);
         this.tileDeepColors = Collections.unmodifiableList(tileDeepColors);
@@ -200,6 +203,7 @@ final class Config {
         boolean profileButton = res.getBoolean(R.bool.profile_button);
         List<String> phoneApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.phone_apps)));
         List<String> shelfFeedApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.shelf_feed_apps)));
+        List<String> shelfChannelApps = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.shelf_channel_apps)));
         boolean darkTiles = res.getBoolean(R.bool.dark_tiles);
         List<String> tileColorsKept = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.tile_colors_kept)));
         List<String> tileDeepColors = new ArrayList<>(Arrays.asList(res.getStringArray(R.array.tile_deep_colors)));
@@ -251,6 +255,7 @@ final class Config {
             profileButton = bool(json, "profile_button", profileButton);
             phoneApps = stringList(json, "phone_apps", phoneApps);
             shelfFeedApps = stringList(json, "shelf_feed_apps", shelfFeedApps);
+            shelfChannelApps = stringList(json, "shelf_channel_apps", shelfChannelApps);
             darkTiles = bool(json, "dark_tiles", darkTiles);
             tileColorsKept = stringList(json, "tile_colors_kept", tileColorsKept);
             tileDeepColors = stringList(json, "tile_deep_colors", tileDeepColors);
@@ -312,7 +317,7 @@ final class Config {
                 Math.max(0, Math.min(100, skyIntensity)), settingsKeycodes, settingsKeyPanel, wallpaperEnabled, wallpaper,
                 wallpapers, rotationMinutes, wallpaperDim, applied,
                 festival, inputKeycodes, appKeys, gridApps, topShelfArt, showClock,
-                showInputs, showWifi, topClock, weather, profileButton, phoneApps, wifiIconOnly, shelfFeedApps, darkTiles, tileColorsKept, tileDeepColors, iconTiles);
+                showInputs, showWifi, topClock, weather, profileButton, phoneApps, wifiIconOnly, shelfFeedApps, shelfChannelApps, darkTiles, tileColorsKept, tileDeepColors, iconTiles);
     }
 
     private static void syncThemeChoices(SharedPreferences choices, File dir, File config) {

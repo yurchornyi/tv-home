@@ -75,6 +75,7 @@
     <string name="reorder_hint">Стрілки переміщують програму, OK ставить її сюди, «Назад» повертає на старе місце.</string>
     <string name="reorder_not_saved">Не вдалося зберегти новий порядок</string>
     <string name="app_library">Усі програми</string>
+    <string name="watch_now">Дивитися</string>
     <string name="library_empty">Немає програм для запуску</string>
     <string name="library_on_home">На головному</string>
     <string name="library_add_home">Додати на головний</string>
