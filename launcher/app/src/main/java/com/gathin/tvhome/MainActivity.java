@@ -155,6 +155,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** The poster put first on an app's shelf: the film or video opened last there (Recents); its pill says Continue. */
     private ShelfFeed.Item continueItem;
     private static final int VOICE_REQUEST = 43;
+    private static final int RECORD_AUDIO_REQUEST = 44;
+    /** Spoken search in the field itself (VoiceSearch); listenOnOpen starts it once the field has unfolded. */
+    private VoiceSearch voice;
+    private boolean listenOnOpen;
     /** The full-screen Now Playing (ambient screen), opened from the card's expand button. */
     private View ambientScreen;
     private AmbientView ambientBg;
@@ -166,6 +170,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View ambientControls;
     private boolean ambientControlsShown = true;
     private final Runnable ambientRest = this::restAmbientControls;
+    private final Runnable ambientGone = this::hideAmbientIfSilent;
     /** The cover's slow turn in space while the full-screen player shows. */
     private android.animation.ValueAnimator ambientTurn;
     private Bitmap ambientCoverShown;
@@ -189,13 +194,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (ambientScreen.getVisibility() == View.VISIBLE) {
                 NowPlaying.Track a = nowPlaying.track();
                 ambientProgress.setVisibility(a != null && a.duration > 0 ? View.VISIBLE : View.INVISIBLE);
-                if (a != null && a.duration > 0) ambientProgress.setProgress((int) Math.min(1000, nowPlaying.position() * 1000 / a.duration));
+                TextView elapsed = findViewById(R.id.ambientElapsed), remaining = findViewById(R.id.ambientRemaining);
+                if (a != null && a.duration > 0) {
+                    long pos = Math.max(0, Math.min(a.duration, nowPlaying.position()));
+                    ambientProgress.setProgress((int) Math.min(1000, pos * 1000 / a.duration));
+                    elapsed.setText(clock(pos));
+                    remaining.setText("-" + clock(a.duration - pos));
+                }
+                elapsed.setVisibility(a != null && a.duration > 0 ? View.VISIBLE : View.INVISIBLE);
+                remaining.setVisibility(elapsed.getVisibility());
             }
             // Paused, the bar stands still: no need to ask the player every second.
             NowPlaying.Track t = nowPlaying.track();
             if (t != null && t.playing) handler.postDelayed(this, 1000);
         }
     };
+    /** m:ss, or h:mm:ss past an hour. */
+    private static String clock(long ms) {
+        long s = ms / 1000;
+        return s >= 3600 ? String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, (s / 60) % 60, s % 60)
+                : String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60);
+    }
+
     private final Runnable feedTick = new Runnable() {
         @Override public void run() {
             if (feedItems == null || feedItems.isEmpty()) return;
@@ -418,6 +438,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfChannels = findViewById(R.id.shelfChannels);
         liveChannels = new LiveChannels(this);
         recents = new Recents(this);
+        voice = new VoiceSearch(this);
         ambientScreen = findViewById(R.id.ambientScreen);
         ambientBg = findViewById(R.id.ambientBg);
         ambientCover = findViewById(R.id.ambientCover);
@@ -434,7 +455,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (t != null) launchApp(t.pkg);
             }
         });
-        findViewById(R.id.ambientClose).setOnClickListener(v -> hideAmbient());
+        findViewById(R.id.ambientClose).setOnClickListener(v -> {
+            hideAmbient();
+            nowPlaying.close();
+        });
         ambientControls = findViewById(R.id.ambientControls);
         View.OnKeyListener ambientKeys = (v, keyCode, event) -> {
             // The row's ends: Left on Previous and Right on Close stay put; Up and Down stay on the row.
@@ -687,7 +711,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSearch = findViewById(R.id.btnSearch);
         searchField = findViewById(R.id.searchField);
         View searchMic = findViewById(R.id.searchMic);
-        searchMic.setOnClickListener(v -> startVoice());
+        searchMic.setOnClickListener(v -> {
+            if (voice.listening()) stopListening(false);
+            else startVoice();
+        });
         searchMic.setOnKeyListener((v, code, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (code == KeyEvent.KEYCODE_DPAD_LEFT) { searchField.requestFocus(); return true; }
@@ -695,7 +722,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) { closeSearch(true); return true; }
             return code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_RIGHT;
         });
-        btnSearch.setOnClickListener(v -> openSearch(""));
+        // OK on Search starts with the microphone; a word not heard (or Back) leaves the field open for typing.
+        btnSearch.setOnClickListener(v -> startVoice());
         searchField.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence c, int a, int b, int n) { }
             @Override public void onTextChanged(CharSequence c, int a, int b, int n) { }
@@ -725,7 +753,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         });
         btnSearch.setOnLongClickListener(v -> {
-            startVoice();
+            openSearch("");   // straight to typing
             return true;
         });
         showInputs = cfg.showInputs;
@@ -768,7 +796,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
@@ -1056,6 +1084,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
         closeSearch(false);
+        voice.stop();
     }
 
     @Override
@@ -1823,38 +1852,51 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientBg.start();
         ambientPlay.requestFocus();
         wakeAmbientControls();
+        holdScreen(true);
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (animations && !reducedMotion) {
-            // The cover floats slowly, as if hung in the light: a long, gentle sway, a slight turn, a breath in size.
-            if (ambientTurn != null) ambientTurn.cancel();
-            ambientTurn = android.animation.ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
-            ambientTurn.setDuration(22000);
-            ambientTurn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
-            ambientTurn.setInterpolator(new android.view.animation.LinearInterpolator());
-            ambientTurn.addUpdateListener(a -> {
-                float p = (float) a.getAnimatedValue();
-                ambientCover.setRotationY(5f * (float) Math.sin(p));
-                ambientCover.setRotationX(2.5f * (float) Math.sin(p * 0.5f + 0.9f));
-                ambientCover.setTranslationY(7 * density * (float) Math.sin(p * 0.75f + 0.4f));
-                float breath = 1f + 0.012f * (float) Math.sin(p * 1.25f);
-                ambientCover.setScaleX(breath);
-                ambientCover.setScaleY(breath);
-            });
-            ambientTurn.start();
-        }
+        if (ambientTurn != null) ambientTurn.cancel();
+        ambientCover.animate().cancel();
+        ambientCover.setRotationX(0f);
+        ambientCover.setRotationY(0f);
+        ambientCover.setTranslationY(0f);
         ambientScreen.animate().cancel();
         if (animations && !reducedMotion) {
+            // In: the screen dissolves in while the cover grows from a little smaller, as a sheet opens on Apple TV;
+            // then the cover floats slowly, as if hung in the light: a long gentle sway, a slight turn, a breath in
+            // size, each starting from rest so nothing jumps when the float takes over.
             ambientScreen.setAlpha(0f);
-            ambientCover.setScaleX(0.9f);
-            ambientCover.setScaleY(0.9f);
-            ambientScreen.animate().alpha(1f).setDuration(700).start();
+            ambientCover.setScaleX(0.88f);
+            ambientCover.setScaleY(0.88f);
+            ambientScreen.animate().alpha(1f).setDuration(600).start();
             ambientCover.animate().scaleX(1f).scaleY(1f).setDuration(900)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2.2f))
+                    .withEndAction(this::startCoverFloat).start();
         } else {
             ambientScreen.setAlpha(1f);
+            ambientCover.setScaleX(1f);
+            ambientCover.setScaleY(1f);
         }
         handler.removeCallbacks(npTick);
         handler.post(npTick);
+    }
+
+    private void startCoverFloat() {
+        if (ambientScreen.getVisibility() != View.VISIBLE || !animations || reducedMotion) return;
+        if (ambientTurn != null) ambientTurn.cancel();
+        ambientTurn = android.animation.ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
+        ambientTurn.setDuration(24000);
+        ambientTurn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+        ambientTurn.setInterpolator(new android.view.animation.LinearInterpolator());
+        ambientTurn.addUpdateListener(a -> {
+            float p = (float) a.getAnimatedValue();
+            ambientCover.setRotationY(5f * (float) Math.sin(p));
+            ambientCover.setRotationX(2.5f * (float) Math.sin(p * 2f));
+            ambientCover.setTranslationY(7 * density * (float) Math.sin(p * 3f));
+            float breath = 1f + 0.012f * (float) Math.sin(p * 4f);
+            ambientCover.setScaleX(breath);
+            ambientCover.setScaleY(breath);
+        });
+        ambientTurn.start();
     }
 
     private void fillAmbient() {
@@ -1863,10 +1905,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientTitle.setText(t.title);
         ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
         ambientPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
-        if (t.cover == null) {
-            hideAmbient();   // a track without a cover has no full-screen player
-            return;
-        }
+        // A track that came without its cover yet (the next one, a moment before its art) keeps the last cover
+        // up; the player never drops out of the full screen over it.
+        if (t.cover == null) return;
         if (t.cover != ambientCoverShown) {
             ambientCoverShown = t.cover;
             ambientCover.setImageBitmap(t.cover);
@@ -1874,12 +1915,46 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
+    /** A wake lock for the full-screen player, so neither sleep nor the screensaver comes while it is up. */
+    private android.os.PowerManager.WakeLock screenHold;
+
+    @SuppressWarnings("deprecation")   // the screen-bright lock is what keeps a TV's dream away; no newer way exists
+    private void holdScreen(boolean on) {
+        if (on) {
+            if (screenHold == null) {
+                android.os.PowerManager pm = getSystemService(android.os.PowerManager.class);
+                if (pm == null) return;
+                screenHold = pm.newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                        | android.os.PowerManager.ON_AFTER_RELEASE, "TvHome:player");
+                screenHold.setReferenceCounted(false);
+            }
+            screenHold.acquire(4 * 60 * 60 * 1000L);   // four hours at most, in case Home is left without a key
+        } else if (screenHold != null && screenHold.isHeld()) {
+            screenHold.release();
+        }
+    }
+
+    private void hideAmbientIfSilent() {
+        if (nowPlaying.track() == null) hideAmbient();
+    }
+
     private void restAmbientControls() {
         if (ambientScreen.getVisibility() != View.VISIBLE || !ambientControlsShown) return;
         ambientControlsShown = false;
         ambientControls.animate().cancel();
-        if (animations && !reducedMotion) ambientControls.animate().alpha(0f).setDuration(600).start();
-        else ambientControls.setAlpha(0f);
+        // The row fades, and the cover with its titles settles into the middle of the screen, the row's space gone.
+        View block = (View) ambientControls.getParent();
+        float shift = (ambientControls.getHeight()
+                + ((ViewGroup.MarginLayoutParams) ambientControls.getLayoutParams()).topMargin) / 2f;
+        block.animate().cancel();
+        if (animations && !reducedMotion) {
+            ambientControls.animate().alpha(0f).setDuration(600).start();
+            block.animate().translationY(shift).setDuration(700)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
+        } else {
+            ambientControls.setAlpha(0f);
+            block.setTranslationY(shift);
+        }
     }
 
     /** The button row back in view, and resting again after four seconds without a key. */
@@ -1888,8 +1963,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!ambientControlsShown) {
             ambientControlsShown = true;
             ambientControls.animate().cancel();
-            if (animations && !reducedMotion) ambientControls.animate().alpha(1f).setDuration(250).start();
-            else ambientControls.setAlpha(1f);
+            View block = (View) ambientControls.getParent();
+            block.animate().cancel();
+            if (animations && !reducedMotion) {
+                ambientControls.animate().alpha(1f).setDuration(250).start();
+                block.animate().translationY(0f).setDuration(300)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
+            } else {
+                ambientControls.setAlpha(1f);
+                block.setTranslationY(0f);
+            }
         }
         handler.postDelayed(ambientRest, 4000);
     }
@@ -1897,6 +1980,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void hideAmbient() {
         if (ambientScreen.getVisibility() != View.VISIBLE) return;
         handler.removeCallbacks(ambientRest);
+        holdScreen(false);
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // Focus back on the card's expand button, where the player was opened from, else on the dock.
         if (ambientScreen.hasFocus()) {
@@ -1909,7 +1993,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ambientTurn = null;
         }
         ambientScreen.animate().cancel();
+        // The button row and the centred block go back to their resting places for the next time.
+        ambientControlsShown = true;
+        ambientControls.animate().cancel();
+        ambientControls.setAlpha(1f);
+        ((View) ambientControls.getParent()).animate().cancel();
+        ((View) ambientControls.getParent()).setTranslationY(0f);
         if (animations && !reducedMotion) {
+            // Out: the sheet dissolves as the cover settles back a little, the reverse of its opening.
+            ambientCover.animate().cancel();
+            ambientCover.animate().scaleX(0.94f).scaleY(0.94f).setDuration(350)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
             ambientScreen.animate().alpha(0f).setDuration(350).withEndAction(() -> {
                 if (ambientScreen.getAlpha() == 0f) {
                     ambientScreen.setVisibility(View.GONE);
@@ -2003,6 +2097,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 v.setScaleY(s);
             }
             v.setAlpha(1f);
+            v.setTranslationY(0f);   // a search tile still rising into place lands at once
             if (focused) hideGlass();
         });
         tile.setOnKeyListener((v, keyCode, event) -> {
@@ -2134,15 +2229,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout.LayoutParams flp = (LinearLayout.LayoutParams) searchField.getLayoutParams();
         flp.width = searchPillWidth;
         searchField.setLayoutParams(flp);
-        btnSearch.setVisibility(View.GONE);
         findViewById(R.id.searchMic).setVisibility(View.VISIBLE);
-        searchField.requestFocus();
+        searchField.requestFocus();   // the pill lets go of its white focus before it goes, so nothing flashes
+        btnSearch.setVisibility(View.GONE);
         Runnable done = () -> {
             if (!searching) return;
             if (!query.isEmpty()) {
                 searchField.setText(query);
                 searchField.setSelection(query.length());
                 if (!focusSearchResult()) searchField.requestFocus();
+            } else if (listenOnOpen) {
+                listenOnOpen = false;
+                beginListening();
             } else {
                 android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
                 if (imm != null) imm.showSoftInput(searchField, 0);
@@ -2185,7 +2283,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 shelfChannels.addView(none);
             }
         } else {
-            for (SearchIndex.Result r : found) shelfChannels.addView(searchTile(r));
+            int n = 0;
+            for (SearchIndex.Result r : found) {
+                View tile = searchTile(r);
+                shelfChannels.addView(tile);
+                if (animations && !reducedMotion && n < 8) {
+                    // The first tiles rise into place one after another, the way results arrive on Apple TV.
+                    tile.setAlpha(0f);
+                    tile.setTranslationY(14 * density);
+                    tile.animate().alpha(1f).translationY(0f).setDuration(280).setStartDelay(n * 35L)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f)).start();
+                }
+                n++;
+            }
         }
         channelsPkg = "\u0000search";
         shelfChannelsScroll.setVisibility(View.VISIBLE);
@@ -2260,6 +2370,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!searching) return;
         searching = false;
         searchAll = null;
+        stopListening(true);
         android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
         if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
         stopChannels(animations);
@@ -2364,11 +2475,103 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** The TV's voice input; what it hears is searched when Home is back. */
+    /**
+     * A spoken search: the field opens (or stays) and listens by itself, the words showing up in it as they are
+     * heard, the microphone button pulsing with the voice; no screen of the TV's own. Without the microphone
+     * permission it is asked for once; without a recognition service the TV's voice screen is used instead.
+     */
     private void startVoice() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_REQUEST);
+            return;
+        }
+        if (!VoiceSearch.available(this)) {
+            startVoiceScreen();
+            return;
+        }
+        if (searching) {
+            beginListening();
+        } else {
+            listenOnOpen = true;
+            openSearch("");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == RECORD_AUDIO_REQUEST) {
+            if (results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) startVoice();
+            else if (!searching) openSearch("");   // typing, then
+        }
+    }
+
+    private void beginListening() {
+        if (!searching) return;
+        View mic = findViewById(R.id.searchMic);
+        android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
+        if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
+        searchField.setText("");
+        searchField.setHint(R.string.search_listening);
+        searchField.requestFocus();
+        mic.setActivated(true);
+        boolean started = voice.start(new VoiceSearch.Listener() {
+            @Override public void onHeard(String words, boolean done) {
+                if (!searching) return;
+                searchField.setText(words);
+                searchField.setSelection(words.length());
+                if (done) {
+                    stopListening(false);
+                    android.util.Log.i("TvHome", "heard: " + words);
+                    if (!focusSearchResult()) {
+                        // Nothing matched what was heard: the keyboard, to put it right.
+                        if (imm != null) imm.showSoftInput(searchField, 0);
+                    }
+                }
+            }
+            @Override public void onLevel(float level) {
+                if (!voice.listening()) return;
+                float sc = 1.05f + 0.22f * level;
+                mic.animate().cancel();
+                mic.animate().scaleX(sc).scaleY(sc).setDuration(120).start();
+            }
+            @Override public void onFailed() {
+                if (!searching) return;
+                stopListening(false);
+                searchField.setHint(R.string.search_not_heard);
+                if (imm != null && searchField.length() == 0) imm.showSoftInput(searchField, 0);
+            }
+        });
+        if (!started) {
+            stopListening(false);
+            startVoiceScreen();
+        }
+    }
+
+    /** Listening over: the microphone rests; the hint goes back unless the field is being closed anyway. */
+    private void stopListening(boolean closing) {
+        voice.stop();
+        View mic = findViewById(R.id.searchMic);
+        mic.setActivated(false);
+        mic.animate().cancel();
+        mic.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
+        if (!closing) searchField.setHint(R.string.search_hint);
+    }
+
+    /** The TV's own voice screen, for a TV without a recognition service the launcher can use directly. */
+    private void startVoiceScreen() {
         Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, getString(R.string.search_hint))
                 .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        // Google TV's own voice input (the Google app's), made for the remote's microphone, rather than the chooser
+        // between it and the speech-services module; any other TV gets whatever answers the intent.
+        for (android.content.pm.ResolveInfo ri : getPackageManager().queryIntentActivities(i, 0)) {
+            if (ri.activityInfo != null && "com.google.android.katniss".equals(ri.activityInfo.packageName)) {
+                i.setClassName(ri.activityInfo.packageName, ri.activityInfo.name);
+                break;
+            }
+        }
         try {
             startActivityForResult(i, VOICE_REQUEST);
         } catch (ActivityNotFoundException | SecurityException e) {
@@ -2502,7 +2705,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
     private void onNowPlayingChanged() {
         if (ambientScreen.getVisibility() == View.VISIBLE) {
-            if (nowPlaying.track() == null) hideAmbient();
+            // A player between two tracks reports nothing for a moment: the full screen waits it out and leaves
+            // only when nothing plays a few seconds later.
+            handler.removeCallbacks(ambientGone);
+            if (nowPlaying.track() == null) handler.postDelayed(ambientGone, 3000);
             else fillAmbient();
         }
         boolean onCard = npCard.hasFocus();
@@ -3666,11 +3872,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         String update = updater.readyVersion();
         if (update != null) addSettingsMenuRow(rows, popup, getString(R.string.update_to, update), updater::install);
         else updater.check(true);   // opening this menu is as good a moment as any to look for one
+        // The essentials only: the TV's own settings first, as the gear's single press used to open them.
+        addSettingsMenuRow(rows, popup, R.string.tv_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
-        if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
+        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         int left = SleepTimer.minutesLeft(this);
         addSettingsMenuRow(rows, popup, left > 0 ? getString(R.string.sleep_timer_left, left) : getString(R.string.sleep_timer),
                 this::showSleepMenu);

@@ -87,6 +87,7 @@ printf '%s\n' \
   "pm grant com.gathin.tvhome android.permission.BLUETOOTH_CONNECT 2>/dev/null; appops set com.gathin.tvhome SYSTEM_ALERT_WINDOW allow; echo bluetooth-and-overlay-granted" \
   "cmd notification allow_listener com.gathin.tvhome/com.gathin.tvhome.NowPlayingListener; echo now-playing-allowed" \
   "pm grant com.gathin.tvhome android.permission.READ_TV_LISTINGS 2>/dev/null; echo tv-listings-granted" \
+  "pm grant com.gathin.tvhome android.permission.RECORD_AUDIO 2>/dev/null; echo microphone-granted" \
   "appops set com.gathin.tvhome REQUEST_INSTALL_PACKAGES allow 2>/dev/null; echo self-update-allowed" \
   "cmd package compile -m speed -f com.gathin.tvhome" \
   "$DISABLE_STOCK" \

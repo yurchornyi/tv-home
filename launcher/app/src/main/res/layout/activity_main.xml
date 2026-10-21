@@ -607,54 +607,101 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- A quiet darkening towards the bottom, so the titles and buttons read over the brightest colours. -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/ambient_scrim"
+            android:importantForAccessibility="no" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:clipChildren="false">
 
             <ImageView
                 android:id="@+id/ambientCover"
-                android:layout_width="290dp"
-                android:layout_height="290dp"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
                 android:scaleType="centerCrop"
-                android:elevation="24dp"
+                android:elevation="28dp"
                 android:contentDescription="@string/now_playing" />
 
             <TextView
                 android:id="@+id/ambientTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="34dp"
-                android:maxWidth="700dp"
+                android:layout_marginTop="40dp"
+                android:maxWidth="760dp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:textColor="#FFFFFFFF"
-                android:textSize="30sp"
+                android:textSize="32sp"
                 android:fontFamily="@font/outfit_medium"
-                android:shadowColor="#66000000"
-                android:shadowRadius="10" />
+                android:letterSpacing="-0.01"
+                android:includeFontPadding="false"
+                android:shadowColor="#59000000"
+                android:shadowRadius="12"
+                android:shadowDy="2" />
 
             <TextView
                 android:id="@+id/ambientArtist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:maxWidth="700dp"
+                android:layout_marginTop="9dp"
+                android:maxWidth="760dp"
                 android:singleLine="true"
                 android:ellipsize="end"
-                android:textColor="#C8FFFFFF"
-                android:textSize="18sp"
-                android:fontFamily="@font/outfit_regular" />
+                android:textColor="#D1FFFFFF"
+                android:textSize="19sp"
+                android:fontFamily="@font/outfit_regular"
+                android:includeFontPadding="false"
+                android:shadowColor="#40000000"
+                android:shadowRadius="8" />
 
-            <ProgressBar
-                android:id="@+id/ambientProgress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="360dp"
-                android:layout_height="3dp"
-                android:layout_marginTop="26dp"
-                android:max="1000"
-                android:progressDrawable="@drawable/now_playing_progress" />
+            <!-- The bar with the time gone and the time left at its ends, as a music player draws it. -->
+            <LinearLayout
+                android:layout_width="440dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:orientation="vertical">
+
+                <ProgressBar
+                    android:id="@+id/ambientProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:max="1000"
+                    android:progressDrawable="@drawable/now_playing_progress" />
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/ambientElapsed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:textColor="#99FFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/outfit_medium"
+                        android:letterSpacing="0.04" />
+
+                    <TextView
+                        android:id="@+id/ambientRemaining"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:textColor="#99FFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/outfit_medium"
+                        android:letterSpacing="0.04" />
+                </RelativeLayout>
+            </LinearLayout>
 
             <!-- Previous, play/pause, next, then open the player app and close: focusable, Left and Right move between
                  them, OK presses; the media keys work too, and Back brings Home back. The row fades out when the remote
@@ -663,7 +710,7 @@
                 android:id="@+id/ambientControls"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="22dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:clipChildren="false"
@@ -694,17 +741,28 @@
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_next" />
 
+                <!-- The two that are not about the music, a step smaller and quieter, set apart from the three. -->
                 <TextView
                     android:id="@+id/ambientOpen"
                     style="@style/TopIconButton"
-                    android:layout_marginStart="44dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="48dp"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:alpha="0.8"
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_open" />
 
                 <TextView
                     android:id="@+id/ambientClose"
                     style="@style/TopIconButton"
-                    android:layout_marginStart="14dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="12dp"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:alpha="0.8"
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_close" />
             </LinearLayout>

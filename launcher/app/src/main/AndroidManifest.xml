@@ -20,6 +20,10 @@
     <!-- Self-update (Updater): hands a downloaded build to Android's installer, which asks to confirm. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- The full-screen player keeps the screen on, with no screensaver, while it is up (MainActivity.holdScreen). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Spoken search in the launcher's own field (VoiceSearch); build-and-install grants it, else it is asked for once. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
          FINE" rule does not apply here. -->
@@ -43,6 +47,13 @@
         </intent>
         <!-- China-market MIUI TV firmware: the Settings and Wi-Fi pills fall back to Xiaomi's settings app. -->
         <package android:name="com.xiaomi.mitv.settings" />
+        <!-- Voice input for Search (RecognizerIntent), so its activities can be listed and the TV's own chosen. -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application

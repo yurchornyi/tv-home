@@ -91,6 +91,8 @@
     <string name="search">Пошук</string>
     <string name="search_hint">Програма, канал чи фільм</string>
     <string name="search_nothing">Нічого не знайдено</string>
+    <string name="search_listening">Слухаю…</string>
+    <string name="search_not_heard">Не почув: скажіть ще раз або наберіть</string>
     <string name="search_no_voice">Голосовий ввід на цьому ТБ недоступний</string>
     <string name="search_app">Програма</string>
     <string name="search_channel">Канал · %s</string>
