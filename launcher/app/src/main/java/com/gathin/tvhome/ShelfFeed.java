@@ -182,7 +182,9 @@ final class ShelfFeed {
                     trimCache();
                 }
                 BitmapFactory.Options o = new BitmapFactory.Options();
-                o.inPreferredConfig = Bitmap.Config.RGB_565;
+                // A logo (PNG) keeps its transparency; a backdrop is a photo and can go without the alpha bytes.
+                o.inPreferredConfig = backdrop.toLowerCase(java.util.Locale.ROOT).endsWith(".png")
+                        ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565;
                 b = BitmapFactory.decodeFile(f.getPath(), o);
                 if (b == null) f.delete();   // a broken download: fetch it again next time, not never show it
             } catch (Exception e) {

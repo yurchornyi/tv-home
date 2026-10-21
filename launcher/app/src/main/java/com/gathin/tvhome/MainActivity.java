@@ -136,6 +136,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** The Watch pill under the shelf title: opens the film or video shown (openFeedItem). */
     private TextView shelfOpen;
     private TextView shelfLive;
+    /** The channel row (LiveChannels): its scroller, the tiles, and the app whose channels it shows, or null. */
+    private android.widget.HorizontalScrollView shelfChannelsScroll;
+    private LinearLayout shelfChannels;
+    private LiveChannels liveChannels;
+    private String channelsPkg;
     /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
     private final Set<String> postersOff = new HashSet<>();
     /** Now Playing card (NowPlaying), shown on the shelf instead of posters while something plays. */
@@ -374,6 +379,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfTitle = findViewById(R.id.shelfTitle);
         shelfOpen = findViewById(R.id.shelfOpen);
         shelfLive = findViewById(R.id.shelfLive);
+        shelfChannelsScroll = findViewById(R.id.shelfChannelsScroll);
+        shelfChannels = findViewById(R.id.shelfChannels);
+        liveChannels = new LiveChannels(this);
         postersOff.addAll(getSharedPreferences("shelf", MODE_PRIVATE).getStringSet("posters_off", Collections.emptySet()));
         shelfOpen.setOnClickListener(v -> openFeedItem());
         shelfOpen.setOnKeyListener((v, keyCode, event) -> {
@@ -1361,7 +1369,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showHero(int position, float dockTopInRoot) {
         lastDockTop = dockTopInRoot;
         lastHeroPosition = position;
-        if (!showNowPlaying() && !showFeed(position) && !showShelfArt(position)) hideShelfArt(animations);
+        if (!showNowPlaying() && !showChannels(position) && !showFeed(position) && !showShelfArt(position)) {
+            hideShelfArt(animations);
+        }
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - heroName.getHeight();
@@ -1589,6 +1599,135 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
     }
 
+    // ---- the channel row ---------------------------------------------------------------------------
+
+    /**
+     * The focused dock app's chosen live channels as a row of tiles over its softened banner, when its shelf is in
+     * channel mode (LiveChannels). False for every other app.
+     */
+    private boolean showChannels(int position) {
+        String pkg = adapter.pkgAt(position);
+        if (!topShelfArt || pkg == null || !liveChannels.available(pkg) || !liveChannels.channelMode(pkg)) {
+            stopChannels(animations);
+            return false;
+        }
+        showShelfArt(position);
+        if (pkg.equals(channelsPkg)) return true;
+        stopFeed();
+        channelsPkg = pkg;
+        buildChannelRow(pkg, position);
+        shelfChannelsScroll.setVisibility(View.VISIBLE);
+        shelfChannelsScroll.animate().cancel();
+        shelfChannelsScroll.post(() -> shelfChannelsScroll.setY(lastDockTop - 14 * density - shelfChannelsScroll.getHeight()));
+        if (animations && !reducedMotion) shelfChannelsScroll.animate().alpha(1f).setDuration(300).start();
+        else shelfChannelsScroll.setAlpha(1f);
+        return true;
+    }
+
+    private void buildChannelRow(String pkg, int position) {
+        shelfChannels.removeAllViews();
+        shelfChannelsScroll.scrollTo(0, 0);
+        List<LiveChannels.Channel> chosen = liveChannels.chosen(pkg);
+        if (chosen.isEmpty()) {
+            View tile = channelTile(null, pkg);
+            tile.setOnClickListener(v -> openChannelPicker(pkg, position));
+            shelfChannels.addView(tile);
+            return;
+        }
+        for (LiveChannels.Channel c : chosen) shelfChannels.addView(channelTile(c, pkg));
+    }
+
+    /** One channel tile: its logo on a dark card, or its name; null makes the "choose channels" tile. */
+    private View channelTile(LiveChannels.Channel c, String pkg) {
+        android.widget.FrameLayout tile = new android.widget.FrameLayout(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (150 * density), (int) (84 * density));
+        lp.setMarginEnd((int) (12 * density));
+        tile.setLayoutParams(lp);
+        tile.setBackgroundResource(R.drawable.tile_bg);
+        tile.setFocusable(true);
+        tile.setClipToOutline(true);
+        TextView name = new TextView(this);
+        name.setText(c == null ? getString(R.string.channels_empty) : c.name);
+        name.setTextColor(0xF2FFFFFF);
+        name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, c == null ? 11 : 13);
+        name.setTypeface(getResources().getFont(R.font.outfit_medium));
+        name.setGravity(android.view.Gravity.CENTER);
+        name.setMaxLines(3);
+        name.setPadding((int) (10 * density), 0, (int) (10 * density), 0);
+        tile.addView(name, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        if (c != null && c.logo != null) {
+            ImageView logo = new ImageView(this);
+            logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            int pad = (int) (14 * density);
+            logo.setPadding(pad, pad, pad, pad);
+            tile.addView(logo, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            shelfFeed.image(c.logo, (url, bmp) -> {
+                if (bmp == null || logo.getParent() == null) return;
+                logo.setImageBitmap(bmp);
+                name.setVisibility(View.GONE);
+            });
+        }
+        tile.setOnFocusChangeListener((v, focused) -> {
+            v.animate().cancel();
+            float s = focused ? 1.1f : 1f;
+            if (animations && !reducedMotion) {
+                v.animate().scaleX(s).scaleY(s).translationZ(focused ? 6 * density : 0f).setDuration(200)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+            } else {
+                v.setScaleX(s);
+                v.setScaleY(s);
+            }
+            v.setAlpha(1f);
+            if (focused) hideGlass();
+        });
+        tile.setOnKeyListener((v, keyCode, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_BACK) {
+                focusTile(lastFocused % COLUMNS);
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                firstPill().requestFocus();
+                return true;
+            }
+            int i = shelfChannels.indexOfChild(v);
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return i == 0;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
+            return false;
+        });
+        if (c != null) tile.setOnClickListener(v -> open(new Intent(Intent.ACTION_VIEW, Uri.parse(c.open)).setPackage(pkg)));
+        return tile;
+    }
+
+    private void stopChannels(boolean animate) {
+        if (channelsPkg == null) return;
+        channelsPkg = null;
+        if (shelfChannelsScroll.hasFocus()) focusTile(lastFocused % COLUMNS);
+        shelfChannelsScroll.animate().cancel();
+        if (animate && !reducedMotion) {
+            shelfChannelsScroll.animate().alpha(0f).setDuration(160).withEndAction(() -> {
+                if (shelfChannelsScroll.getAlpha() == 0f) shelfChannelsScroll.setVisibility(View.GONE);
+            }).start();
+        } else {
+            shelfChannelsScroll.setAlpha(0f);
+            shelfChannelsScroll.setVisibility(View.GONE);
+        }
+    }
+
+    private void openChannelPicker(String pkg, int position) {
+        if (openPopup != null) openPopup.dismiss();
+        String label = adapter.labelAt(position);
+        openPopup = ChannelPicker.show(this, label != null ? label : pkg, liveChannels.all(pkg), liveChannels.chosenIds(pkg), chosen -> {
+            openPopup = null;
+            liveChannels.setChosen(pkg, chosen);
+            stopChannels(false);
+            if (position == lastFocused) showHero(position, lastDockTop);
+            focusTile(position);
+        });
+    }
+
     /** Opens what the shelf shows: the video itself, the film's page where the app has one, else the app. */
     private void openFeedItem() {
         if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return;
@@ -1772,6 +1911,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return false;
         }
         stopFeed();
+        stopChannels(false);
         shelfTitle.animate().cancel();
         shelfTitle.setAlpha(0f);
         shelfLive.setAlpha(0f);
@@ -1863,6 +2003,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void hideShelfArt(boolean animate) {
         hideNowPlaying(animate);
         stopFeed();
+        stopChannels(animate);
         if (heroArtShown == null) return;
         heroArtShown = null;
         heroArt.animate().cancel();
@@ -2112,6 +2253,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
                 }
+                // The channel row: its first tile.
+                if (channelsPkg != null && shelfChannels.getChildCount() > 0) {
+                    shelfChannels.getChildAt(0).requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                    return true;
+                }
                 return false;
             }
             target = position - COLUMNS;
@@ -2148,7 +2295,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (240 * density));
         addSettingsMenuRow(rows, popup, R.string.reorder, () -> startSingleMove(key));
-        if (feedApps.contains(pkg) || channelApps.contains(pkg)) {
+        boolean channelMode = liveChannels.available(pkg) && liveChannels.channelMode(pkg);
+        if (liveChannels.available(pkg)) {
+            addSettingsMenuRow(rows, popup, channelMode ? R.string.shelf_mode_posters : R.string.shelf_mode_channels, () -> {
+                liveChannels.setChannelMode(pkg, !channelMode);
+                stopChannels(false);
+                stopFeed();
+                showHero(position, lastDockTop);
+            });
+            if (channelMode) addSettingsMenuRow(rows, popup, R.string.choose_channels, () -> openChannelPicker(pkg, position));
+        }
+        if (!channelMode && (feedApps.contains(pkg) || channelApps.contains(pkg))) {
             boolean off = postersOff.contains(pkg);
             addSettingsMenuRow(rows, popup, off ? R.string.shelf_posters_show : R.string.shelf_posters_hide, () -> {
                 if (off) postersOff.remove(pkg);

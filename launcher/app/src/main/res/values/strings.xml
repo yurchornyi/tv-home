@@ -80,6 +80,13 @@
     <!-- The top shelf button that opens the film or video shown. -->
     <string name="watch_now">Watch</string>
     <string name="live_badge">LIVE</string>
+    <!-- Tile menu: an app's shelf shows its live channels or posters; the picker for the channels. -->
+    <string name="shelf_mode_channels">Shelf: channels</string>
+    <string name="shelf_mode_posters">Shelf: posters</string>
+    <string name="choose_channels">Choose channels…</string>
+    <string name="channels_on_shelf">Channels on the shelf: %s</string>
+    <string name="channels_hint">OK ticks a channel, Back keeps the choice</string>
+    <string name="channels_empty">Hold OK on the tile to choose channels</string>
     <!-- Tile menu: the top shelf's posters for this app on or off. -->
     <string name="shelf_posters_hide">Hide posters on the shelf</string>
     <string name="shelf_posters_show">Show posters on the shelf</string>

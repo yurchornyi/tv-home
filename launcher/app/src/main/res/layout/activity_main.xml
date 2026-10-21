@@ -76,6 +76,31 @@
         android:includeFontPadding="false"
         android:text="@string/live_badge" />
 
+    <!-- The app's chosen live channels (LiveChannels), a row of logo tiles above the dock; Up from the dock lands
+         here, OK opens the channel in the app. Built in code; hidden while the shelf shows something else. -->
+    <HorizontalScrollView
+        android:id="@+id/shelfChannelsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="70dp"
+        android:paddingEnd="70dp"
+        android:clipToPadding="false"
+        android:clipChildren="false"
+        android:scrollbars="none"
+        android:alpha="0"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/shelfChannels"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
     <!-- Opens what the shelf shows (ShelfFeed/ChannelFeed item): Up from the dock lands here, Left/Right turn the
          pages, OK opens. Positioned under the title in code; hidden while nothing is shown. -->
     <TextView

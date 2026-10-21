@@ -1,0 +1,3159 @@
+[
+{
+"id": "63a1cdb84c3452c24a804dfd",
+"name": "1+1 HD",
+"logo": "https://i.imgur.com/y78saaG.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63a1cdb84c3452c24a804dfd",
+"own": false
+},
+{
+"id": "55f2bcefe4b0781039beb055",
+"name": "1+1 Marafon HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55f2bcefe4b0781039beb055",
+"own": false
+},
+{
+"id": "621d1337fdf4079b25b505b2",
+"name": "11 канал",
+"logo": "https://i.imgur.com/y78saaG.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=621d1337fdf4079b25b505b2",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc046c",
+"name": "2+2 HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc046c",
+"own": false
+},
+{
+"id": "55efdb74e4b0781039bc0760",
+"name": "24 Канал",
+"logo": "https://pbs.twimg.com/profile_images/1498285886714298374/EMSJzC-0_400x400.jpg",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb74e4b0781039bc0760",
+"own": false
+},
+{
+"id": "5c22624fe4b0f16ffd086240",
+"name": "36.6",
+"logo": "https://i.imgur.com/sC0K5BZ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c22624fe4b0f16ffd086240",
+"own": false
+},
+{
+"id": "5c226495e4b0f16ffd088340",
+"name": "36.6 HD",
+"logo": "https://i.imgur.com/sC0K5BZ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c226495e4b0f16ffd088340",
+"own": false
+},
+{
+"id": "5fc4db001d544ddbce8bb293",
+"name": "4ever Music",
+"logo": "https://i.imgur.com/UJ5oaeU.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4db001d544ddbce8bb293",
+"own": false
+},
+{
+"id": "63ad904063b46c5d268c63d0",
+"name": "4ever Music",
+"logo": "https://i.imgur.com/UJ5oaeU.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63ad904063b46c5d268c63d0",
+"own": false
+},
+{
+"id": "55fefa0ae4b036638ef0b606",
+"name": "5 канал",
+"logo": "https://i.imgur.com/a9JJXPk.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55fefa0ae4b036638ef0b606",
+"own": false
+},
+{
+"id": "62442a45527400192f73cb8d",
+"name": "6 соток",
+"logo": "https://i.imgur.com/icSN0GI.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=62442a45527400192f73cb8d",
+"own": false
+},
+{
+"id": "55efdb74e4b0781039bc07af",
+"name": "8 канал",
+"logo": "https://i.imgur.com/6Sr5vJD.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb74e4b0781039bc07af",
+"own": false
+},
+{
+"id": "66c87a5a3674690dd5f56c1f",
+"name": "Amc HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66c87a5a3674690dd5f56c1f",
+"own": false
+},
+{
+"id": "5b4c567960b25704b6b0639c",
+"name": "Animal Planet",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5b4c567960b25704b6b0639c",
+"own": false
+},
+{
+"id": "644a67eaf8f476b400ad073a",
+"name": "Army FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=644a67eaf8f476b400ad073a",
+"own": false
+},
+{
+"id": "64a55b47e4b0710133fee9e0",
+"name": "Barely Legal TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64a55b47e4b0710133fee9e0",
+"own": false
+},
+{
+"id": "6a07415f74b4921921570481",
+"name": "Bikini",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a07415f74b4921921570481",
+"own": false
+},
+{
+"id": "63ad8eee63b46c5d268ae261",
+"name": "Black",
+"logo": "https://i.imgur.com/iSzAO32.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63ad8eee63b46c5d268ae261",
+"own": false
+},
+{
+"id": "5b43b09860b25704b69e6c4d",
+"name": "Bloomberg TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5b43b09860b25704b69e6c4d",
+"own": false
+},
+{
+"id": "6336b70851d4acd47f6e355d",
+"name": "Blue Hustler",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6336b70851d4acd47f6e355d",
+"own": false
+},
+{
+"id": "5a37a21360b2876d30778a72",
+"name": "Bolt",
+"logo": "https://i.imgur.com/YdIHXOR.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5a37a21360b2876d30778a72",
+"own": false
+},
+{
+"id": "5f0452a7f0f4201b22763474",
+"name": "Bolt",
+"logo": "https://i.imgur.com/YdIHXOR.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0452a7f0f4201b22763474",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc09cb",
+"name": "Cappuccino TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc09cb",
+"own": false
+},
+{
+"id": "6064ecd02834f0c8b6867301",
+"name": "Cars Stars TV HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6064ecd02834f0c8b6867301",
+"own": false
+},
+{
+"id": "674b8dbf6c14d3b92eb069cb",
+"name": "Champion Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=674b8dbf6c14d3b92eb069cb",
+"own": false
+},
+{
+"id": "6a59f5f5bb94347bc1ce87f4",
+"name": "Chillout FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a59f5f5bb94347bc1ce87f4",
+"own": false
+},
+{
+"id": "5fc4da161d544ddbce8b38fa",
+"name": "Cine HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4da161d544ddbce8b38fa",
+"own": false
+},
+{
+"id": "5fc4dcf31d544ddbce8c2d0c",
+"name": "Cine Hit HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4dcf31d544ddbce8c2d0c",
+"own": false
+},
+{
+"id": "5fc4df611d544ddbce8ddfbd",
+"name": "Cine Kids HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4df611d544ddbce8ddfbd",
+"own": false
+},
+{
+"id": "5fc4dbc51d544ddbce8beb58",
+"name": "Cine Legend",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4dbc51d544ddbce8beb58",
+"own": false
+},
+{
+"id": "625557cf9834171c86b98e07",
+"name": "Classic Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=625557cf9834171c86b98e07",
+"own": false
+},
+{
+"id": "686635e726f49755054dcfee",
+"name": "Classical Harmony",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=686635e726f49755054dcfee",
+"own": false
+},
+{
+"id": "69d4c5e84bb456719f49595d",
+"name": "D1",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69d4c5e84bb456719f49595d",
+"own": false
+},
+{
+"id": "5efcf8147a949d862f6e859b",
+"name": "Da Vinci",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5efcf8147a949d862f6e859b",
+"own": false
+},
+{
+"id": "55efdb77e4b0781039bc0e59",
+"name": "Discovery Channel",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb77e4b0781039bc0e59",
+"own": false
+},
+{
+"id": "5fe9e0a11814ed0677cc06a2",
+"name": "Discovery Id HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fe9e0a11814ed0677cc06a2",
+"own": false
+},
+{
+"id": "6569e6984a14d75bf8501acc",
+"name": "DiviSport",
+"logo": "https://i.logos-download.com/114030/29915-s5120-904df224e4c030fefcc45adda448b6e8.png/DiviSport_Logo_2023-s5120.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6569e6984a14d75bf8501acc",
+"own": false
+},
+{
+"id": "6253d207f0349ca7421b6154",
+"name": "Djfm",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6253d207f0349ca7421b6154",
+"own": false
+},
+{
+"id": "5c010770e4b0f16ffce5234d",
+"name": "Dorama",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c010770e4b0f16ffce5234d",
+"own": false
+},
+{
+"id": "67b49ffda534dccfca27e8c3",
+"name": "Drama TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67b49ffda534dccfca27e8c3",
+"own": false
+},
+{
+"id": "5c013156e4b0f16ffce57335",
+"name": "Duck TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c013156e4b0f16ffce57335",
+"own": false
+},
+{
+"id": "5f044d77f0f4201b2275df74",
+"name": "Duck TV HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f044d77f0f4201b2275df74",
+"own": false
+},
+{
+"id": "5f4dc4251774d4de88e4aca5",
+"name": "Duck TV Plus",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f4dc4251774d4de88e4aca5",
+"own": false
+},
+{
+"id": "5805e3c27134f20c943473b6",
+"name": "Dw",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5805e3c27134f20c943473b6",
+"own": false
+},
+{
+"id": "55efdb74e4b0781039bc06be",
+"name": "ECO TV",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/ECO_TV.svg/250px-ECO_TV.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb74e4b0781039bc06be",
+"own": false
+},
+{
+"id": "55efdb76e4b0781039bc0c8e",
+"name": "English Club HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb76e4b0781039bc0c8e",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc041b",
+"name": "Enter-фільм",
+"logo": "https://i.imgur.com/wQbiGs6.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc041b",
+"own": false
+},
+{
+"id": "5f9eacfd68745623f6597f61",
+"name": "Epic Drama HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f9eacfd68745623f6597f61",
+"own": false
+},
+{
+"id": "6125f47ff51485075ca3aae8",
+"name": "Equalympic",
+"logo": "https://i.imgur.com/ixSj4H7.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6125f47ff51485075ca3aae8",
+"own": false
+},
+{
+"id": "5afc1b7560b20c61c236a147",
+"name": "Erox",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5afc1b7560b20c61c236a147",
+"own": false
+},
+{
+"id": "646604d8201498776aab95fa",
+"name": "Ets",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=646604d8201498776aab95fa",
+"own": false
+},
+{
+"id": "689b5bb89934e5e0d1ebf9ec",
+"name": "Ets",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=689b5bb89934e5e0d1ebf9ec",
+"own": false
+},
+{
+"id": "55fefd09e4b036638ef0c9bb",
+"name": "EU Music",
+"logo": "https://i.imgur.com/fJdvyrG.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55fefd09e4b036638ef0c9bb",
+"own": false
+},
+{
+"id": "5bb082f260b2f2d5070b46bb",
+"name": "Euronews",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5bb082f260b2f2d5070b46bb",
+"own": false
+},
+{
+"id": "5f4dc5601774d4de88e5096e",
+"name": "Euronews English HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f4dc5601774d4de88e5096e",
+"own": false
+},
+{
+"id": "55efdb77e4b0781039bc0ee0",
+"name": "Eurosport 2",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb77e4b0781039bc0ee0",
+"own": false
+},
+{
+"id": "66acf7472254a13f599cc629",
+"name": "Eurosport 2 English",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66acf7472254a13f599cc629",
+"own": false
+},
+{
+"id": "58c24f0830d48b494be7c3e8",
+"name": "Eurosport English",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=58c24f0830d48b494be7c3e8",
+"own": false
+},
+{
+"id": "55efdb77e4b0781039bc0ec5",
+"name": "Eurosport HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb77e4b0781039bc0ec5",
+"own": false
+},
+{
+"id": "62442f03527400192f86c6cf",
+"name": "Fashion",
+"logo": "https://ukrtvr.org/images/%D1%82%D0%B5%D0%BB%D0%B5%D0%B2%D0%B5%D0%B6%D1%96/%D1%81%D1%82%D0%B0%D1%80%D1%96_%D0%BB%D0%BE%D0%B3%D0%BE/FASHION%20TV%20UKRAINE/FASHION%20TV%20UKRAINE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=62442f03527400192f86c6cf",
+"own": false
+},
+{
+"id": "630776c043f40f192ec153e7",
+"name": "Fashion",
+"logo": "https://ukrtvr.org/images/%D1%82%D0%B5%D0%BB%D0%B5%D0%B2%D0%B5%D0%B6%D1%96/%D1%81%D1%82%D0%B0%D1%80%D1%96_%D0%BB%D0%BE%D0%B3%D0%BE/FASHION%20TV%20UKRAINE/FASHION%20TV%20UKRAINE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=630776c043f40f192ec153e7",
+"own": false
+},
+{
+"id": "56e2b647e4b0b3eebdd851a2",
+"name": "Fashion",
+"logo": "https://ukrtvr.org/images/%D1%82%D0%B5%D0%BB%D0%B5%D0%B2%D0%B5%D0%B6%D1%96/%D1%81%D1%82%D0%B0%D1%80%D1%96_%D0%BB%D0%BE%D0%B3%D0%BE/FASHION%20TV%20UKRAINE/FASHION%20TV%20UKRAINE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=56e2b647e4b0b3eebdd851a2",
+"own": false
+},
+{
+"id": "57147246e4b006ddd602c415",
+"name": "Fashion",
+"logo": "https://ukrtvr.org/images/%D1%82%D0%B5%D0%BB%D0%B5%D0%B2%D0%B5%D0%B6%D1%96/%D1%81%D1%82%D0%B0%D1%80%D1%96_%D0%BB%D0%BE%D0%B3%D0%BE/FASHION%20TV%20UKRAINE/FASHION%20TV%20UKRAINE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=57147246e4b006ddd602c415",
+"own": false
+},
+{
+"id": "5c01323de4b0f16ffce5824a",
+"name": "FilmUADrama",
+"logo": "https://i.imgur.com/Hnwsh5d.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c01323de4b0f16ffce5824a",
+"own": false
+},
+{
+"id": "5fec60431814a6b006c1dbeb",
+"name": "Flix Snip",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fec60431814a6b006c1dbeb",
+"own": false
+},
+{
+"id": "58cfc89a30d48b494bfcaa12",
+"name": "Food Network",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=58cfc89a30d48b494bfcaa12",
+"own": false
+},
+{
+"id": "622b59ce8cb40e74c42662d9",
+"name": "France 24 Arabic",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=622b59ce8cb40e74c42662d9",
+"own": false
+},
+{
+"id": "5894711530d48b494bc6a824",
+"name": "France 24 En",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5894711530d48b494bc6a824",
+"own": false
+},
+{
+"id": "589471bb30d48b494bc6ad8c",
+"name": "France 24 Fr",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=589471bb30d48b494bc6ad8c",
+"own": false
+},
+{
+"id": "56533ef8e4b02194ff66bb33",
+"name": "FREEДOM",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/FreeDOMUAlogo.svg/960px-FreeDOMUAlogo.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=56533ef8e4b02194ff66bb33",
+"own": false
+},
+{
+"id": "658eeb5fe4b07f6423f623c5",
+"name": "Front HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=658eeb5fe4b07f6423f623c5",
+"own": false
+},
+{
+"id": "5c9fe2f1e4b0b702df2a1d1a",
+"name": "Fx",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c9fe2f1e4b0b702df2a1d1a",
+"own": false
+},
+{
+"id": "66edaf73bb34a213083a82cc",
+"name": "Fx English",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66edaf73bb34a213083a82cc",
+"own": false
+},
+{
+"id": "60f5378bd0348f888563bc73",
+"name": "Fx Life",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f5378bd0348f888563bc73",
+"own": false
+},
+{
+"id": "66edb0aabb34a213083de896",
+"name": "Fx Life English",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66edb0aabb34a213083de896",
+"own": false
+},
+{
+"id": "661fde06e4b0253f05d54fc5",
+"name": "Happy Radio TV",
+"logo": "https://i.imgur.com/PAw36qJ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=661fde06e4b0253f05d54fc5",
+"own": false
+},
+{
+"id": "6425e18f6e1448e072668d1e",
+"name": "History Ukraine",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/History_%282021%29.svg/960px-History_%282021%29.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6425e18f6e1448e072668d1e",
+"own": false
+},
+{
+"id": "5b7c1bf560b292cf6a9cfd3d",
+"name": "History Ukraine",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/History_%282021%29.svg/960px-History_%282021%29.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5b7c1bf560b292cf6a9cfd3d",
+"own": false
+},
+{
+"id": "62faaade917481358b89561a",
+"name": "History2 Ukraine",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/History2_logo_%282022%29.svg/960px-History2_logo_%282022%29.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=62faaade917481358b89561a",
+"own": false
+},
+{
+"id": "5fed80121814a6b006ee9f7e",
+"name": "Hit FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed80121814a6b006ee9f7e",
+"own": false
+},
+{
+"id": "611a1df0feb4c2e51bf05dc4",
+"name": "Hollywood Ukraine",
+"logo": "https://i.imgur.com/eVqPfRk.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=611a1df0feb4c2e51bf05dc4",
+"own": false
+},
+{
+"id": "611a1ec4feb4c2e51bf108d9",
+"name": "Hollywood Ukraine",
+"logo": "https://i.imgur.com/eVqPfRk.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=611a1ec4feb4c2e51bf108d9",
+"own": false
+},
+{
+"id": "63526aeb847492548d8292cb",
+"name": "Holos Donbasu",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=63526aeb847492548d8292cb",
+"own": false
+},
+{
+"id": "62d192e4221416648aa8b35f",
+"name": "Hromadske Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62d192e4221416648aa8b35f",
+"own": false
+},
+{
+"id": "63a1cebb4c3452c24a84352f",
+"name": "ICTV 2 HD",
+"logo": "https://i.imgur.com/J4zlRGv.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63a1cebb4c3452c24a84352f",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc057a",
+"name": "ICTV HD",
+"logo": "https://i.imgur.com/97W1NOW.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc057a",
+"own": false
+},
+{
+"id": "60e7fe88f9d4e877bf4cf23b",
+"name": "InRating TV",
+"logo": "https://i.imgur.com/l753AgQ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=60e7fe88f9d4e877bf4cf23b",
+"own": false
+},
+{
+"id": "66056baa14f4b3f94222aa7f",
+"name": "Itv Media Group HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66056baa14f4b3f94222aa7f",
+"own": false
+},
+{
+"id": "6a197e8edb94f50c9a0ede26",
+"name": "K Pop 24",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a197e8edb94f50c9a0ede26",
+"own": false
+},
+{
+"id": "627001e21d54b220a6eeaceb",
+"name": "Kino 1",
+"logo": "https://i.imgur.com/FWVxBWI.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=627001e21d54b220a6eeaceb",
+"own": false
+},
+{
+"id": "66324b18e4b00500b12e1edc",
+"name": "Kino 2",
+"logo": "https://upload.wikimedia.org/wikipedia/uk/3/35/KINO_2_UA.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=66324b18e4b00500b12e1edc",
+"own": false
+},
+{
+"id": "657c5f79e4b0b28d7b43e7ea",
+"name": "Kinogrande",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657c5f79e4b0b28d7b43e7ea",
+"own": false
+},
+{
+"id": "63ad8c2163b46c5d26896057",
+"name": "Kinokazka",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=63ad8c2163b46c5d26896057",
+"own": false
+},
+{
+"id": "63d397e85a54b35c0c57a98c",
+"name": "Kinoliving",
+"logo": "https://i.imgur.com/9XJcmBY.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63d397e85a54b35c0c57a98c",
+"own": false
+},
+{
+"id": "657311894a14d75b0695ea22",
+"name": "Kinosweet HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657311894a14d75b0695ea22",
+"own": false
+},
+{
+"id": "644fd6af6274c9ef1847e830",
+"name": "Kinowood",
+"logo": "https://i.imgur.com/PQcXNBI.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=644fd6af6274c9ef1847e830",
+"own": false
+},
+{
+"id": "5fed84441814a6b006f1117e",
+"name": "Kiss FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed84441814a6b006f1117e",
+"own": false
+},
+{
+"id": "61f7a0fce65454b30347b965",
+"name": "Konkurent Volyn",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=61f7a0fce65454b30347b965",
+"own": false
+},
+{
+"id": "686644fe92346d182fc42911",
+"name": "Lang Lab",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=686644fe92346d182fc42911",
+"own": false
+},
+{
+"id": "6866536cbd749e48ab969b9e",
+"name": "Lingotoons",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6866536cbd749e48ab969b9e",
+"own": false
+},
+{
+"id": "60646fce2834f0c8b67b83c6",
+"name": "Lounge FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60646fce2834f0c8b67b83c6",
+"own": false
+},
+{
+"id": "6a59f4d7bb94347bc1ce0d17",
+"name": "Love FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a59f4d7bb94347bc1ce0d17",
+"own": false
+},
+{
+"id": "6a19755cdb94f50c99f527d2",
+"name": "Lux FM Chill and Relax",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a19755cdb94f50c99f527d2",
+"own": false
+},
+{
+"id": "6a197d10db94f50c9a0d4ad1",
+"name": "Lux FM Golden Hits",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a197d10db94f50c9a0d4ad1",
+"own": false
+},
+{
+"id": "6a197fb1db94f50c9a0faad8",
+"name": "Lux FM Lviv",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a197fb1db94f50c9a0faad8",
+"own": false
+},
+{
+"id": "6a1979b6db94f50c99fbc695",
+"name": "Lux FM Modern Hits",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a1979b6db94f50c99fbc695",
+"own": false
+},
+{
+"id": "6a197afedb94f50c9a0c3e61",
+"name": "Lux FM Ukrainian Hits",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a197afedb94f50c9a0c3e61",
+"own": false
+},
+{
+"id": "6a4fac7299b4841d54c4d1ab",
+"name": "Lux TV",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/8/87/Lux_TV_2.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a4fac7299b4841d54c4d1ab",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0595",
+"name": "M1",
+"logo": "https://i.imgur.com/wbRdUw8.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0595",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc05b0",
+"name": "M2",
+"logo": "https://i.imgur.com/AfcBWCg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc05b0",
+"own": false
+},
+{
+"id": "6253d264f0349ca7421c2e2a",
+"name": "Magic Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6253d264f0349ca7421c2e2a",
+"own": false
+},
+{
+"id": "674a2b4e6c14d3b92d832ace",
+"name": "Maincast Kibersport",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=674a2b4e6c14d3b92d832ace",
+"own": false
+},
+{
+"id": "695e4db1c7541a5f0907c1d0",
+"name": "Maincast Sport",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/5/57/Maincast_%28HD_Logo%29_2024.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=695e4db1c7541a5f0907c1d0",
+"own": false
+},
+{
+"id": "67bde6c21bd47010c9a41079",
+"name": "Medical Series",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67bde6c21bd47010c9a41079",
+"own": false
+},
+{
+"id": "5fed82de1814a6b006ef4d9e",
+"name": "Melodiya FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed82de1814a6b006ef4d9e",
+"own": false
+},
+{
+"id": "67ab78ced694ae41ff45c124",
+"name": "Melodrams Ua",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67ab78ced694ae41ff45c124",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0a57",
+"name": "Milady",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0a57",
+"own": false
+},
+{
+"id": "6436a51dbbf43604fb1ca938",
+"name": "Misto Nad Buhom",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6436a51dbbf43604fb1ca938",
+"own": false
+},
+{
+"id": "6544ced0ddd42503c4c3521e",
+"name": "MusicBox Ukraine",
+"logo": "https://i.imgur.com/MJeKucp.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6544ced0ddd42503c4c3521e",
+"own": false
+},
+{
+"id": "62d19492221416648aa9a29a",
+"name": "My Z Ukrainy",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62d19492221416648aa9a29a",
+"own": false
+},
+{
+"id": "67c6f3519074a29cab173ffc",
+"name": "Mystical Stories",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67c6f3519074a29cab173ffc",
+"own": false
+},
+{
+"id": "5fed84b61814a6b006f16949",
+"name": "Nashe Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed84b61814a6b006f16949",
+"own": false
+},
+{
+"id": "5898569230d48b494bc850ce",
+"name": "Nastoyashcheye Vremya",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5898569230d48b494bc850ce",
+"own": false
+},
+{
+"id": "5c9fe402e4b0b702df2a2e37",
+"name": "National Geographic",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c9fe402e4b0b702df2a2e37",
+"own": false
+},
+{
+"id": "60f53885d0348f8885641085",
+"name": "National Geographic Wild",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/National_Geographic_Wild_logo.svg/960px-National_Geographic_Wild_logo.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f53885d0348f8885641085",
+"own": false
+},
+{
+"id": "5fc4da5c1d544ddbce8b3b94",
+"name": "Niki Junior",
+"logo": "https://i.imgur.com/DrHsNin.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4da5c1d544ddbce8b3b94",
+"own": false
+},
+{
+"id": "5fc4d8c61d544ddbce8b007a",
+"name": "Niki Kids",
+"logo": "https://i.imgur.com/HH4HZ2J.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc4d8c61d544ddbce8b007a",
+"own": false
+},
+{
+"id": "658ee22ee4b07f6423e6855a",
+"name": "Now Series HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=658ee22ee4b07f6423e6855a",
+"own": false
+},
+{
+"id": "6064bb7b2834f0c8b67e6ae8",
+"name": "Nrj",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6064bb7b2834f0c8b67e6ae8",
+"own": false
+},
+{
+"id": "5a72c4f260b231ffb6c4c9e7",
+"name": "Obozrevatel TV",
+"logo": "https://i.imgur.com/ubldSBv.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5a72c4f260b231ffb6c4c9e7",
+"own": false
+},
+{
+"id": "63ad87d863b46c5d26802991",
+"name": "One Planet",
+"logo": "https://i.imgur.com/N7FBNjV.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63ad87d863b46c5d26802991",
+"own": false
+},
+{
+"id": "61e49bb6bcb489f48b54e4d2",
+"name": "Perets",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e49bb6bcb489f48b54e4d2",
+"own": false
+},
+{
+"id": "5f1954978d54597042561eba",
+"name": "Pershyi Miskyi Kr",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f1954978d54597042561eba",
+"own": false
+},
+{
+"id": "5afaf2d860b233f72599dcbc",
+"name": "Playboy",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5afaf2d860b233f72599dcbc",
+"own": false
+},
+{
+"id": "6253d5fcf0349ca7421dcb3c",
+"name": "Power FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6253d5fcf0349ca7421dcb3c",
+"own": false
+},
+{
+"id": "64f1ed5c19f40ed835708373",
+"name": "Prokino",
+"logo": "https://i.imgur.com/Vm9nbi8.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=64f1ed5c19f40ed835708373",
+"own": false
+},
+{
+"id": "6270010f1d54b220a6e82b53",
+"name": "Pv",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6270010f1d54b220a6e82b53",
+"own": false
+},
+{
+"id": "623f3910f3b44c635db07a4d",
+"name": "Radio Bairaktar",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=623f3910f3b44c635db07a4d",
+"own": false
+},
+{
+"id": "676d8d80b7140a1fefa3a221",
+"name": "Radio Bug",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d8d80b7140a1fefa3a221",
+"own": false
+},
+{
+"id": "5fed853e1814a6b006f2b324",
+"name": "Radio Jazz",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed853e1814a6b006f2b324",
+"own": false
+},
+{
+"id": "69eb5444f7d4dc51d8ff6848",
+"name": "Radio Khartia",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69eb5444f7d4dc51d8ff6848",
+"own": false
+},
+{
+"id": "62584abf3bf4d6877b8144c1",
+"name": "Radio Kultura",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62584abf3bf4d6877b8144c1",
+"own": false
+},
+{
+"id": "62d7ccb38d940e85e0d40c3e",
+"name": "Radio Maria",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62d7ccb38d940e85e0d40c3e",
+"own": false
+},
+{
+"id": "60acbcac72f48fe0cee7a2cf",
+"name": "Radio Maximum",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60acbcac72f48fe0cee7a2cf",
+"own": false
+},
+{
+"id": "6a073b7474b492192154e35f",
+"name": "Radio Nakypilo",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a073b7474b492192154e35f",
+"own": false
+},
+{
+"id": "60acbdde72f48fe0ceea21aa",
+"name": "Radio Nostalgie",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60acbdde72f48fe0ceea21aa",
+"own": false
+},
+{
+"id": "62f2bce510f4ec96fc1c9b30",
+"name": "Radio Nv",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62f2bce510f4ec96fc1c9b30",
+"own": false
+},
+{
+"id": "6064bdd52834f0c8b67f6042",
+"name": "Radio Piatnytsia",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6064bdd52834f0c8b67f6042",
+"own": false
+},
+{
+"id": "692dc89e4eb474f8cd9fd618",
+"name": "Radio Pikhota",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=692dc89e4eb474f8cd9fd618",
+"own": false
+},
+{
+"id": "69cce81c3df4c4b573d25beb",
+"name": "Radio Prischepkin Top40 Ua",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69cce81c3df4c4b573d25beb",
+"own": false
+},
+{
+"id": "625849da3bf4d6877b8075fd",
+"name": "Radio Promin",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=625849da3bf4d6877b8075fd",
+"own": false
+},
+{
+"id": "5fed83b81814a6b006ef87e1",
+"name": "Radio Relax",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed83b81814a6b006ef87e1",
+"own": false
+},
+{
+"id": "66c8817c3674690dd5f8ac42",
+"name": "Radio Respect",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66c8817c3674690dd5f8ac42",
+"own": false
+},
+{
+"id": "5fed80ca1814a6b006eed8d1",
+"name": "Radio Roks",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fed80ca1814a6b006eed8d1",
+"own": false
+},
+{
+"id": "6253d55cf0349ca7421cff65",
+"name": "Radio Schlager",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6253d55cf0349ca7421cff65",
+"own": false
+},
+{
+"id": "67a62afe96d4e4c117ebebc2",
+"name": "Radiotochka",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67a62afe96d4e4c117ebebc2",
+"own": false
+},
+{
+"id": "65bd13dce4b017165a003f68",
+"name": "RAZ 1",
+"logo": "https://s2.vcdn.biz/static/f/7607683721/image.jpg/pt/c192x192x4",
+"open": "com.kyivstar.tv.tvapp://live?liveId=65bd13dce4b017165a003f68",
+"own": false
+},
+{
+"id": "65bd154de4b017165a03418d",
+"name": "RAZ 2",
+"logo": "https://s7.vcdn.biz/static/f/7607698621/image.jpg/pt/c192x192x4",
+"open": "com.kyivstar.tv.tvapp://live?liveId=65bd154de4b017165a03418d",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc09e6",
+"name": "RAZ 3",
+"logo": "https://static.wikia.nocookie.net/tvpedia/images/f/f4/RAZ_3.jpg/revision/latest?cb=20260831213225",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc09e6",
+"own": false
+},
+{
+"id": "6a59f387bb94347bc1cd7c78",
+"name": "Rock 24",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a59f387bb94347bc1cd7c78",
+"own": false
+},
+{
+"id": "676d3b72b7140a1feeaf0efb",
+"name": "Setanta Sports Premium HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d3b72b7140a1feeaf0efb",
+"own": false
+},
+{
+"id": "5f7482451774d4de8a615dd5",
+"name": "Setanta Sports Украина",
+"logo": "https://i.imgur.com/UR8dHNO.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f7482451774d4de8a615dd5",
+"own": false
+},
+{
+"id": "5f7482c51774d4de8a615eeb",
+"name": "Setanta Sports Украина",
+"logo": "https://i.imgur.com/UR8dHNO.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f7482c51774d4de8a615eeb",
+"own": false
+},
+{
+"id": "627003d81d54b220a6f880d2",
+"name": "Sol TV HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=627003d81d54b220a6f880d2",
+"own": false
+},
+{
+"id": "61e5518dbcb489f48babe915",
+"name": "Sport 1 Baltic",
+"logo": "https://i.imgur.com/aBY7QK4.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e5518dbcb489f48babe915",
+"own": false
+},
+{
+"id": "67cadf9ff174deaf8810b0b6",
+"name": "Sport 5",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Sport5UA.jpg",
+"open": "com.kyivstar.tv.tvapp://live?liveId=67cadf9ff174deaf8810b0b6",
+"own": false
+},
+{
+"id": "5a37a30460b2876d30778e43",
+"name": "Star Cinema",
+"logo": "https://i.imgur.com/5sis895.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5a37a30460b2876d30778e43",
+"own": false
+},
+{
+"id": "5f044e5df0f4201b227614e9",
+"name": "Star Cinema",
+"logo": "https://i.imgur.com/5sis895.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f044e5df0f4201b227614e9",
+"own": false
+},
+{
+"id": "66fe8015abf4b43606fa2837",
+"name": "Sun FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66fe8015abf4b43606fa2837",
+"own": false
+},
+{
+"id": "676d687cb7140a1fef5b97e7",
+"name": "Super HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d687cb7140a1fef5b97e7",
+"own": false
+},
+{
+"id": "68665434bd749e48ab96c561",
+"name": "Tiny Teen",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68665434bd749e48ab96c561",
+"own": false
+},
+{
+"id": "55efdb77e4b0781039bc0efb",
+"name": "Tlc",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb77e4b0781039bc0efb",
+"own": false
+},
+{
+"id": "5fec63b11814a6b006c2cb1c",
+"name": "Trace Sport Stars HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fec63b11814a6b006c2cb1c",
+"own": false
+},
+{
+"id": "5fec62a51814a6b006c27a75",
+"name": "Trace Urban HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fec62a51814a6b006c27a75",
+"own": false
+},
+{
+"id": "57ed13b50714ed876c0ff685",
+"name": "Travel Channel",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=57ed13b50714ed876c0ff685",
+"own": false
+},
+{
+"id": "6270052b1d54b220a6f95f7c",
+"name": "Travel Food HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6270052b1d54b220a6f95f7c",
+"own": false
+},
+{
+"id": "6336b3f951d4acd47f6cf8ae",
+"name": "Travel Xp HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6336b3f951d4acd47f6cf8ae",
+"own": false
+},
+{
+"id": "6584026de4b0851c74698583",
+"name": "Tv5monde",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6584026de4b0851c74698583",
+"own": false
+},
+{
+"id": "676d7d55b7140a1fef89741d",
+"name": "Tvoe Kino Action HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d7d55b7140a1fef89741d",
+"own": false
+},
+{
+"id": "676d766ab7140a1fef7555d9",
+"name": "Tvoe Kino Hit HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d766ab7140a1fef7555d9",
+"own": false
+},
+{
+"id": "676d8766b7140a1fef9c071c",
+"name": "Tvoe Kino Relax HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=676d8766b7140a1fef9c071c",
+"own": false
+},
+{
+"id": "63526f23847492548d83ac5c",
+"name": "Tysa FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=63526f23847492548d83ac5c",
+"own": false
+},
+{
+"id": "613af75f96f467e44044829e",
+"name": "U Travel",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/U_Travel.svg/1920px-U_Travel.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=613af75f96f467e44044829e",
+"own": false
+},
+{
+"id": "625848a83bf4d6877b7ed630",
+"name": "Ukrainske Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=625848a83bf4d6877b7ed630",
+"own": false
+},
+{
+"id": "635272d7847492548d8ad9fe",
+"name": "Ukrayinske Radio Vsru Rui",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=635272d7847492548d8ad9fe",
+"own": false
+},
+{
+"id": "62236f147534b8d219cb39f4",
+"name": "United News Radio",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62236f147534b8d219cb39f4",
+"own": false
+},
+{
+"id": "65d75483b5f4696e682b98fc",
+"name": "Upl TV Sub 1 HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65d75483b5f4696e682b98fc",
+"own": false
+},
+{
+"id": "65d75546b5f4696e683d828e",
+"name": "Upl TV Sub 2 HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65d75546b5f4696e683d828e",
+"own": false
+},
+{
+"id": "65d75609b5f4696e68425753",
+"name": "Upl TV Sub 3 HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65d75609b5f4696e68425753",
+"own": false
+},
+{
+"id": "65d752acb5f4696e681d8631",
+"name": "UPL.TV",
+"logo": "https://s4.vcdn.biz/static/f/9219528031/image.jpg",
+"open": "com.kyivstar.tv.tvapp://live?liveId=65d752acb5f4696e681d8631",
+"own": false
+},
+{
+"id": "65ba0c8c8e74610f66bcf541",
+"name": "Uz TV Train Home",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65ba0c8c8e74610f66bcf541",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0b14",
+"name": "Viasat Explore",
+"logo": "https://i.imgur.com/RBqKj6R.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0b14",
+"own": false
+},
+{
+"id": "5646025ee4b030cb88f2ca9e",
+"name": "Viasat History",
+"logo": "https://i.imgur.com/39qZ68J.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5646025ee4b030cb88f2ca9e",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0a8d",
+"name": "Viasat Kino",
+"logo": "https://i.imgur.com/io0WAkA.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0a8d",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0ac3",
+"name": "Viasat Kino Action",
+"logo": "https://i.imgur.com/HwsNIDK.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0ac3",
+"own": false
+},
+{
+"id": "55efdb76e4b0781039bc0b9b",
+"name": "Viasat Kino Comedy",
+"logo": "https://i.imgur.com/qVYt8kP.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb76e4b0781039bc0b9b",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0aa8",
+"name": "Viasat Kino World",
+"logo": "https://i.imgur.com/GPiE2Rb.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0aa8",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0b2f",
+"name": "Viasat Nature",
+"logo": "https://i.imgur.com/YY0LfBA.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0b2f",
+"own": false
+},
+{
+"id": "6544d132ddd42503c4c623e3",
+"name": "Viasat Serial",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Viasat_Serial.svg",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6544d132ddd42503c4c623e3",
+"own": false
+},
+{
+"id": "6965fc3b5f94b00e0b8b6e82",
+"name": "Viasat True Crime",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6965fc3b5f94b00e0b8b6e82",
+"own": false
+},
+{
+"id": "631705f672b4c44feb245fb5",
+"name": "Vitatv HD",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=631705f672b4c44feb245fb5",
+"own": false
+},
+{
+"id": "62442da3527400192f84653d",
+"name": "Zakon TV",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62442da3527400192f84653d",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0436",
+"name": "Zoom",
+"logo": "https://i.imgur.com/EzIiXIT.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0436",
+"own": false
+},
+{
+"id": "695392a9b1741a95fb887f43",
+"name": "Zoosvit",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=695392a9b1741a95fb887f43",
+"own": false
+},
+{
+"id": "6400902fa1943d578e6a4545",
+"name": "¡Viva Latino!",
+"logo": "https://i.imgur.com/KRakHAq.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6400902fa1943d578e6a4545",
+"own": false
+},
+{
+"id": "5c7babfae4b00d3812e04a31",
+"name": "Аверс",
+"logo": "https://i.imgur.com/rHHz94D.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c7babfae4b00d3812e04a31",
+"own": false
+},
+{
+"id": "6064a6752834f0c8b67d620d",
+"name": "Авторадіо Украина",
+"logo": "https://i.imgur.com/4m6ZnU3.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6064a6752834f0c8b67d620d",
+"own": false
+},
+{
+"id": "5f195ae68d54597042569a34",
+"name": "Апостроф TV HD",
+"logo": "https://i.imgur.com/LCXvbQX.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f195ae68d54597042569a34",
+"own": false
+},
+{
+"id": "64b149a2e4b071014c8dd390",
+"name": "Армія ТБ",
+"logo": "https://i.imgur.com/pGByjbh.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=64b149a2e4b071014c8dd390",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc08f3",
+"name": "АТР",
+"logo": "https://i.imgur.com/lRJAXC7.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc08f3",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc04d8",
+"name": "Бігуді",
+"logo": "https://i.imgur.com/dy9ZKG1.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc04d8",
+"own": false
+},
+{
+"id": "5f0c299b8d54597041dd7f33",
+"name": "Галичина ТБ",
+"logo": "https://i.imgur.com/aL9Dsgu.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c299b8d54597041dd7f33",
+"own": false
+},
+{
+"id": "561bb18fe4b0116df7025c94",
+"name": "Дача",
+"logo": "https://i.imgur.com/xq6p9BZ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=561bb18fe4b0116df7025c94",
+"own": false
+},
+{
+"id": "61e54432bcb489f48b8ec7ad",
+"name": "Динамо Киев ТВ",
+"logo": "https://i.imgur.com/ymxmyyG.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e54432bcb489f48b8ec7ad",
+"own": false
+},
+{
+"id": "621e301fa1b4d2fa38ce0337",
+"name": "Дніпро TV",
+"logo": "https://i.imgur.com/mbPTVh1.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=621e301fa1b4d2fa38ce0337",
+"own": false
+},
+{
+"id": "68b155ba9d544fc80c9a2429",
+"name": "Дім",
+"logo": "https://i.imgur.com/3cjaXIF.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=68b155ba9d544fc80c9a2429",
+"own": false
+},
+{
+"id": "637c96307014ebf0127ba621",
+"name": "Дім HD",
+"logo": "https://i.imgur.com/3cjaXIF.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=637c96307014ebf0127ba621",
+"own": false
+},
+{
+"id": "58a15a5430d48b494bcc67c2",
+"name": "Еспресо",
+"logo": "https://i.imgur.com/xNatV8K.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=58a15a5430d48b494bcc67c2",
+"own": false
+},
+{
+"id": "63077a6843f40f192ec7a0a4",
+"name": "ЕТНО канал",
+"logo": "https://i.imgur.com/CIi3ejZ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63077a6843f40f192ec7a0a4",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0394",
+"name": "К1 HD",
+"logo": "https://i.imgur.com/uuRGpEn.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0394",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc03af",
+"name": "К2 HD",
+"logo": "https://i.imgur.com/NMhydr5.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc03af",
+"own": false
+},
+{
+"id": "5a16f4a960b2b10251c39c43",
+"name": "Караван TV",
+"logo": "https://i.imgur.com/nxEDdB0.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5a16f4a960b2b10251c39c43",
+"own": false
+},
+{
+"id": "55efdb74e4b0781039bc066d",
+"name": "Київ",
+"logo": "https://i.imgur.com/TVuCY4N.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb74e4b0781039bc066d",
+"own": false
+},
+{
+"id": "64ccef9ee4b0286271f2ae6f",
+"name": "Київ FM",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64ccef9ee4b0286271f2ae6f",
+"own": false
+},
+{
+"id": "683f11e253d4c0d8b30df19b",
+"name": "Конкурент TV",
+"logo": "https://i.imgur.com/dJXsv5g.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=683f11e253d4c0d8b30df19b",
+"own": false
+},
+{
+"id": "63ad8acd63b46c5d26818a1f",
+"name": "Континент Е",
+"logo": "https://i.imgur.com/9M9Y9hh.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=63ad8acd63b46c5d26818a1f",
+"own": false
+},
+{
+"id": "5e4bc0ebb874c71b030b07ec",
+"name": "Кус-Кус",
+"logo": "https://i.imgur.com/4a4qX0P.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5e4bc0ebb874c71b030b07ec",
+"own": false
+},
+{
+"id": "60acbbbe72f48fe0cee6a008",
+"name": "Люкс ФМ",
+"logo": "https://i.imgur.com/UfjxW5r.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=60acbbbe72f48fe0cee6a008",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc090e",
+"name": "Ляле",
+"logo": "https://i.imgur.com/CNhqVHd.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc090e",
+"own": false
+},
+{
+"id": "62442e80527400192f85f970",
+"name": "Масон ТБ",
+"logo": "https://i.imgur.com/lySRePP.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=62442e80527400192f85f970",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc03ca",
+"name": "Мега HD",
+"logo": "https://i.imgur.com/Hsr0EvO.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc03ca",
+"own": false
+},
+{
+"id": "660568ac14f4b3f942099f6c",
+"name": "Ми — Україна",
+"logo": "https://i.imgur.com/OD84Oga.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=660568ac14f4b3f942099f6c",
+"own": false
+},
+{
+"id": "64e642299b1489d46f9bfdef",
+"name": "Музвар",
+"logo": "https://i.imgur.com/Klu5k9U.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e642299b1489d46f9bfdef",
+"own": false
+},
+{
+"id": "5f4dc5f31774d4de88e537ad",
+"name": "Надія",
+"logo": "https://i.imgur.com/mUx2P29.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f4dc5f31774d4de88e537ad",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0929",
+"name": "Наталі",
+"logo": "https://i.imgur.com/SEfJZiT.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0929",
+"own": false
+},
+{
+"id": "590633095f34ba4a8ffb2da6",
+"name": "Наука",
+"logo": "https://i.imgur.com/ClGdZCe.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=590633095f34ba4a8ffb2da6",
+"own": false
+},
+{
+"id": "6307791f43f40f192ec543a6",
+"name": "НАШЕ Music",
+"logo": "https://i.imgur.com/ienkbOc.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=6307791f43f40f192ec543a6",
+"own": false
+},
+{
+"id": "630777ee43f40f192ec35032",
+"name": "НАШЕ Ретро",
+"logo": "https://i.imgur.com/u1phZGW.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=630777ee43f40f192ec35032",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0544",
+"name": "Новий канал",
+"logo": "https://i.imgur.com/Dnfhdsm.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0544",
+"own": false
+},
+{
+"id": "60b62b0372f48fe0d040280c",
+"name": "НТА",
+"logo": "https://i.imgur.com/jGT6qY7.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=60b62b0372f48fe0d040280c",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc03e5",
+"name": "НТН",
+"logo": "https://i.imgur.com/AmyCNJv.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc03e5",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc05cb",
+"name": "ОЦЕ",
+"logo": "https://i.imgur.com/SeRNJIS.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc05cb",
+"own": false
+},
+{
+"id": "55efdb72e4b0781039bc0340",
+"name": "Перший",
+"logo": "https://i.imgur.com/osTQLED.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb72e4b0781039bc0340",
+"own": false
+},
+{
+"id": "5c29427ee4b06b9e5999907a",
+"name": "Перший автомобільний",
+"logo": "https://i.imgur.com/ul93Lse.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5c29427ee4b06b9e5999907a",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc09b0",
+"name": "Перший Західний",
+"logo": "https://i.imgur.com/SnljTbR.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc09b0",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc04a2",
+"name": "ПлюсПлюс HD",
+"logo": "https://i.imgur.com/9bPhStm.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc04a2",
+"own": false
+},
+{
+"id": "5f73467b1774d4de8a57a92b",
+"name": "ПравдаТУТ Львів",
+"logo": "https://i.imgur.com/IloW37o.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f73467b1774d4de8a57a92b",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0601",
+"name": "Прямий",
+"logo": "https://i.imgur.com/sEdzw80.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0601",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0400",
+"name": "Піксель HD",
+"logo": "https://i.imgur.com/ECro8Ah.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0400",
+"own": false
+},
+{
+"id": "55efdb74e4b0781039bc0652",
+"name": "Рада",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Rada_TV_%282021%29.svg/960px-Rada_TV_%282021%29.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb74e4b0781039bc0652",
+"own": false
+},
+{
+"id": "5efcfda37a949d862f6ee3ee",
+"name": "Рибалка",
+"logo": "https://i.imgur.com/NafW0xT.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5efcfda37a949d862f6ee3ee",
+"own": false
+},
+{
+"id": "658eee07e4b07f6423f928cb",
+"name": "Рудана",
+"logo": "https://i.imgur.com/1EupURz.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=658eee07e4b07f6423f928cb",
+"own": false
+},
+{
+"id": "6724df025ff410530cf71e1f",
+"name": "Світ",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6724df025ff410530cf71e1f",
+"own": false
+},
+{
+"id": "5906304f5f34ba4a8ffb2aff",
+"name": "Світло",
+"logo": "https://i.imgur.com/KyqWRyE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5906304f5f34ba4a8ffb2aff",
+"own": false
+},
+{
+"id": "630773bf43f40f192ebf2d6d",
+"name": "СК 1",
+"logo": "https://i.imgur.com/XiXwr5h.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=630773bf43f40f192ebf2d6d",
+"own": false
+},
+{
+"id": "69eb4b81f7d4dc51d8f8d2fc",
+"name": "Сонцe",
+"logo": "https://i.imgur.com/MrkQLTp.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=69eb4b81f7d4dc51d8f8d2fc",
+"own": false
+},
+{
+"id": "61e54c8bbcb489f48b98253a",
+"name": "Спорт 1",
+"logo": "https://i.imgur.com/Zjb8awW.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e54c8bbcb489f48b98253a",
+"own": false
+},
+{
+"id": "61e55036bcb489f48b9a726d",
+"name": "Спорт 2",
+"logo": "https://i.imgur.com/vk0j1mY.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e55036bcb489f48b9a726d",
+"own": false
+},
+{
+"id": "61e54d66bcb489f48b98b64e",
+"name": "Спорт 3",
+"logo": "https://i.imgur.com/qkvavfH.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e54d66bcb489f48b98b64e",
+"own": false
+},
+{
+"id": "61e550abbcb489f48b9b02e8",
+"name": "Спорт 4",
+"logo": "https://i.imgur.com/xW6oGIx.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=61e550abbcb489f48b9b02e8",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc055f",
+"name": "СТБ HD",
+"logo": "https://i.imgur.com/DCbfsyW.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc055f",
+"own": false
+},
+{
+"id": "5f1952758d54597042558fbd",
+"name": "Суспільне Cherkasy",
+"logo": "https://i.imgur.com/VghLoDS.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f1952758d54597042558fbd",
+"own": false
+},
+{
+"id": "5f1951f98d545970425583f9",
+"name": "Суспільне Chernihiv",
+"logo": "https://i.imgur.com/WBChVXj.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f1951f98d545970425583f9",
+"own": false
+},
+{
+"id": "5f1952e88d5459704255a9c8",
+"name": "Суспільне Chernivtsi",
+"logo": "https://i.imgur.com/mzYRGp2.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f1952e88d5459704255a9c8",
+"own": false
+},
+{
+"id": "5f0c327460742308d9356d6c",
+"name": "Суспільне Dnipro",
+"logo": "https://i.imgur.com/nMHd9FK.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c327460742308d9356d6c",
+"own": false
+},
+{
+"id": "638f2eb87bd4ac19ad17fc6a",
+"name": "Суспільне Donbas",
+"logo": "https://i.imgur.com/GPXrpJC.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=638f2eb87bd4ac19ad17fc6a",
+"own": false
+},
+{
+"id": "5f0c487060742308d936dfa6",
+"name": "Суспільне Ivano Frankivsk",
+"logo": "https://i.imgur.com/ApKFK5p.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c487060742308d936dfa6",
+"own": false
+},
+{
+"id": "5f1951208d545970425574c1",
+"name": "Суспільне Kharkiv",
+"logo": "https://i.imgur.com/D00PIKE.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f1951208d545970425574c1",
+"own": false
+},
+{
+"id": "5f19519e8d545970425582c5",
+"name": "Суспільне Kherson",
+"logo": "https://i.imgur.com/HUyl87C.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f19519e8d545970425582c5",
+"own": false
+},
+{
+"id": "5f19500c8d54597042552bdd",
+"name": "Суспільне Khmelnytskyi",
+"logo": "https://i.imgur.com/uoTcTbU.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f19500c8d54597042552bdd",
+"own": false
+},
+{
+"id": "5f0c365460742308d935c158",
+"name": "Суспільне Kropyvnytskyi",
+"logo": "https://i.imgur.com/zzYJr87.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c365460742308d935c158",
+"own": false
+},
+{
+"id": "55efdb72e4b0781039bc035b",
+"name": "Суспільне Krym",
+"logo": "https://i.imgur.com/m7znCes.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb72e4b0781039bc035b",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc0a3c",
+"name": "Суспільне Kultura",
+"logo": "https://i.imgur.com/hHMJV8e.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc0a3c",
+"own": false
+},
+{
+"id": "58086bc00714ed876c1fcd56",
+"name": "Суспільне Kyiv",
+"logo": "https://i.imgur.com/MeR1dJw.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=58086bc00714ed876c1fcd56",
+"own": false
+},
+{
+"id": "5f0c31c960742308d9356bc3",
+"name": "Суспільне Lutsk",
+"logo": "https://i.imgur.com/QIin5nZ.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c31c960742308d9356bc3",
+"own": false
+},
+{
+"id": "5f0c4d9b60742308d93785f7",
+"name": "Суспільне Lviv",
+"logo": "https://i.imgur.com/1fBopUs.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c4d9b60742308d93785f7",
+"own": false
+},
+{
+"id": "5f0c49f160742308d937092d",
+"name": "Суспільне Mykolaiv",
+"logo": "https://i.imgur.com/bdOmdT4.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c49f160742308d937092d",
+"own": false
+},
+{
+"id": "5f0c52ab60742308d9378ec6",
+"name": "Суспільне Odesa",
+"logo": "https://i.imgur.com/giTdUK9.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c52ab60742308d9378ec6",
+"own": false
+},
+{
+"id": "5f0c511660742308d9378c78",
+"name": "Суспільне Poltava",
+"logo": "https://i.imgur.com/xT5TsKN.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c511660742308d9378c78",
+"own": false
+},
+{
+"id": "5f194f378d5459704254d2ef",
+"name": "Суспільне Rivne",
+"logo": "https://i.imgur.com/GlwZw2S.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f194f378d5459704254d2ef",
+"own": false
+},
+{
+"id": "64da16bf6fb4afb00d17519f",
+"name": "Суспільне Sport HD",
+"logo": "https://i.imgur.com/16IhU0M.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=64da16bf6fb4afb00d17519f",
+"own": false
+},
+{
+"id": "5f194faa8d54597042552446",
+"name": "Суспільне Sumy",
+"logo": "https://i.imgur.com/U5GQiUz.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f194faa8d54597042552446",
+"own": false
+},
+{
+"id": "5f194e508d5459704254aa0d",
+"name": "Суспільне Ternopil",
+"logo": "https://i.imgur.com/rxXyCY7.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f194e508d5459704254aa0d",
+"own": false
+},
+{
+"id": "55efdb75e4b0781039bc08d8",
+"name": "Суспільне Uzhhorod",
+"logo": "https://i.imgur.com/5zYTBJ1.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb75e4b0781039bc08d8",
+"own": false
+},
+{
+"id": "5f0c312560742308d9356a24",
+"name": "Суспільне Vinnytsia",
+"logo": "https://i.imgur.com/g84PWbj.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c312560742308d9356a24",
+"own": false
+},
+{
+"id": "5f0c475560742308d936ddc1",
+"name": "Суспільне Zaporizhzhya",
+"logo": "https://i.imgur.com/SZWteS9.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c475560742308d936ddc1",
+"own": false
+},
+{
+"id": "5f0c33ad60742308d9356f29",
+"name": "Суспільне Zhytomyr",
+"logo": "https://i.imgur.com/lCv1Xaq.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f0c33ad60742308d9356f29",
+"own": false
+},
+{
+"id": "658ee723e4b07f6423f2e5ee",
+"name": "Твій серіал",
+"logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Tviy_Serial.svg/250px-Tviy_Serial.svg.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=658ee723e4b07f6423f2e5ee",
+"own": false
+},
+{
+"id": "5b51f77760b2315d91d9f717",
+"name": "Телевсесвіт",
+"logo": "https://i.imgur.com/ygexoKO.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5b51f77760b2315d91d9f717",
+"own": false
+},
+{
+"id": "590631675f34ba4a8ffb2bfc",
+"name": "Терра",
+"logo": "https://i.imgur.com/HFY61gj.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=590631675f34ba4a8ffb2bfc",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc0487",
+"name": "ТЕТ HD",
+"logo": "https://i.imgur.com/Wu6wtbe.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc0487",
+"own": false
+},
+{
+"id": "5b41dfe460b2315d91c9088e",
+"name": "Трофей",
+"logo": "https://i.imgur.com/VDt4mKB.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5b41dfe460b2315d91c9088e",
+"own": false
+},
+{
+"id": "55efdb73e4b0781039bc04f3",
+"name": "УНІАН Серіал",
+"logo": "https://i.imgur.com/Alu78zn.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=55efdb73e4b0781039bc04f3",
+"own": false
+},
+{
+"id": "590632605f34ba4a8ffb2cf8",
+"name": "Фауна",
+"logo": "https://i.imgur.com/UwQcDTm.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=590632605f34ba4a8ffb2cf8",
+"own": false
+},
+{
+"id": "627003031d54b220a6f25279",
+"name": "Чемодан ТВ",
+"logo": "https://i.imgur.com/1WjGN8u.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=627003031d54b220a6f25279",
+"own": false
+},
+{
+"id": "5ab9e7e760b20c61c1efec00",
+"name": "Інтер HD",
+"logo": "https://i.imgur.com/FHRagMx.png",
+"open": "com.kyivstar.tv.tvapp://live?liveId=5ab9e7e760b20c61c1efec00",
+"own": false
+},
+{
+"id": "677d01c38b14b5f80056277d",
+"name": "A Part of Me · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=677d01c38b14b5f80056277d",
+"own": true
+},
+{
+"id": "6597e869e4b01fb1328077f0",
+"name": "Action HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6597e869e4b01fb1328077f0",
+"own": true
+},
+{
+"id": "64d60021e4b02862812b970c",
+"name": "Action · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d60021e4b02862812b970c",
+"own": true
+},
+{
+"id": "6656f833e4b0349909e157d5",
+"name": "Agatha Christies Marple · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6656f833e4b0349909e157d5",
+"own": true
+},
+{
+"id": "65706090c594d7d46e860c45",
+"name": "Air Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65706090c594d7d46e860c45",
+"own": true
+},
+{
+"id": "680a3900a5146efef43cda95",
+"name": "Aldatmak · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=680a3900a5146efef43cda95",
+"own": true
+},
+{
+"id": "65705f98c594d7d46e86091d",
+"name": "Animals Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65705f98c594d7d46e86091d",
+"own": true
+},
+{
+"id": "611d0d69f51485075ae8dc9c",
+"name": "Animals Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611d0d69f51485075ae8dc9c",
+"own": true
+},
+{
+"id": "6570628bc594d7d46e861b29",
+"name": "Aquarium Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6570628bc594d7d46e861b29",
+"own": true
+},
+{
+"id": "611d07c9f51485075ae46a9b",
+"name": "Aquarium Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611d07c9f51485075ae46a9b",
+"own": true
+},
+{
+"id": "61c48647b054c5945df39c44",
+"name": "Audio Stories · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=61c48647b054c5945df39c44",
+"own": true
+},
+{
+"id": "68a87facdf14eb24b2bce200",
+"name": "Basketball 2 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68a87facdf14eb24b2bce200",
+"own": true
+},
+{
+"id": "6a466b17929408ce7df4163d",
+"name": "Basketball 3 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a466b17929408ce7df4163d",
+"own": true
+},
+{
+"id": "6166e12578b43e5a4e065097",
+"name": "Basketball · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6166e12578b43e5a4e065097",
+"own": true
+},
+{
+"id": "65eb06aee4b05a430356a10c",
+"name": "Be Helsi · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65eb06aee4b05a430356a10c",
+"own": true
+},
+{
+"id": "65706148c594d7d46e860fa1",
+"name": "Beach Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65706148c594d7d46e860fa1",
+"own": true
+},
+{
+"id": "64f087cc19f40ed82ae0c36a",
+"name": "Blind Wedding · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64f087cc19f40ed82ae0c36a",
+"own": true
+},
+{
+"id": "68bfe8309bb45746b3868a4c",
+"name": "Blood Flowers · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68bfe8309bb45746b3868a4c",
+"own": true
+},
+{
+"id": "677fbc926dd4db9a0d1ae4bc",
+"name": "Boxing HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=677fbc926dd4db9a0d1ae4bc",
+"own": true
+},
+{
+"id": "685bb3ee1bb407340cee5b82",
+"name": "Bride From Istanbul · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=685bb3ee1bb407340cee5b82",
+"own": true
+},
+{
+"id": "64d6014ee4b02862812bba62",
+"name": "Brilliant · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d6014ee4b02862812bba62",
+"own": true
+},
+{
+"id": "653a1babe4b096bc30713e83",
+"name": "Bubble Guppies · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=653a1babe4b096bc30713e83",
+"own": true
+},
+{
+"id": "6508533a5194ee6d755fe9d5",
+"name": "Charmed · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6508533a5194ee6d755fe9d5",
+"own": true
+},
+{
+"id": "60b663c6c3348470d4ecbb33",
+"name": "Chill · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60b663c6c3348470d4ecbb33",
+"own": true
+},
+{
+"id": "65706208c594d7d46e861872",
+"name": "Clouds Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65706208c594d7d46e861872",
+"own": true
+},
+{
+"id": "5f99574855b4a5677105b49e",
+"name": "Comedy HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f99574855b4a5677105b49e",
+"own": true
+},
+{
+"id": "6425bcbc6e1448e07191cb7b",
+"name": "Comedy HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6425bcbc6e1448e07191cb7b",
+"own": true
+},
+{
+"id": "64c0c9f6c394fe566c16768e",
+"name": "Comedy Series · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64c0c9f6c394fe566c16768e",
+"own": true
+},
+{
+"id": "64d5fc8ae4b028628122256f",
+"name": "Comedyland · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d5fc8ae4b028628122256f",
+"own": true
+},
+{
+"id": "68a4d7bd74f4e4bce9d20fa6",
+"name": "Costume Drama · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68a4d7bd74f4e4bce9d20fa6",
+"own": true
+},
+{
+"id": "633458df50347fd195aeeb37",
+"name": "Crime HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633458df50347fd195aeeb37",
+"own": true
+},
+{
+"id": "690bab9211d4c745a1d5401d",
+"name": "Csi Crime Scene Investigation · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=690bab9211d4c745a1d5401d",
+"own": true
+},
+{
+"id": "69158febd9b4e7b5b3aa8e4e",
+"name": "Cult Cinema of the 00s · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69158febd9b4e7b5b3aa8e4e",
+"own": true
+},
+{
+"id": "6901f7244b74878c14e819e2",
+"name": "Cult Cinema of the 90s · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6901f7244b74878c14e819e2",
+"own": true
+},
+{
+"id": "66c6f712367436b05767b24a",
+"name": "Death In Paradise · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66c6f712367436b05767b24a",
+"own": true
+},
+{
+"id": "60f57a58d0348f888597bae9",
+"name": "Detective HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f57a58d0348f888597bae9",
+"own": true
+},
+{
+"id": "670fd10f10f40b608830247a",
+"name": "Dexter · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=670fd10f10f40b608830247a",
+"own": true
+},
+{
+"id": "5fc63f265414554c17e4938f",
+"name": "Documentary HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc63f265414554c17e4938f",
+"own": true
+},
+{
+"id": "64b90aeee4b071015a3d08b2",
+"name": "Dorama HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64b90aeee4b071015a3d08b2",
+"own": true
+},
+{
+"id": "64e5f87646744d662a28159f",
+"name": "Drama · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e5f87646744d662a28159f",
+"own": true
+},
+{
+"id": "60a7807d72f48fe0cd655927",
+"name": "Dramatic Cinema HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60a7807d72f48fe0cd655927",
+"own": true
+},
+{
+"id": "657062ffc594d7d46e861dcb",
+"name": "Earth Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657062ffc594d7d46e861dcb",
+"own": true
+},
+{
+"id": "611d089af51485075ae46c6a",
+"name": "Earth Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611d089af51485075ae46c6a",
+"own": true
+},
+{
+"id": "633e94433a7466f6e08a418d",
+"name": "Electro · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e94433a7466f6e08a418d",
+"own": true
+},
+{
+"id": "6528f34dc814a9ac356f3a25",
+"name": "Elementary HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6528f34dc814a9ac356f3a25",
+"own": true
+},
+{
+"id": "63d12a714c14663bb51f19b6",
+"name": "Erotica · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=63d12a714c14663bb51f19b6",
+"own": true
+},
+{
+"id": "6966d20649f4b714fa018b39",
+"name": "Explore · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6966d20649f4b714fa018b39",
+"own": true
+},
+{
+"id": "6492fae38b94b9c419a4aa41",
+"name": "Family Dramas · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6492fae38b94b9c419a4aa41",
+"own": true
+},
+{
+"id": "60a7816172f48fe0cd659ddb",
+"name": "Family Movie HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60a7816172f48fe0cd659ddb",
+"own": true
+},
+{
+"id": "64df46116fb4afb01bb8402b",
+"name": "Fantasy Art · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64df46116fb4afb01bb8402b",
+"own": true
+},
+{
+"id": "68a4d76874f4e4bce9d1fba6",
+"name": "Fantasy · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68a4d76874f4e4bce9d1fba6",
+"own": true
+},
+{
+"id": "664dc7d2e4b05b94c828f3e0",
+"name": "Father Brown · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=664dc7d2e4b05b94c828f3e0",
+"own": true
+},
+{
+"id": "657064adc594d7d46e8629bb",
+"name": "Fire Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657064adc594d7d46e8629bb",
+"own": true
+},
+{
+"id": "611d0bcaf51485075ae7bbda",
+"name": "Fire Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611d0bcaf51485075ae7bbda",
+"own": true
+},
+{
+"id": "68fb653f4eb468b99832891a",
+"name": "Football 2 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68fb653f4eb468b99832891a",
+"own": true
+},
+{
+"id": "6a5a2aea87b491a656de4d98",
+"name": "Football 3 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a5a2aea87b491a656de4d98",
+"own": true
+},
+{
+"id": "68fb631b4eb468b99819f75b",
+"name": "Football · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68fb631b4eb468b99819f75b",
+"own": true
+},
+{
+"id": "6672af58e4b0e65f5c9722e6",
+"name": "Forbidden Fruit · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6672af58e4b0e65f5c9722e6",
+"own": true
+},
+{
+"id": "69a55a5d405401e5acc4206b",
+"name": "Forbidden Love · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69a55a5d405401e5acc4206b",
+"own": true
+},
+{
+"id": "6ac53b4fe4b02436d94ef2d0",
+"name": "Free Movies · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6ac53b4fe4b02436d94ef2d0",
+"own": true
+},
+{
+"id": "6a8df710881450d1c86feb81",
+"name": "Futsal 2 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a8df710881450d1c86feb81",
+"own": true
+},
+{
+"id": "6a8df80a881450d1c8707200",
+"name": "Futsal 3 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a8df80a881450d1c8707200",
+"own": true
+},
+{
+"id": "67e5739abc943114302c64ff",
+"name": "Futsal · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67e5739abc943114302c64ff",
+"own": true
+},
+{
+"id": "6915de5cfa9460f30a1e0a26",
+"name": "Golden Boy · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6915de5cfa9460f30a1e0a26",
+"own": true
+},
+{
+"id": "633e90853a7466f6e07f4987",
+"name": "Golden Hits · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e90853a7466f6e07f4987",
+"own": true
+},
+{
+"id": "629618e6a4f4e57c0341f679",
+"name": "Good Cinema · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=629618e6a4f4e57c0341f679",
+"own": true
+},
+{
+"id": "677fbf316dd4db9a0d2269bf",
+"name": "Heads Tails · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=677fbf316dd4db9a0d2269bf",
+"own": true
+},
+{
+"id": "6881ff733f1447f80c3e3c8e",
+"name": "Her Yerde Sen · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6881ff733f1447f80c3e3c8e",
+"own": true
+},
+{
+"id": "633e92e23a7466f6e0850d83",
+"name": "Hiphop Rnb · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e92e23a7466f6e0850d83",
+"own": true
+},
+{
+"id": "6966d17549f4b714fa0187b0",
+"name": "History · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6966d17549f4b714fa0187b0",
+"own": true
+},
+{
+"id": "64e5bc90e4b01e556c0af0cd",
+"name": "History · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e5bc90e4b01e556c0af0cd",
+"own": true
+},
+{
+"id": "68af3c20cd14ace644fd63f8",
+"name": "Hockey · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68af3c20cd14ace644fd63f8",
+"own": true
+},
+{
+"id": "5fc63d815414554c17e49002",
+"name": "Horror HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc63d815414554c17e49002",
+"own": true
+},
+{
+"id": "64d63314e4b028628206d89b",
+"name": "Hot Films · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d63314e4b028628206d89b",
+"own": true
+},
+{
+"id": "64e5fd4e46744d662a50a976",
+"name": "Humor · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e5fd4e46744d662a50a976",
+"own": true
+},
+{
+"id": "6a57de8415f42de8fa04d168",
+"name": "Jennets Tears · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a57de8415f42de8fa04d168",
+"own": true
+},
+{
+"id": "655ccb45e4b091f07c72ecd7",
+"name": "Kara Sevda · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=655ccb45e4b091f07c72ecd7",
+"own": true
+},
+{
+"id": "65085645e4b00819f395d48e",
+"name": "Kc TV the World Inside Out South America HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65085645e4b00819f395d48e",
+"own": true
+},
+{
+"id": "67ff5b7cec14b22e85eb5659",
+"name": "Kiddisvit · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67ff5b7cec14b22e85eb5659",
+"own": true
+},
+{
+"id": "64d602eee4b0286281387875",
+"name": "Kids Planet · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d602eee4b0286281387875",
+"own": true
+},
+{
+"id": "64d60202e4b02862812bdf7a",
+"name": "Kids · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64d60202e4b02862812bdf7a",
+"own": true
+},
+{
+"id": "66a22748fc34a4d5048e9eb6",
+"name": "Kino and Serials · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66a22748fc34a4d5048e9eb6",
+"own": true
+},
+{
+"id": "65d5fb4fe4b0d45a437e623d",
+"name": "Kremlin Is On Fire 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65d5fb4fe4b0d45a437e623d",
+"own": true
+},
+{
+"id": "6304e56c32f43b289c680992",
+"name": "Kremlin Is On Fire · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6304e56c32f43b289c680992",
+"own": true
+},
+{
+"id": "62fa02a618f45f37f1c11b8d",
+"name": "Lego · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62fa02a618f45f37f1c11b8d",
+"own": true
+},
+{
+"id": "64df46a86fb4afb01bb8433c",
+"name": "Lesbian Love · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64df46a86fb4afb01bb8433c",
+"own": true
+},
+{
+"id": "6a7d7c9d31d4be794e5b363f",
+"name": "Leyla · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a7d7c9d31d4be794e5b363f",
+"own": true
+},
+{
+"id": "6492f7f08b94b9c41993be28",
+"name": "Lives of Famous People · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6492f7f08b94b9c41993be28",
+"own": true
+},
+{
+"id": "67ee4ab71774a75ad67b843c",
+"name": "Lost World · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=67ee4ab71774a75ad67b843c",
+"own": true
+},
+{
+"id": "6620cdabe4b0e42bf3725d65",
+"name": "Love Does Not Understand Words · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6620cdabe4b0e42bf3725d65",
+"own": true
+},
+{
+"id": "68664d4ebd749e48ab827450",
+"name": "Love For Rent · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68664d4ebd749e48ab827450",
+"own": true
+},
+{
+"id": "677d13e57c34526899e67701",
+"name": "Love Is In the Air · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=677d13e57c34526899e67701",
+"own": true
+},
+{
+"id": "657063e8c594d7d46e86263a",
+"name": "Lullaby Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657063e8c594d7d46e86263a",
+"own": true
+},
+{
+"id": "611d0e29f51485075ae8e50a",
+"name": "Lullaby Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611d0e29f51485075ae8e50a",
+"own": true
+},
+{
+"id": "633e923b3a7466f6e083f07c",
+"name": "Made In Ukraine · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e923b3a7466f6e083f07c",
+"own": true
+},
+{
+"id": "678a9c3cb41478cfe9032052",
+"name": "Mediafootball · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=678a9c3cb41478cfe9032052",
+"own": true
+},
+{
+"id": "6952741db1741a95fb0d9ed5",
+"name": "Megahit · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6952741db1741a95fb0d9ed5",
+"own": true
+},
+{
+"id": "60f57eaad0348f88859a8eeb",
+"name": "Melodrama HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f57eaad0348f88859a8eeb",
+"own": true
+},
+{
+"id": "69f337346234a8697e8b32cf",
+"name": "Motorsport · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69f337346234a8697e8b32cf",
+"own": true
+},
+{
+"id": "5fc642585414554c17e4cb9e",
+"name": "Multoland · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc642585414554c17e4cb9e",
+"own": true
+},
+{
+"id": "6656df50e4b03499096fefd5",
+"name": "Murdoch Mysteries · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6656df50e4b03499096fefd5",
+"own": true
+},
+{
+"id": "64e5f1f446744d662a0b80c2",
+"name": "Mystic · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e5f1f446744d662a0b80c2",
+"own": true
+},
+{
+"id": "6966d28249f4b714fa018f4b",
+"name": "Nature · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6966d28249f4b714fa018f4b",
+"own": true
+},
+{
+"id": "64f877b4e4b0a1c5df0f1a00",
+"name": "Ninja Turtles · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64f877b4e4b0a1c5df0f1a00",
+"own": true
+},
+{
+"id": "6645ce32e4b0f26f093362e2",
+"name": "Oggy and the Cockroaches · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6645ce32e4b0f26f093362e2",
+"own": true
+},
+{
+"id": "60353b1ffe34f89e3586b513",
+"name": "Our Series HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60353b1ffe34f89e3586b513",
+"own": true
+},
+{
+"id": "60f582e8d0348f88859cec49",
+"name": "Paw Patrol HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f582e8d0348f88859cec49",
+"own": true
+},
+{
+"id": "6582d716e4b05f90a92aa106",
+"name": "Peppa Pig · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6582d716e4b05f90a92aa106",
+"own": true
+},
+{
+"id": "60f57fa2d0348f88859b2c60",
+"name": "Reality Show HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f57fa2d0348f88859b2c60",
+"own": true
+},
+{
+"id": "64e6006546744d662a6e6353",
+"name": "Reality · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e6006546744d662a6e6353",
+"own": true
+},
+{
+"id": "6878a6c4c9f4a1317711560a",
+"name": "Recipe of Love · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6878a6c4c9f4a1317711560a",
+"own": true
+},
+{
+"id": "696f550ce4b08983bb3d564e",
+"name": "Red Buds · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=696f550ce4b08983bb3d564e",
+"own": true
+},
+{
+"id": "633e93703a7466f6e0874874",
+"name": "Retro · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e93703a7466f6e0874874",
+"own": true
+},
+{
+"id": "60b66665c3348470d4f1191f",
+"name": "Rock · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60b66665c3348470d4f1191f",
+"own": true
+},
+{
+"id": "632982f766d411c45f59e106",
+"name": "Romance Series · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=632982f766d411c45f59e106",
+"own": true
+},
+{
+"id": "63dbc6a13bb40b11d44fc110",
+"name": "Secret 18 · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=63dbc6a13bb40b11d44fc110",
+"own": true
+},
+{
+"id": "5fc643105414554c17e4ce62",
+"name": "Series HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fc643105414554c17e4ce62",
+"own": true
+},
+{
+"id": "64afa382e4b07101487321b1",
+"name": "Shopping Goddess · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64afa382e4b07101487321b1",
+"own": true
+},
+{
+"id": "691f105893343913ac4539b4",
+"name": "Socca · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=691f105893343913ac4539b4",
+"own": true
+},
+{
+"id": "644a18bff8f476b40042739f",
+"name": "Space Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=644a18bff8f476b40042739f",
+"own": true
+},
+{
+"id": "60f580e1d0348f88859bda69",
+"name": "Sponge Bob HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60f580e1d0348f88859bda69",
+"own": true
+},
+{
+"id": "68a36a8399343850f68fc042",
+"name": "Sport · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68a36a8399343850f68fc042",
+"own": true
+},
+{
+"id": "633e949c3a7466f6e08d83d3",
+"name": "Sport · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e949c3a7466f6e08d83d3",
+"own": true
+},
+{
+"id": "6ac6601de4b0019444eb26d8",
+"name": "Sporting · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6ac6601de4b0019444eb26d8",
+"own": true
+},
+{
+"id": "6790eeef0594ce86e473b094",
+"name": "Stosuetsa Kozhnogo · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6790eeef0594ce86e473b094",
+"own": true
+},
+{
+"id": "6966d39649f4b714fa019325",
+"name": "Sweet Revenge · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6966d39649f4b714fa019325",
+"own": true
+},
+{
+"id": "64e5b20c6fb4afb023b742eb",
+"name": "Team · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64e5b20c6fb4afb023b742eb",
+"own": true
+},
+{
+"id": "64f83902e4b0a1c5db44272d",
+"name": "the Cop On Call · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64f83902e4b0a1c5db44272d",
+"own": true
+},
+{
+"id": "6915e60187944f811a0570ac",
+"name": "the Family · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6915e60187944f811a0570ac",
+"own": true
+},
+{
+"id": "66bc62b478f4cf180587f171",
+"name": "the Girl Named Feriha · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=66bc62b478f4cf180587f171",
+"own": true
+},
+{
+"id": "64b907ede4b071015a34cc2f",
+"name": "the Lady and the Peasant · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=64b907ede4b071015a34cc2f",
+"own": true
+},
+{
+"id": "6a6b5d2fc3144f2ec4dae82f",
+"name": "the Penguins of Madagascar · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a6b5d2fc3144f2ec4dae82f",
+"own": true
+},
+{
+"id": "692ec4fe4eb474f8ce9f2c8a",
+"name": "the Real Story · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=692ec4fe4eb474f8ce9f2c8a",
+"own": true
+},
+{
+"id": "648adbe1e4b03140695bf056",
+"name": "the Whole Country Is Talking · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=648adbe1e4b03140695bf056",
+"own": true
+},
+{
+"id": "65085677e4b00819f3968ca3",
+"name": "the World Inside Out Asia HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65085677e4b00819f3968ca3",
+"own": true
+},
+{
+"id": "5fd36b545414fee0a809cc16",
+"name": "the World Inside Out HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5fd36b545414fee0a809cc16",
+"own": true
+},
+{
+"id": "6a62251a9074b5b8bf1fd918",
+"name": "the Yellowstone Universe · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a62251a9074b5b8bf1fd918",
+"own": true
+},
+{
+"id": "667bfe371034a3a64e21afbd",
+"name": "Thriller · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=667bfe371034a3a64e21afbd",
+"own": true
+},
+{
+"id": "664dcdbfe4b05b94c83338e3",
+"name": "Top Gear · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=664dcdbfe4b05b94c83338e3",
+"own": true
+},
+{
+"id": "60b66279c3348470d4ec7657",
+"name": "Top Hits · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=60b66279c3348470d4ec7657",
+"own": true
+},
+{
+"id": "5f99281055b4a56770ddf089",
+"name": "Trailer HD · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=5f99281055b4a56770ddf089",
+"own": true
+},
+{
+"id": "65c33d4ce4b04e81a86b90cc",
+"name": "Trophy HD Premium · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=65c33d4ce4b04e81a86b90cc",
+"own": true
+},
+{
+"id": "689c401d9934e5e0d281e40f",
+"name": "Turkish Series · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=689c401d9934e5e0d281e40f",
+"own": true
+},
+{
+"id": "646df4f5e4b0f13e55a40d2f",
+"name": "TV Series About Doctors · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=646df4f5e4b0f13e55a40d2f",
+"own": true
+},
+{
+"id": "6787b02d4f34b6e890b08c56",
+"name": "Veshdok · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6787b02d4f34b6e890b08c56",
+"own": true
+},
+{
+"id": "68a3692c99343850f6877efe",
+"name": "Volleyball · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=68a3692c99343850f6877efe",
+"own": true
+},
+{
+"id": "62961a74a4f4e57c0343ca1a",
+"name": "Warrior · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=62961a74a4f4e57c0343ca1a",
+"own": true
+},
+{
+"id": "6570694ac594d7d46e865e48",
+"name": "Water Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6570694ac594d7d46e865e48",
+"own": true
+},
+{
+"id": "611bc98ffeb4c2e51c22054f",
+"name": "Water Relax · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=611bc98ffeb4c2e51c22054f",
+"own": true
+},
+{
+"id": "657068a9c594d7d46e865ae8",
+"name": "Waterfall Relax 4K · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=657068a9c594d7d46e865ae8",
+"own": true
+},
+{
+"id": "6492fc238b94b9c419bc3075",
+"name": "Wife Swap · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6492fc238b94b9c419bc3075",
+"own": true
+},
+{
+"id": "6a0ef494f754405d1b8cbc64",
+"name": "Wild Heart · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6a0ef494f754405d1b8cbc64",
+"own": true
+},
+{
+"id": "69f31ea96234a8697e801b1c",
+"name": "Wildlife · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=69f31ea96234a8697e801b1c",
+"own": true
+},
+{
+"id": "6ac53c32e4b02436d94fe8fa",
+"name": "Woman · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=6ac53c32e4b02436d94fe8fa",
+"own": true
+},
+{
+"id": "633e915e3a7466f6e081b759",
+"name": "World Charts · Київстар",
+"logo": null,
+"open": "com.kyivstar.tv.tvapp://live?liveId=633e915e3a7466f6e081b759",
+"own": true
+}
+]

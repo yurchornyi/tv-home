@@ -77,6 +77,12 @@
     <string name="app_library">Усі програми</string>
     <string name="watch_now">Дивитися</string>
     <string name="live_badge">НАЖИВО</string>
+    <string name="shelf_mode_channels">Полиця: канали</string>
+    <string name="shelf_mode_posters">Полиця: постери</string>
+    <string name="choose_channels">Вибрати канали…</string>
+    <string name="channels_on_shelf">Канали на полиці: %s</string>
+    <string name="channels_hint">OK додає або прибирає канал, Назад зберігає вибір</string>
+    <string name="channels_empty">Утримуйте OK на плитці, щоб вибрати канали</string>
     <string name="shelf_posters_hide">Прибрати постери з полиці</string>
     <string name="shelf_posters_show">Показувати постери на полиці</string>
     <string name="library_empty">Немає програм для запуску</string>
