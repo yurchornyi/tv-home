@@ -2,11 +2,14 @@ plugins {
     id 'com.android.application'
 }
 
-// TMDB key for the top shelf posters (tmdb.key=... in launcher/local.properties, which git ignores). Empty: no posters.
+// The top shelf's TMDB requests go through the tv-home-tmdb Worker (config.xml tmdb_proxy, tools/tmdb-proxy), which
+// holds the key, so builds carry none. tmdb.key=... in launcher/local.properties (git ignores it) is what
+// tools/tmdb-proxy/deploy.sh hands the Worker; tmdb.embed_key=true puts it in the APK instead, for a fork without
+// a Worker. Neither: no posters.
 def localProps = new Properties()
 def localFile = rootProject.file('local.properties')
 if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
-def tmdbKey = (localProps.getProperty('tmdb.key') ?: '').trim()
+def tmdbKey = localProps.getProperty('tmdb.embed_key') == 'true' ? (localProps.getProperty('tmdb.key') ?: '').trim() : ''
 
 android {
     namespace 'com.gathin.tvhome'

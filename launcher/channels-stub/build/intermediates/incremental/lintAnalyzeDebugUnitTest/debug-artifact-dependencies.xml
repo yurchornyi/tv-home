@@ -1,8 +1,0 @@
-<dependencies>
-  <compile
-      roots=":@@:channels-stub::debug">
-    <dependency
-        name=":@@:channels-stub::debug"
-        simpleName="artifacts::channels-stub"/>
-  </compile>
-</dependencies>

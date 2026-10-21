@@ -1,4 +1,4 @@
-#Wed Oct 21 12:46:39 CEST 2026
+#Wed Oct 21 20:13:29 CEST 2026
 base.0=/Users/chornyi/Projects/tv-home/launcher/channels-stub/build/intermediates/dex/release/mergeDexRelease/classes.dex
 renamed.0=classes.dex
 path.0=classes.dex

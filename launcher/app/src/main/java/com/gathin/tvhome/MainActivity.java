@@ -587,7 +587,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (View b : npButtons) b.setOnKeyListener(npKeys);
         feedApps.addAll(cfg.shelfFeedApps);
         channelApps.addAll(cfg.shelfChannelApps);
-        shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY);
+        shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY, getString(R.string.tmdb_proxy));
         channelFeed = new ChannelFeed(this);
         if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
         greeting = findViewById(R.id.greeting);

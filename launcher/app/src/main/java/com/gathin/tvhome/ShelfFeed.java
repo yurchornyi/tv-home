@@ -71,7 +71,8 @@ final class ShelfFeed {
     interface ImageListener { void onImage(String backdrop, Bitmap bitmap); }
 
     private static final String TAG = "TvHome.ShelfFeed";
-    private static final String API = "https://api.themoviedb.org/3/";
+    /** TMDB's API, or the Worker that asks it on the launcher's behalf (config.xml tmdb_proxy). */
+    private final String API;
     private static final String IMAGES = "https://image.tmdb.org/t/p/w1280";
     private static final long MAX_AGE_MS = 6 * 60 * 60 * 1000L;
     private static final String NETFLIX = "com.netflix.ninja";
@@ -92,16 +93,22 @@ final class ShelfFeed {
     private final Map<String, List<ImageListener>> waiting = new HashMap<>();
     private final LruCache<String, Bitmap> images = new LruCache<>(3);
 
-    ShelfFeed(Context ctx, String key) {
+    ShelfFeed(Context ctx, String key, String proxy) {
         this.ctx = ctx.getApplicationContext();
-        this.key = key == null ? "" : key.trim();
+        String p = proxy == null ? "" : proxy.trim();
+        // With the Worker, no key goes along: it adds its own.
+        this.key = p.isEmpty() && key != null ? key.trim() : "";
+        this.API = p.isEmpty() ? "https://api.themoviedb.org/3/" : (p.endsWith("/") ? p : p + "/") + "3/";
+        this.proxied = !p.isEmpty();
         java.util.Locale l = java.util.Locale.getDefault();
         this.language = l.getLanguage() + (l.getCountry().isEmpty() ? "" : "-" + l.getCountry());
         this.region = l.getCountry().isEmpty() ? "US" : l.getCountry();
     }
 
+    private final boolean proxied;
+
     boolean enabled() {
-        return !key.isEmpty();
+        return proxied || !key.isEmpty();
     }
 
     /** What is cached for this app right now, without any fetch; empty when nothing is. */
@@ -324,11 +331,11 @@ final class ShelfFeed {
     /** A v4 read token (long JWT) goes in the Authorization header, a v3 key in the query. */
     private byte[] get(String url, boolean api) throws Exception {
         boolean bearer = key.length() > 40;
-        if (api && !bearer) url += "&api_key=" + key;
+        if (api && !bearer && !key.isEmpty()) url += "&api_key=" + key;
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(8000);
         c.setReadTimeout(12000);
-        if (api && bearer) c.setRequestProperty("Authorization", "Bearer " + key);
+        if (api && bearer && !key.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + key);
         try (InputStream in = c.getInputStream()) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buf = new byte[16384];
@@ -358,6 +365,6 @@ final class ShelfFeed {
     }
 
     private SharedPreferences prefs() {
-        return ctx.getSharedPreferences("shelf_feed_v4", Context.MODE_PRIVATE);
+        return ctx.getSharedPreferences("shelf_feed_v5", Context.MODE_PRIVATE);
     }
 }

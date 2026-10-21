@@ -1,5 +1,0 @@
-<libraries>
-  <library
-      name=":@@:channels-stub::debug"
-      project=":channels-stub"/>
-</libraries>

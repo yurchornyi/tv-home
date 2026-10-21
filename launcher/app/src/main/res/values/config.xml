@@ -178,6 +178,9 @@
     <!-- Self-update (Updater): the JSON launcher/release.sh publishes with each release; the launcher reads it
          every few hours, downloads a newer build and offers "Update to ..." in the Settings menu (hold OK on the
          Settings pill). Empty: the launcher never looks. A theme can set "update_url". -->
+    <!-- Where the top shelf asks TMDB for posters: the tv-home-tmdb Cloudflare Worker (tools/tmdb-proxy), which keeps
+         the key, so the APK has none. Empty: straight to TMDB with a key built in (tmdb.embed_key), or no posters. -->
+    <string name="tmdb_proxy" translatable="false">https://tv-home-tmdb.basic-175.workers.dev</string>
     <string name="update_url" translatable="false">https://github.com/yurchornyi/tv-home/releases/latest/download/update.json</string>
     <!-- The dock as its own row: a lighter band, no names under the tiles, parked low on the screen with the top
          shelf above it. false makes the dock apps simply the first tiles of one plain grid (still in dock_apps
