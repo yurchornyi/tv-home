@@ -1,5 +1,5 @@
 {
-  "name": "tv-home-tmdb",
+  "name": "tv-launcher-tmdb",
   "private": true,
   "type": "module",
   "dependencies": {

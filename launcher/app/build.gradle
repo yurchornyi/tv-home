@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
 }
 
-// The top shelf's TMDB requests go through the tv-home-tmdb Worker (config.xml tmdb_proxy, tools/tmdb-proxy), which
+// The top shelf's TMDB requests go through the tv-launcher-tmdb Worker (config.xml tmdb_proxy, tools/tmdb-proxy), which
 // holds the key, so builds carry none. tmdb.key=... in launcher/local.properties (git ignores it) is what
 // tools/tmdb-proxy/deploy.sh hands the Worker; tmdb.embed_key=true puts it in the APK instead, for a fork without
 // a Worker. Neither: no posters.

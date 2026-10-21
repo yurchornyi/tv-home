@@ -109,7 +109,7 @@ final class Updater {
             try (PackageInstaller.Session session = installer.openSession(id)) {
                 // The stream must be closed before the commit (a second close would fail with EBADF).
                 try (InputStream in = new FileInputStream(apk);
-                     OutputStream out = session.openWrite("tv-home.apk", 0, apk.length())) {
+                     OutputStream out = session.openWrite("tv-launcher.apk", 0, apk.length())) {
                     byte[] buf = new byte[65536];
                     int n;
                     while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
@@ -145,7 +145,7 @@ final class Updater {
         c.setConnectTimeout(10000);
         c.setReadTimeout(30000);
         c.setInstanceFollowRedirects(true);
-        c.setRequestProperty("User-Agent", "tv-home/" + BuildConfig.VERSION_NAME);
+        c.setRequestProperty("User-Agent", "tv-launcher/" + BuildConfig.VERSION_NAME);
         return c;
     }
 

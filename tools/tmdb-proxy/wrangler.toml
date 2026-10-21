@@ -1,4 +1,4 @@
-name = "tv-home-tmdb"
+name = "tv-launcher-tmdb"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 account_id = "175aa69489121cb4274c780bc5195f18"   # Cloudflare account "Basic"
