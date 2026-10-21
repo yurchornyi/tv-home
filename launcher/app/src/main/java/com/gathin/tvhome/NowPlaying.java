@@ -79,20 +79,12 @@ final class NowPlaying {
         }
     }
 
-    /** Apps that play video, whose paused session is closed when Home comes back (stopPausedVideo). */
-    private static final java.util.Set<String> VIDEO_APPS = new java.util.HashSet<>(java.util.Arrays.asList(
-            "rezkatv.web.app", "org.smarttube.stable", "com.netflix.ninja", "com.kyivstar.tv.tvapp",
-            "com.megogo.application", "tv.twitch.android.app", "com.setanta.app", "com.kick.mobile",
-            "com.brouken.player", "net.gtvbox.videoplayer", "com.google.android.youtube.tv", "is.xyz.mpv",
-            "org.videolan.vlc", "com.mxtech.videoplayer.ad"));
-
     /**
-     * Home is back over a film left paused (HDRezka keeps its session after it is closed): stop it, so the
-     * headphones' or remote's Play does not start the film again behind Home and goes to the music instead.
-     * A video still playing (sound in the background) and paused music are left alone. A video app not in the
-     * list counts too when its session names no artist, as a song always does.
+     * Home is back over something left paused (HDRezka and Spotify keep their session after they are closed):
+     * stop it, so the headphones' or remote's Play does not start it again behind Home. Anything still playing
+     * (music in the background) is left alone.
      */
-    void stopPausedVideo() {
+    void stopPaused() {
         if (msm == null) return;
         List<MediaController> all;
         try {
@@ -103,21 +95,7 @@ final class NowPlaying {
         for (MediaController c : all) {
             String pkg = c.getPackageName();
             if (pkg.equals(ctx.getPackageName()) || state(c) != PlaybackState.STATE_PAUSED) continue;
-            boolean video = VIDEO_APPS.contains(pkg);
-            if (!video) {
-                MediaMetadata m;
-                try {
-                    m = c.getMetadata();
-                } catch (RuntimeException e) {
-                    continue;
-                }
-                video = m != null && m.getString(MediaMetadata.METADATA_KEY_TITLE) != null
-                        && m.getString(MediaMetadata.METADATA_KEY_ARTIST) == null
-                        && m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST) == null
-                        && !pkg.contains("music") && !pkg.contains("spotify") && !pkg.contains("podcast");
-            }
-            if (!video) continue;
-            Log.i("TvHome", "stop paused video in " + pkg);
+            Log.i("TvHome", "stop paused session of " + pkg);
             try {
                 c.getTransportControls().stop();
             } catch (RuntimeException ignored) {
