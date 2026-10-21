@@ -10,7 +10,6 @@ import android.os.Looper;
 import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,7 @@ final class ChannelFeed {
         return known == null ? java.util.Collections.emptyList() : known;
     }
 
-    /** The app's programs, shuffled; the cached list at once when it is fresh, else read on a worker thread. */
+    /** The app's programs, most current first; the cached list at once when it is fresh, else read on a worker thread. */
     void items(String pkg, ShelfFeed.ItemsListener listener) {
         if (!enabled()) return;
         Long at = readAt.get(pkg);
@@ -67,6 +66,7 @@ final class ChannelFeed {
 
     private List<ShelfFeed.Item> read(String pkg) {
         List<ShelfFeed.Item> out = new ArrayList<>();
+        java.util.Map<Long, List<Object[]>> byChannel = new java.util.LinkedHashMap<>();
         try {
             // The app's channels, in the order it made them. SmartTube publishes Subscriptions, Recommendations and
             // History; the one made last is history, which is not something to watch next.
@@ -91,20 +91,49 @@ final class ChannelFeed {
             try (Cursor c = ctx.getContentResolver().query(programsUri,
                     new String[]{TvContract.PreviewPrograms.COLUMN_CHANNEL_ID, TvContract.PreviewPrograms.COLUMN_TITLE,
                             TvContract.PreviewPrograms.COLUMN_POSTER_ART_URI, TvContract.PreviewPrograms.COLUMN_INTENT_URI,
-                            TvContract.PreviewPrograms.COLUMN_LIVE},
+                            TvContract.PreviewPrograms.COLUMN_LIVE, TvContract.PreviewPrograms.COLUMN_WEIGHT},
                     null, null, null)) {
                 while (c != null && c.moveToNext()) {
                     if (!channels.contains(c.getLong(0))) continue;
                     String title = c.getString(1);
                     String poster = c.getString(2);
                     if (title == null || title.isEmpty() || poster == null || !poster.startsWith("http")) continue;
-                    out.add(new ShelfFeed.Item(title, poster, c.getString(3), "", 0, c.getInt(4) != 0));
+                    ShelfFeed.Item item = new ShelfFeed.Item(title, poster, c.getString(3), "", 0, c.getInt(4) != 0);
+                    List<Object[]> row = byChannel.get(c.getLong(0));
+                    if (row == null) byChannel.put(c.getLong(0), row = new ArrayList<>());
+                    row.add(new Object[]{item, c.getInt(5)});
                 }
             }
         } catch (SecurityException | IllegalArgumentException e) {
             Log.w(TAG, "channels unreadable: " + e);
         }
-        Collections.shuffle(out);
+        // What is most current now first, in the app's own order: each channel by its weight (SmartTube gives the
+        // newest of the subscriptions and the most relevant recommendations the highest), the channels taking turns
+        // so both are there; a stream live right now moves up to within the first few, not necessarily first.
+        List<List<ShelfFeed.Item>> rows = new ArrayList<>();
+        for (List<Object[]> row : byChannel.values()) {
+            row.sort((x, y) -> Integer.compare((Integer) y[1], (Integer) x[1]));
+            List<ShelfFeed.Item> items = new ArrayList<>();
+            for (Object[] o : row) items.add((ShelfFeed.Item) o[0]);
+            rows.add(items);
+        }
+        for (int i = 0; ; i++) {
+            boolean any = false;
+            for (List<ShelfFeed.Item> row : rows) {
+                if (i < row.size()) {
+                    out.add(row.get(i));
+                    any = true;
+                }
+            }
+            if (!any) break;
+        }
+        int slot = 1;
+        for (int i = 2; i < out.size(); i++) {
+            if (out.get(i).live && slot < out.size() && slot < 4) {
+                out.add(slot, out.remove(i));
+                slot += 2;
+            }
+        }
         if (out.size() > 30) out = new ArrayList<>(out.subList(0, 30));
         return out;
     }
