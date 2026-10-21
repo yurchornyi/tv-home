@@ -141,6 +141,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private LinearLayout shelfChannels;
     private LiveChannels liveChannels;
     private Updater updater;
+    /** The full-screen Now Playing (ambient screen) and the wait before it comes up by itself. */
+    private View ambientScreen;
+    private AmbientView ambientBg;
+    private ImageView ambientCover;
+    private TextView ambientTitle, ambientArtist;
+    private android.widget.ProgressBar ambientProgress;
+    private Bitmap ambientCoverShown;
+    private static final long AMBIENT_AFTER_MS = 25_000L;
+    private final Runnable ambientTick = this::showAmbientIfPlaying;
     private String channelsPkg;
     /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
     private final Set<String> postersOff = new HashSet<>();
@@ -158,6 +167,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private final Runnable npTick = new Runnable() {
         @Override public void run() {
             updateNowPlayingProgress();
+            if (ambientScreen.getVisibility() == View.VISIBLE) {
+                NowPlaying.Track a = nowPlaying.track();
+                ambientProgress.setVisibility(a != null && a.duration > 0 ? View.VISIBLE : View.INVISIBLE);
+                if (a != null && a.duration > 0) ambientProgress.setProgress((int) Math.min(1000, nowPlaying.position() * 1000 / a.duration));
+            }
             // Paused, the bar stands still: no need to ask the player every second.
             NowPlaying.Track t = nowPlaying.track();
             if (t != null && t.playing) handler.postDelayed(this, 1000);
@@ -383,6 +397,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfChannelsScroll = findViewById(R.id.shelfChannelsScroll);
         shelfChannels = findViewById(R.id.shelfChannels);
         liveChannels = new LiveChannels(this);
+        ambientScreen = findViewById(R.id.ambientScreen);
+        ambientBg = findViewById(R.id.ambientBg);
+        ambientCover = findViewById(R.id.ambientCover);
+        ambientTitle = findViewById(R.id.ambientTitle);
+        ambientArtist = findViewById(R.id.ambientArtist);
+        ambientProgress = findViewById(R.id.ambientProgress);
+        ambientCover.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View v, android.graphics.Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 18 * density);
+            }
+        });
+        ambientCover.setClipToOutline(true);
+        findViewById(R.id.npExpand).setOnClickListener(v -> showAmbient());
         updater = new Updater(this, cfg.updateUrl, version -> {
             // Said once per downloaded build; the Settings menu keeps the row until it is installed.
             if (!version.equals(getSharedPreferences("updater", MODE_PRIVATE).getString("told", ""))) {
@@ -431,8 +458,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         npProgress = findViewById(R.id.npProgress);
         nowPlaying = new NowPlaying(this, this::onNowPlayingChanged);
         npPlay = findViewById(R.id.npPlay);
-        npButtons = new View[]{findViewById(R.id.npPrev), npPlay, findViewById(R.id.npNext), findViewById(R.id.npOpen),
-                findViewById(R.id.npClose)};
+        npButtons = new View[]{findViewById(R.id.npPrev), npPlay, findViewById(R.id.npNext), findViewById(R.id.npExpand),
+                findViewById(R.id.npOpen), findViewById(R.id.npClose)};
         findViewById(R.id.npOpen).setOnClickListener(v -> {
             NowPlaying.Track t = nowPlaying.track();
             if (!nowPlaying.openPlayer() && t != null) launchApp(t.pkg);
@@ -766,6 +793,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        armAmbient();
         updater.check();
         nowPlaying.start();
         AudioDevices.addListener(audioListener);
@@ -917,6 +945,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopFeed();
         handler.removeCallbacks(minuteTick);
         handler.removeCallbacks(weatherTick);
+        handler.removeCallbacks(ambientTick);
+        hideAmbient();
         AudioDevices.removeListener(audioListener);
         nowPlaying.stop();
         hideNowPlaying(false);
@@ -1002,6 +1032,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (ambientScreen.getVisibility() == View.VISIBLE) {
+            // Any key brings Home back; the key itself goes no further (it only meant "wake").
+            if (event.getAction() == KeyEvent.ACTION_DOWN) hideAmbient();
+            return true;
+        }
+        armAmbient();
         if (handleSettingsKey(event)) return true;
         if (!reordering) return super.dispatchKeyEvent(event);
         if (dockEditing) return dispatchDockEdit(event);
@@ -1378,8 +1414,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showHero(int position, float dockTopInRoot) {
         lastDockTop = dockTopInRoot;
         lastHeroPosition = position;
-        if (!showNowPlaying() && !showChannels(position) && !showFeed(position) && !showShelfArt(position)) {
-            hideShelfArt(animations);
+        if (!showNowPlaying()) {
+            boolean channels = showChannels(position);   // the row sits over the posters, so both may show
+            if (!showFeed(position) && !channels && !showShelfArt(position)) hideShelfArt(animations);
         }
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
@@ -1599,6 +1636,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         shelfOpen.measure(unspecified, unspecified);
         float openTop = lastDockTop - 26 * density - shelfOpen.getMeasuredHeight();
+        if (channelsPkg != null) {
+            shelfChannelsScroll.measure(View.MeasureSpec.makeMeasureSpec(root.getWidth(), View.MeasureSpec.EXACTLY), unspecified);
+            openTop = lastDockTop - 14 * density - shelfChannelsScroll.getMeasuredHeight() + 6 * density;
+        }
         shelfOpen.setY(openTop);
         int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
         shelfTitle.measure(widthSpec, unspecified);
@@ -1606,6 +1647,78 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfTitle.setY(titleTop);
         shelfLive.measure(unspecified, unspecified);
         shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
+    }
+
+    // ---- the ambient screen (full-screen Now Playing) ---------------------------------------------
+
+    /** Restarts the wait for the ambient screen: it comes up after AMBIENT_AFTER_MS without a key while music plays. */
+    private void armAmbient() {
+        handler.removeCallbacks(ambientTick);
+        handler.postDelayed(ambientTick, AMBIENT_AFTER_MS);
+    }
+
+    private void showAmbientIfPlaying() {
+        NowPlaying.Track t = nowPlaying.track();
+        if (t == null || !t.playing || openPopup != null || appLibrary != null || reordering || !hasWindowFocus()) {
+            armAmbient();
+            return;
+        }
+        showAmbient();
+    }
+
+    private void showAmbient() {
+        if (nowPlaying.track() == null) return;
+        handler.removeCallbacks(ambientTick);
+        fillAmbient();
+        if (ambientScreen.getVisibility() == View.VISIBLE) return;
+        ambientScreen.setVisibility(View.VISIBLE);
+        ambientBg.start();
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        ambientScreen.animate().cancel();
+        if (animations && !reducedMotion) {
+            ambientScreen.setAlpha(0f);
+            ambientCover.setScaleX(0.9f);
+            ambientCover.setScaleY(0.9f);
+            ambientScreen.animate().alpha(1f).setDuration(700).start();
+            ambientCover.animate().scaleX(1f).scaleY(1f).setDuration(900)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2f)).start();
+        } else {
+            ambientScreen.setAlpha(1f);
+        }
+        handler.removeCallbacks(npTick);
+        handler.post(npTick);
+    }
+
+    private void fillAmbient() {
+        NowPlaying.Track t = nowPlaying.track();
+        if (t == null) return;
+        ambientTitle.setText(t.title);
+        ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
+        if (t.cover != ambientCoverShown) {
+            ambientCoverShown = t.cover;
+            ambientCover.setImageBitmap(t.cover);
+            ambientCover.setVisibility(t.cover != null ? View.VISIBLE : View.INVISIBLE);
+            ambientBg.setCover(t.cover);
+        }
+    }
+
+    private void hideAmbient() {
+        armAmbient();
+        if (ambientScreen.getVisibility() != View.VISIBLE) return;
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        ambientScreen.animate().cancel();
+        if (animations && !reducedMotion) {
+            ambientScreen.animate().alpha(0f).setDuration(350).withEndAction(() -> {
+                if (ambientScreen.getAlpha() == 0f) {
+                    ambientScreen.setVisibility(View.GONE);
+                    ambientBg.stop();
+                }
+            }).start();
+        } else {
+            ambientScreen.setAlpha(0f);
+            ambientScreen.setVisibility(View.GONE);
+            ambientBg.stop();
+        }
     }
 
     // ---- the channel row ---------------------------------------------------------------------------
@@ -1620,10 +1733,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             stopChannels(animations);
             return false;
         }
-        showShelfArt(position);
         if (pkg.equals(channelsPkg)) return true;
-        stopFeed();
         channelsPkg = pkg;
+        showShelfOpen(false, animations);   // Up goes to the channels; the poster's title stays
         buildChannelRow(pkg, position);
         shelfChannelsScroll.setVisibility(View.VISIBLE);
         shelfChannelsScroll.animate().cancel();
@@ -1636,7 +1748,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void buildChannelRow(String pkg, int position) {
         shelfChannels.removeAllViews();
         shelfChannelsScroll.scrollTo(0, 0);
-        List<LiveChannels.Channel> chosen = liveChannels.chosen(pkg);
+        List<LiveChannels.Channel> chosen = liveChannels.row(pkg);
         if (chosen.isEmpty()) {
             View tile = channelTile(null, pkg);
             tile.setOnClickListener(v -> openChannelPicker(pkg, position));
@@ -1706,7 +1818,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
             return false;
         });
-        if (c != null) tile.setOnClickListener(v -> open(new Intent(Intent.ACTION_VIEW, Uri.parse(c.open)).setPackage(pkg)));
+        if (c != null) tile.setOnClickListener(v -> {
+            liveChannels.recordOpen(pkg, c.id);
+            android.util.Log.i("TvHome", "open channel " + c.name + " in " + pkg);
+            open(new Intent(Intent.ACTION_VIEW, Uri.parse(c.open)).setPackage(pkg));
+        });
         return tile;
     }
 
@@ -1779,6 +1895,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The Watch pill in or out with the shelf's title. */
     private void showShelfOpen(boolean show, boolean animate) {
+        if (show && channelsPkg != null) show = false;
         if (show) {
             if (shelfOpen.getVisibility() != View.VISIBLE) {
                 shelfOpen.setVisibility(View.VISIBLE);
@@ -1893,6 +2010,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
     private void onNowPlayingChanged() {
+        if (ambientScreen.getVisibility() == View.VISIBLE) {
+            if (nowPlaying.track() == null) hideAmbient();
+            else fillAmbient();
+        }
         boolean onCard = npCard.hasFocus();
         if (onCard) {
             // Using the card's buttons: update it in place, or back to the dock once it closes.

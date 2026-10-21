@@ -488,6 +488,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // TV apps launch with the same leanback intent as from the stock launcher or the remote, so an app
         // already running resumes instead of restarting; only phone apps added from the library use plain MAIN.
         if (leanbackPackages.contains(e.pkg)) i.addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
+        android.util.Log.i("TvHome", "tile opens " + e.pkg);
         try {
             ctx.startActivity(i);
             if (advancedEffects && ctx instanceof Activity) {

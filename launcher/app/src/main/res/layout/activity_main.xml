@@ -219,9 +219,16 @@
                     android:drawableStart="@drawable/ic_np_next" />
 
                 <TextView
-                    android:id="@+id/npOpen"
+                    android:id="@+id/npExpand"
                     style="@style/TopIconButton"
                     android:layout_marginStart="28dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_expand" />
+
+                <TextView
+                    android:id="@+id/npOpen"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="14dp"
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_open" />
 
@@ -545,6 +552,71 @@
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
     </LinearLayout>
+
+    <!-- Full-screen Now Playing (ambient screen): the cover over a flowing backdrop in its colours, shown after a
+         while without a key press while music plays, or from the card's expand button; any key brings Home back. -->
+    <FrameLayout
+        android:id="@+id/ambientScreen"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:alpha="0">
+
+        <com.gathin.tvhome.AmbientView
+            android:id="@+id/ambientBg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/ambientCover"
+                android:layout_width="360dp"
+                android:layout_height="360dp"
+                android:scaleType="centerCrop"
+                android:elevation="24dp"
+                android:contentDescription="@string/now_playing" />
+
+            <TextView
+                android:id="@+id/ambientTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:maxWidth="700dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFFFF"
+                android:textSize="30sp"
+                android:fontFamily="@font/outfit_medium"
+                android:shadowColor="#66000000"
+                android:shadowRadius="10" />
+
+            <TextView
+                android:id="@+id/ambientArtist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxWidth="700dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#C8FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="@font/outfit_regular" />
+
+            <ProgressBar
+                android:id="@+id/ambientProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="360dp"
+                android:layout_height="3dp"
+                android:layout_marginTop="26dp"
+                android:max="1000"
+                android:progressDrawable="@drawable/now_playing_progress" />
+        </LinearLayout>
+    </FrameLayout>
 
     <!-- The single floating glass highlight that springs between tiles. -->
     <com.gathin.tvhome.GlassView

@@ -106,6 +106,50 @@ final class LiveChannels {
         return out;
     }
 
+    /** A channel was opened from the shelf: counts towards the row's order (row). */
+    void recordOpen(String pkg, String id) {
+        Map<String, Integer> use = uses(pkg);
+        Integer n = use.get(id);
+        use.put(id, n == null ? 1 : n + 1);
+        prefs().edit().putString("use_" + pkg, new JSONObject(use).toString()).apply();
+    }
+
+    /**
+     * What the shelf shows: the chosen channels, the most opened first, then up to three others opened often
+     * enough to earn a place; with nothing chosen, the eight most opened. Empty until a choice or an opening.
+     */
+    List<Channel> row(String pkg) {
+        Map<String, Integer> use = uses(pkg);
+        List<Channel> chosen = chosen(pkg);
+        List<Channel> out = new ArrayList<>(chosen);
+        java.util.Comparator<Channel> byUse = (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0));
+        Collections.sort(out, byUse);   // stable: equal counts keep the chosen order
+        List<Channel> often = new ArrayList<>();
+        for (Channel c : all(pkg)) {
+            if (use.getOrDefault(c.id, 0) >= 2 && !out.contains(c)) often.add(c);
+        }
+        Collections.sort(often, byUse);
+        int extra = chosen.isEmpty() ? 8 : 3;
+        for (Channel c : often) {
+            if (extra-- <= 0) break;
+            out.add(c);
+        }
+        return out;
+    }
+
+    private Map<String, Integer> uses(String pkg) {
+        Map<String, Integer> out = new HashMap<>();
+        try {
+            JSONObject o = new JSONObject(prefs().getString("use_" + pkg, "{}"));
+            for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
+                String k = it.next();
+                out.put(k, o.getInt(k));
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
     private SharedPreferences prefs() {
         return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
