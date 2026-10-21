@@ -121,8 +121,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ShelfFeed shelfFeed;
     private final Set<String> feedApps = new HashSet<>();
     private String feedPkg;
-    /** The backdrop the carousel shows now (the one the next dissolves from). */
-    private Drawable feedArt;
     /** Android's package change counter at the last tile rebuild, and when that was (appsMayHaveChanged). */
     private int packageSeq;
     private long tilesBuiltAt;
@@ -1501,9 +1499,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         positionShelfTitle();
         if (pkg.equals(feedPkg)) return true;
+        boolean fromOtherFeed = feedPkg != null;
         stopFeed();
         feedPkg = pkg;
-        if (heroArtShown == null) showShelfArt(position);
+        // Its own softened banner right away (from another feed app the previous poster must not linger), the
+        // first backdrop dissolves in over it.
+        if (heroArtShown == null || fromOtherFeed) showShelfArt(position);
         int gen = feedGen;
         shelfFeed.items(pkg, items -> {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
@@ -1547,40 +1548,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (animate) shelfTitle.animate().alpha(1f).setDuration(400).start();
                 else shelfTitle.setAlpha(1f);
             };
-            if (animate && feedArt != null && heroArtShown == feedArt) {
+            // Whatever is on the shelf now (the app's softened banner, or the previous backdrop, even one still
+            // dissolving in) is the picture the new one dissolves from.
+            Drawable from = heroArt.getDrawable();
+            if (from instanceof android.graphics.drawable.TransitionDrawable) {
+                from = ((android.graphics.drawable.TransitionDrawable) from).getDrawable(1);
+            }
+            if (animate && from != null) {
                 // One backdrop dissolves into the next, as the top shelf does on Apple TV: both stay on screen,
                 // nothing dips to black in between.
                 android.graphics.drawable.TransitionDrawable cross = new android.graphics.drawable.TransitionDrawable(
-                        new Drawable[]{feedArt, art});
+                        new Drawable[]{from, art});
                 cross.setCrossFadeEnabled(true);
                 heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 heroArt.setImageDrawable(cross);
                 heroArt.setAlpha(1f);
                 cross.startTransition(700);
                 heroArtShown = art;
-                feedArt = art;
                 // Once the dissolve is over, hold the new picture alone, so the old bitmap can go.
                 handler.postDelayed(() -> {
                     if (heroArtShown == art && heroArt.getDrawable() == cross) heroArt.setImageDrawable(art);
                 }, 760);
-                shelfTitle.animate().alpha(0f).setDuration(220).withEndAction(title).start();
-            } else if (animate) {
-                // From the app's softened banner: fade it out, then the first backdrop in.
-                heroArt.animate().alpha(0f).setDuration(250).withEndAction(() -> {
-                    heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    heroArt.setImageDrawable(art);
-                    heroArtShown = art;
-                    feedArt = art;
-                    heroArt.animate().alpha(1f).setDuration(450).start();
+                if (shelfTitle.getAlpha() > 0f) {
+                    shelfTitle.animate().alpha(0f).setDuration(220).withEndAction(title).start();
+                } else {
                     title.run();
-                }).start();
-                shelfTitle.animate().alpha(0f).setDuration(250).start();
+                }
             } else {
                 heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 heroArt.setImageDrawable(art);
                 heroArt.setAlpha(1f);
                 heroArtShown = art;
-                feedArt = art;
                 title.run();
             }
             handler.postDelayed(feedTick, 8000);
@@ -1593,7 +1591,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
         feedGen++;
-        feedArt = null;
         if (feedPkg == null) return;
         feedPkg = null;
         feedItems = null;
