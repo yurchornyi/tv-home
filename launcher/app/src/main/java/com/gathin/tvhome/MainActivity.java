@@ -152,10 +152,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View btnSearch;
     /** A voice query waiting for Home to be resumed, then searched. */
     private String pendingSearch;
-    /** The Continue row: shown over the dock tile focused when Home came up, until focus moves to another tile. */
-    private boolean continueMode;
-    private int continueAnchor = -1;
-    private static final String CONTINUE = "\u0000continue";
+    /** The poster put first on an app's shelf: the film or video opened last there (Recents); its pill says Continue. */
+    private ShelfFeed.Item continueItem;
     private static final int VOICE_REQUEST = 43;
     /** The full-screen Now Playing (ambient screen), opened from the card's expand button. */
     private View ambientScreen;
@@ -164,6 +162,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView ambientTitle, ambientArtist;
     private android.widget.ProgressBar ambientProgress;
     private TextView ambientPlay;
+    /** The player's button row; it rests out of sight after a few seconds without a key (ambientRest). */
+    private View ambientControls;
+    private boolean ambientControlsShown = true;
+    private final Runnable ambientRest = this::restAmbientControls;
     /** The cover's slow turn in space while the full-screen player shows. */
     private android.animation.ValueAnimator ambientTurn;
     private Bitmap ambientCoverShown;
@@ -426,14 +428,22 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientPlay.setOnClickListener(v -> nowPlaying.playPause());
         findViewById(R.id.ambientPrev).setOnClickListener(v -> nowPlaying.previous());
         findViewById(R.id.ambientNext).setOnClickListener(v -> nowPlaying.next());
+        findViewById(R.id.ambientOpen).setOnClickListener(v -> {
+            if (!nowPlaying.openPlayer()) {
+                NowPlaying.Track t = nowPlaying.track();
+                if (t != null) launchApp(t.pkg);
+            }
+        });
+        findViewById(R.id.ambientClose).setOnClickListener(v -> hideAmbient());
+        ambientControls = findViewById(R.id.ambientControls);
         View.OnKeyListener ambientKeys = (v, keyCode, event) -> {
-            // The row's ends: Left on Previous and Right on Next stay put; Up and Down stay on the row.
+            // The row's ends: Left on Previous and Right on Close stay put; Up and Down stay on the row.
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == R.id.ambientPrev;
-            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.ambientNext;
+            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == R.id.ambientClose;
         };
-        for (int id : new int[]{R.id.ambientPrev, R.id.ambientPlay, R.id.ambientNext}) {
+        for (int id : new int[]{R.id.ambientPrev, R.id.ambientPlay, R.id.ambientNext, R.id.ambientOpen, R.id.ambientClose}) {
             findViewById(id).setOnKeyListener(ambientKeys);
         }
         ambientCover.setOutlineProvider(new android.view.ViewOutlineProvider() {
@@ -676,6 +686,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View btnSettings = findViewById(R.id.btnSettings);
         btnSearch = findViewById(R.id.btnSearch);
         searchField = findViewById(R.id.searchField);
+        View searchMic = findViewById(R.id.searchMic);
+        searchMic.setOnClickListener(v -> startVoice());
+        searchMic.setOnKeyListener((v, code, event) -> {
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT) { searchField.requestFocus(); return true; }
+            if (code == KeyEvent.KEYCODE_DPAD_DOWN) return focusSearchResult();
+            if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) { closeSearch(true); return true; }
+            return code == KeyEvent.KEYCODE_DPAD_UP || code == KeyEvent.KEYCODE_DPAD_RIGHT;
+        });
         btnSearch.setOnClickListener(v -> openSearch(""));
         searchField.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence c, int a, int b, int n) { }
@@ -693,9 +712,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (code == KeyEvent.KEYCODE_DPAD_DOWN) return focusSearchResult();
             if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE) { closeSearch(true); return true; }
             if (code == KeyEvent.KEYCODE_DPAD_UP) return true;
-            // Left at the start or Right at the end of the text would wander off to the clock or the next pill.
+            // Left at the start of the text would wander off to the clock; Right at its end goes to the microphone.
             if (code == KeyEvent.KEYCODE_DPAD_LEFT) return searchField.getSelectionStart() == 0;
-            return code == KeyEvent.KEYCODE_DPAD_RIGHT && searchField.getSelectionEnd() == searchField.length();
+            if (code == KeyEvent.KEYCODE_DPAD_RIGHT && searchField.getSelectionEnd() == searchField.length()) {
+                findViewById(R.id.searchMic).requestFocus();
+                return true;
+            }
+            return false;
         });
         searchField.setOnLongClickListener(v -> {
             startVoice();
@@ -859,9 +882,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
-        continueMode = true;
-        continueAnchor = -1;
-        if (CONTINUE.equals(channelsPkg)) stopChannels(false);   // rebuilt with the newest entry first
         updater.check();
         if (pendingSearch != null) {
             String q = pendingSearch;
@@ -1113,8 +1133,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (ambientScreen.getVisibility() == View.VISIBLE) {
             // The full-screen player: its buttons take the arrows and OK, the media keys work from anywhere, Back
-            // (or Home) brings Home back.
+            // (or Home) brings Home back. The buttons rest out of sight after a few seconds; the first key that
+            // comes then only brings them back.
             boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
+            boolean wereHidden = !ambientControlsShown;
+            if (down) wakeAmbientControls();
             switch (event.getKeyCode()) {
                 case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: case KeyEvent.KEYCODE_MEDIA_PLAY: case KeyEvent.KEYCODE_MEDIA_PAUSE:
                     if (down) nowPlaying.playPause();
@@ -1132,6 +1155,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     if (event.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER || event.getKeyCode() == KeyEvent.KEYCODE_ENTER
                             || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_LEFT || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT
                             || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN) {
+                        if (wereHidden) return true;   // this press only woke the buttons
                         if (!ambientScreen.hasFocus()) ambientPlay.requestFocus();
                         return super.dispatchKeyEvent(event);
                     }
@@ -1454,7 +1478,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onTileFocused(int position, View card) {
-        if (continueMode && continueAnchor >= 0 && position != continueAnchor) continueMode = false;
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
@@ -1524,7 +1547,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         lastHeroPosition = position;
         if (searching) return;
         if (!showNowPlaying()) {
-            boolean channels = continueRow(position) || showChannels(position);   // the row sits over the posters, so both may show
+            boolean channels = showChannels(position);   // the row sits over the posters, so both may show
             if (!showFeed(position) && !channels && !showShelfArt(position)) hideShelfArt(animations);
         }
         String label = adapter.labelAt(position);
@@ -1726,7 +1749,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ShelfFeed.ItemsListener onItems = items -> {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
             boolean first = feedItems == null;
-            feedItems = items;
+            feedItems = withContinue(pkg, items);
             if (first) {
                 feedIndex = 0;
                 showFeedItem();
@@ -1735,6 +1758,36 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (fromChannels) channelFeed.items(pkg, onItems);
         else shelfFeed.items(pkg, onItems);
         return true;
+    }
+
+    /**
+     * The film or video opened last in this app (Recents) put first, so the shelf opens on it and its pill says
+     * Continue; the list's own copy of it, if any, is dropped. The list as it came when nothing was opened there.
+     */
+    private List<ShelfFeed.Item> withContinue(String pkg, List<ShelfFeed.Item> items) {
+        continueItem = null;
+        for (Recents.Entry e : recents.all()) {
+            if (!e.pkg.equals(pkg) || !Recents.Entry.ITEM.equals(e.kind)) continue;
+            String type = "";
+            long id = 0;
+            if (e.open == null) {
+                String[] parts = e.key.split(":", 3);
+                if (parts.length == 3) {
+                    type = parts[0];
+                    try { id = Long.parseLong(parts[1]); } catch (NumberFormatException ignored) { }
+                }
+            }
+            continueItem = new ShelfFeed.Item(e.title, e.image, e.open, type, id);
+            break;
+        }
+        if (continueItem == null || continueItem.backdrop == null) return items;
+        List<ShelfFeed.Item> out = new ArrayList<>();
+        out.add(continueItem);
+        for (ShelfFeed.Item i : items) {
+            boolean same = continueItem.open != null ? continueItem.open.equals(i.open) : continueItem.title.equals(i.title);
+            if (!same) out.add(i);
+        }
+        return out;
     }
 
     /**
@@ -1769,19 +1822,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientScreen.setVisibility(View.VISIBLE);
         ambientBg.start();
         ambientPlay.requestFocus();
+        wakeAmbientControls();
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (animations && !reducedMotion) {
-            // The cover turns a little in space and floats, as if hung in the light.
+            // The cover floats slowly, as if hung in the light: a long, gentle sway, a slight turn, a breath in size.
             if (ambientTurn != null) ambientTurn.cancel();
             ambientTurn = android.animation.ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
-            ambientTurn.setDuration(14000);
+            ambientTurn.setDuration(22000);
             ambientTurn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
             ambientTurn.setInterpolator(new android.view.animation.LinearInterpolator());
             ambientTurn.addUpdateListener(a -> {
                 float p = (float) a.getAnimatedValue();
-                ambientCover.setRotationY(11f * (float) Math.sin(p));
-                ambientCover.setRotationX(4f * (float) Math.sin(p * 2 + 1.1f));
-                ambientCover.setTranslationY(8 * density * (float) Math.sin(p * 1.5f + 0.4f));
+                ambientCover.setRotationY(5f * (float) Math.sin(p));
+                ambientCover.setRotationX(2.5f * (float) Math.sin(p * 0.5f + 0.9f));
+                ambientCover.setTranslationY(7 * density * (float) Math.sin(p * 0.75f + 0.4f));
+                float breath = 1f + 0.012f * (float) Math.sin(p * 1.25f);
+                ambientCover.setScaleX(breath);
+                ambientCover.setScaleY(breath);
             });
             ambientTurn.start();
         }
@@ -1817,8 +1874,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
+    private void restAmbientControls() {
+        if (ambientScreen.getVisibility() != View.VISIBLE || !ambientControlsShown) return;
+        ambientControlsShown = false;
+        ambientControls.animate().cancel();
+        if (animations && !reducedMotion) ambientControls.animate().alpha(0f).setDuration(600).start();
+        else ambientControls.setAlpha(0f);
+    }
+
+    /** The button row back in view, and resting again after four seconds without a key. */
+    private void wakeAmbientControls() {
+        handler.removeCallbacks(ambientRest);
+        if (!ambientControlsShown) {
+            ambientControlsShown = true;
+            ambientControls.animate().cancel();
+            if (animations && !reducedMotion) ambientControls.animate().alpha(1f).setDuration(250).start();
+            else ambientControls.setAlpha(1f);
+        }
+        handler.postDelayed(ambientRest, 4000);
+    }
+
     private void hideAmbient() {
         if (ambientScreen.getVisibility() != View.VISIBLE) return;
+        handler.removeCallbacks(ambientRest);
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         // Focus back on the card's expand button, where the player was opened from, else on the dock.
         if (ambientScreen.hasFocus()) {
@@ -2023,133 +2101,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    // ---- the Continue row ---------------------------------------------------------------------------
-
-    /**
-     * What was opened last, newest first, as a row of tiles over the dock tile Home came up on; it gives way to that
-     * app's own shelf as soon as focus moves to another tile. False when there is nothing to continue.
-     */
-    private boolean continueRow(int position) {
-        if (!continueMode || !topShelfArt) return false;
-        if (continueAnchor < 0) continueAnchor = position;
-        if (position != continueAnchor) return false;
-        List<Recents.Entry> entries = new ArrayList<>();
-        for (Recents.Entry e : recents.all()) {
-            if (installed(e.pkg)) entries.add(e);
-            if (entries.size() == 8) break;
-        }
-        if (entries.isEmpty()) {
-            continueMode = false;
-            return false;
-        }
-        if (CONTINUE.equals(channelsPkg)) return true;
-        channelsPkg = CONTINUE;
-        showShelfOpen(false, animations);
-        shelfChannels.removeAllViews();
-        shelfChannelsScroll.scrollTo(0, 0);
-        TextView label = new TextView(this);
-        label.setText(R.string.continue_row);
-        label.setTextColor(0xB3FFFFFF);
-        label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
-        label.setTypeface(getResources().getFont(R.font.outfit_medium));
-        label.setAllCaps(true);
-        label.setLetterSpacing(0.18f);
-        label.setRotation(-90f);
-        label.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams((int) (84 * density), (int) (84 * density));
-        llp.setMarginStart((int) (-30 * density));
-        llp.setMarginEnd((int) (-24 * density));
-        label.setLayoutParams(llp);
-        shelfChannels.addView(label);
-        for (Recents.Entry e : entries) shelfChannels.addView(continueTile(e));
-        shelfChannelsScroll.setVisibility(View.VISIBLE);
-        shelfChannelsScroll.animate().cancel();
-        shelfChannelsScroll.post(() -> shelfChannelsScroll.setY(lastDockTop - 14 * density - shelfChannelsScroll.getHeight()));
-        if (animations && !reducedMotion) shelfChannelsScroll.animate().alpha(1f).setDuration(300).start();
-        else shelfChannelsScroll.setAlpha(1f);
-        return true;
-    }
-
-    private boolean installed(String pkg) {
-        try {
-            getPackageManager().getPackageInfo(pkg, 0);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /** A Continue tile: a channel's logo, a film's backdrop with its title, or an app's banner. */
-    private View continueTile(Recents.Entry e) {
-        View tile;
-        if (Recents.Entry.CHANNEL.equals(e.kind)) {
-            tile = channelTile(new LiveChannels.Channel(e.key, e.title, e.image, e.open), e.pkg);
-        } else {
-            tile = channelTile(new LiveChannels.Channel(e.key, e.title, null, e.open), e.pkg);
-            android.widget.FrameLayout f = (android.widget.FrameLayout) tile;
-            TextView name = (TextView) f.getChildAt(0);
-            if (Recents.Entry.APP.equals(e.kind)) {
-                Drawable banner = null;
-                try {
-                    banner = getPackageManager().getApplicationBanner(e.pkg);
-                    if (banner == null) banner = getPackageManager().getApplicationIcon(e.pkg);
-                } catch (Exception ignored) {
-                }
-                if (banner != null) {
-                    ImageView art = new ImageView(this);
-                    art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                    art.setImageDrawable(banner);
-                    f.addView(art, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT));
-                    name.setVisibility(View.GONE);
-                }
-            } else if (e.image != null) {
-                ImageView art = new ImageView(this);
-                art.setScaleType(ImageView.ScaleType.CENTER_CROP);
-                f.addView(art, 0, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-                // The title along the bottom, over a dark gradient, once the picture is in.
-                name.setGravity(Gravity.BOTTOM | Gravity.START);
-                name.setMaxLines(2);
-                name.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
-                name.setPadding((int) (10 * density), 0, (int) (10 * density), (int) (7 * density));
-                shelfFeed.image(e.image, (url, bmp) -> {
-                    if (bmp == null || art.getParent() == null) return;
-                    art.setImageBitmap(bmp);
-                    name.setBackground(new android.graphics.drawable.GradientDrawable(
-                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0xC0000000}));
-                });
-            }
-        }
-        tile.setOnClickListener(v -> openEntry(e));
-        return tile;
-    }
-
-    private void openEntry(Recents.Entry e) {
-        android.util.Log.i("TvHome", "continue " + e.kind + " " + e.title + " in " + e.pkg);
-        switch (e.kind) {
-            case Recents.Entry.CHANNEL:
-                openChannel(e.pkg, new LiveChannels.Channel(e.key, e.title, e.image, e.open));
-                break;
-            case Recents.Entry.ITEM: {
-                String type = "";
-                long id = 0;
-                if (e.open == null) {
-                    String[] parts = e.key.split(":", 3);
-                    if (parts.length == 3) {
-                        type = parts[0];
-                        try { id = Long.parseLong(parts[1]); } catch (NumberFormatException ignored) { }
-                    }
-                }
-                openItem(e.pkg, new ShelfFeed.Item(e.title, e.image, e.open, type, id));
-                break;
-            }
-            default:
-                recents.app(e.pkg, e.title);
-                launchApp(e.pkg);
-        }
-    }
-
     // ---- search -------------------------------------------------------------------------------------
 
     /**
@@ -2176,7 +2127,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int leftEdge = topInfo.getVisibility() == View.VISIBLE ? topInfo.getRight() + (int) (28 * density)
                 : leftBlock.getLeft() + (int) (320 * density);
         int target = Math.max(btnSearch.getWidth(), btnSearch.getRight()
-                + ((View) btnSearch.getParent()).getLeft() - leftEdge);
+                + ((View) btnSearch.getParent()).getLeft() - leftEdge - (int) (60 * density));
         searchPillWidth = btnSearch.getWidth();
         searchField.setText("");
         searchField.setVisibility(View.VISIBLE);
@@ -2184,6 +2135,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         flp.width = searchPillWidth;
         searchField.setLayoutParams(flp);
         btnSearch.setVisibility(View.GONE);
+        findViewById(R.id.searchMic).setVisibility(View.VISIBLE);
         searchField.requestFocus();
         Runnable done = () -> {
             if (!searching) return;
@@ -2312,6 +2264,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (imm != null) imm.hideSoftInputFromWindow(searchField.getWindowToken(), 0);
         stopChannels(animations);
         LinearLayout.LayoutParams flp = (LinearLayout.LayoutParams) searchField.getLayoutParams();
+        findViewById(R.id.searchMic).setVisibility(View.GONE);
         Runnable done = () -> {
             searchField.setVisibility(View.GONE);
             searchField.setText("");
@@ -2479,6 +2432,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
                 shelfTitle.setText(item.title);
+                shelfOpen.setText(item == continueItem ? R.string.continue_row : R.string.watch_now);
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
                 shelfLive.animate().cancel();

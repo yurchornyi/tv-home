@@ -40,7 +40,8 @@ final class SleepTimer {
         prefs(ctx).edit().putLong("at", at).apply();
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
         if (am == null) return;
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx));
+        // An alarm-clock alarm: exact, and allowed without the exact-alarm permission Android 12+ asks for otherwise.
+        am.setAlarmClock(new AlarmManager.AlarmClockInfo(at, pending(ctx)), pending(ctx));
     }
 
     static void cancel(Context ctx) {

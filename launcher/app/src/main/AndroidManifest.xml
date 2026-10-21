@@ -142,7 +142,14 @@
              sleep. build-and-install enables the service. -->
         <receiver
             android:name=".SleepReceiver"
-            android:exported="false" />
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <!-- Exported only to the shell (DUMP), so the timer's end can be tried over adb:
+                 am broadcast -n com.gathin.tvhome/.SleepReceiver -->
+            <intent-filter>
+                <action android:name="com.gathin.tvhome.action.SLEEP_NOW" />
+            </intent-filter>
+        </receiver>
         <service
             android:name=".SleepService"
             android:exported="true"

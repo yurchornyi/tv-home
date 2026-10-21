@@ -503,6 +503,14 @@
                     android:importantForAutofill="no"
                     android:visibility="gone" />
 
+                <!-- Voice search, at the field's right end while searching. -->
+                <TextView
+                    android:id="@+id/searchMic"
+                    style="@style/TopIconButton"
+                    android:contentDescription="@string/search_hint"
+                    android:drawableStart="@drawable/ic_mic"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/btnInputs"
                     style="@style/TopButton"
@@ -648,9 +656,11 @@
                 android:max="1000"
                 android:progressDrawable="@drawable/now_playing_progress" />
 
-            <!-- Previous, play/pause, next: focusable, Left and Right move between them, OK presses; the media keys
-                 work too, and Back brings Home back. -->
+            <!-- Previous, play/pause, next, then open the player app and close: focusable, Left and Right move between
+                 them, OK presses; the media keys work too, and Back brings Home back. The row fades out when the remote
+                 rests for a few seconds and any key brings it back (ambientControls). -->
             <LinearLayout
+                android:id="@+id/ambientControls"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
@@ -683,6 +693,20 @@
                     android:layout_marginStart="22dp"
                     android:contentDescription="@string/now_playing"
                     android:drawableStart="@drawable/ic_np_next" />
+
+                <TextView
+                    android:id="@+id/ambientOpen"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="44dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_open" />
+
+                <TextView
+                    android:id="@+id/ambientClose"
+                    style="@style/TopIconButton"
+                    android:layout_marginStart="14dp"
+                    android:contentDescription="@string/now_playing"
+                    android:drawableStart="@drawable/ic_np_close" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

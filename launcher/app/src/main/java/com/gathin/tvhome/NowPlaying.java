@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.media.MediaMetadata;
+import android.util.Log;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
@@ -203,9 +204,28 @@ final class NowPlaying {
         if (title == null) return null;
         String artist = first(m.getString(MediaMetadata.METADATA_KEY_ARTIST),
                 m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST), m.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE));
+        if (Log.isLoggable("TvHome.Meta", Log.DEBUG)) {
+            StringBuilder sb = new StringBuilder();
+            for (String k : m.keySet()) {
+                Object v = m.getBitmap(k) != null ? m.getBitmap(k).getWidth() + "x" + m.getBitmap(k).getHeight() + " bitmap" : null;
+                if (v == null) try { v = m.getString(k); } catch (Exception e) { v = "?"; }
+                sb.append(k).append('=').append(v).append("; ");
+            }
+            Log.d("TvHome.Meta", c.getPackageName() + ": " + sb);
+        }
+        // The album's art, or the track's; never DISPLAY_ICON, which is the player's own logo (Spotify sends its
+        // logo there, and the real cover a moment later). Without a bitmap, a cover URL is fetched (CoverArt).
         Bitmap cover = m.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
         if (cover == null) cover = m.getBitmap(MediaMetadata.METADATA_KEY_ART);
-        if (cover == null) cover = m.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON);
+        if (cover == null) {
+            String uri = m.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI);
+            if (uri == null) uri = m.getString(MediaMetadata.METADATA_KEY_ART_URI);
+            if (uri == null) uri = m.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI);
+            if (uri != null && uri.startsWith("http")) {
+                cover = CoverArt.cached(uri);
+                if (cover == null) CoverArt.fetch(uri, () -> main.post(this::pick));
+            }
+        }
         String app = c.getPackageName();
         try {
             PackageManager pm = ctx.getPackageManager();
@@ -246,20 +266,32 @@ final class NowPlaying {
     }
 
     void next() {
-        send(MediaController.TransportControls::skipToNext);
+        Log.i("TvHome", "player: next");
+        if (!send(MediaController.TransportControls::skipToNext)) mediaKey(android.view.KeyEvent.KEYCODE_MEDIA_NEXT);
     }
 
     void previous() {
-        send(MediaController.TransportControls::skipToPrevious);
+        Log.i("TvHome", "player: previous");
+        if (!send(MediaController.TransportControls::skipToPrevious)) mediaKey(android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS);
     }
 
     /** A button press for the player; one that quit a moment ago must not take Home down with it. */
-    private void send(java.util.function.Consumer<MediaController.TransportControls> action) {
-        if (current == null) return;
+    private boolean send(java.util.function.Consumer<MediaController.TransportControls> action) {
+        if (current == null) return false;
         try {
             action.accept(current.getTransportControls());
-        } catch (RuntimeException ignored) {
+            return true;
+        } catch (RuntimeException e) {
+            return false;
         }
+    }
+
+    /** The same request as the remote's own media button, for a player whose session took no controller call. */
+    private void mediaKey(int code) {
+        android.media.AudioManager am = ctx.getSystemService(android.media.AudioManager.class);
+        if (am == null) return;
+        am.dispatchMediaKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code));
+        am.dispatchMediaKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code));
     }
 
     /** Opens the player's own screen for what plays (its session activity), or false when it offers none. */
