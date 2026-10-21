@@ -213,6 +213,33 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final android.animation.TimeInterpolator EASE =
             new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f);
 
+    /**
+     * A song title in the room it has (the view's maxWidth): at full size when it fits, a little smaller when that
+     * is enough, and otherwise slowly scrolling along, as Apple TV shows a long title, never cut at the screen edge.
+     */
+    private void fitTitle(TextView v, float maxSp, float minSp) {
+        int room = v.getMaxWidth();
+        if (room <= 0 || room == Integer.MAX_VALUE) return;
+        android.text.TextPaint p = new android.text.TextPaint(v.getPaint());
+        String text = String.valueOf(v.getText());
+        float sp = maxSp;
+        float scaled = getResources().getDisplayMetrics().scaledDensity;
+        while (sp > minSp) {
+            p.setTextSize(sp * scaled);
+            if (p.measureText(text) <= room) break;
+            sp -= 1f;
+        }
+        v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, sp);
+        p.setTextSize(sp * scaled);
+        boolean scroll = p.measureText(text) > room;
+        v.setSingleLine(true);
+        v.setHorizontalFadingEdgeEnabled(scroll);
+        v.setFadingEdgeLength((int) (24 * density));
+        v.setEllipsize(scroll ? TextUtils.TruncateAt.MARQUEE : TextUtils.TruncateAt.END);
+        v.setMarqueeRepeatLimit(-1);
+        v.setSelected(scroll);   // a marquee runs only on a selected view
+    }
+
     /** m:ss, or h:mm:ss past an hour. */
     private static String clock(long ms) {
         long s = ms / 1000;
@@ -1916,11 +1943,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     v.animate().cancel();
                     v.animate().alpha(0f).setDuration(160).setInterpolator(EASE).withEndAction(() -> {
                         v.setText(text);
+                        if (v == ambientTitle) fitTitle(v, 28f, 22f);
                         v.animate().alpha(1f).setDuration(420).setInterpolator(EASE).start();
                     }).start();
                 }
             } else {
                 ambientTitle.setText(t.title);
+                fitTitle(ambientTitle, 28f, 22f);
                 ambientArtist.setText(artist);
                 ambientTitle.setAlpha(1f);
                 ambientArtist.setAlpha(1f);
@@ -2782,6 +2811,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfLive.setAlpha(0f);
         showShelfOpen(false, false);
         npTitle.setText(t.title);
+        fitTitle(npTitle, 32f, 24f);
         npPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         npArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
         if (t.cover != npCoverShown) {
