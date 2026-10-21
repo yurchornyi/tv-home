@@ -108,6 +108,8 @@
     <!-- The top shelf's row of what was opened last (Recents). -->
     <string name="continue_row">Continue</string>
     <!-- Sleep timer (SleepTimer, SleepService): the Settings menu rows and the note under the clock. -->
+    <string name="access_now_playing">Allow Now Playing</string>
+    <string name="access_permissions">Allow posters and weather</string>
     <string name="sleep_timer">Sleep timer</string>
     <string name="sleep_timer_left">Sleep timer: %d min</string>
     <string name="sleep_minutes">%d min</string>

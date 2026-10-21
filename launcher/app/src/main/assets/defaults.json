@@ -1,0 +1,16 @@
+{
+ "_": "Starting choices for a TV that has never been set up (Backup.applyDefaultsIfFresh), made by tools/make-defaults.py from backups/xgimi.json. Use counts are left out.",
+ "files": {
+  "order.txt": "tvhome-order 1\ndock org.smarttube.stable,com.kyivstar.tv.tvapp,com.netflix.ninja,rezkatv.web.app\norg.smarttube.stable/com.liskovsoft.smartyoutubetv2.tv.ui.main.SplashActivity\ncom.kyivstar.tv.tvapp/com.vidmind.tv.ui.splashscreen.SplashActivity\ncom.netflix.ninja/.MainActivity\nrezkatv.web.app/.MainActivity\ncom.spotify.tv.android/.SpotifyTVActivity\ncom.setanta.app/.MainActivity\ntv.twitch.android.app/tv.twitch.starshot64.app.StarshotActivity\ncom.kick.mobile/com.kick.tv.MainActivity\ntv.parsec.client/.MainActivity\ncom.megarohas.amtv/.MainActivity\nnet.gtvbox.videoplayer/net.gtvbox.vimuhd.VimuHDActivity\ncom.brouken.player/.PlayerActivity\ncom.phlox.tvwebbrowser/.activity.main.MainActivity\ncom.surfshark.vpnclient.android/.StartActivity\ncom.macpaw.clearvpn.android/.presentation.MainActivity\ncom.android.vending/com.google.android.finsky.tvmainactivity.TvMainActivity\ncom.alphainventor.filemanager/.activity.MainActivity\ndev.vodik7.tvquickactions/.MainActivity\ncom.desktop.launcher/com.xtv.xtvmanager.launcher.LauncherActivity\ncom.android.tv.settings/.MainSettings\n",
+  "library_home_removed.txt": "com.apple.android.music\n"
+ },
+ "prefs": {
+  "shelf": {
+   "posters_off": []
+  },
+  "channels": {
+   "mode_com.kyivstar.tv.tvapp": true,
+   "chosen_com.kyivstar.tv.tvapp": "[\"55f2bcefe4b0781039beb055\",\"55efdb74e4b0781039bc0760\",\"63ad904063b46c5d268c63d0\"]"
+  }
+ }
+}

@@ -156,6 +156,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ShelfFeed.Item continueItem;
     private static final int VOICE_REQUEST = 43;
     private static final int RECORD_AUDIO_REQUEST = 44;
+    private static final int TV_LISTINGS_REQUEST = 45;
     /** Spoken search in the field itself (VoiceSearch); listenOnOpen starts it once the field has unfolded. */
     private VoiceSearch voice;
     private boolean listenOnOpen;
@@ -429,6 +430,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Backup.importIfChanged(this);   // a backup.json put in the files folder (restore) before anything reads
+        Backup.applyDefaultsIfFresh(this);   // a new TV starts from the owner's usual shelf and channel choices
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
         settingsKeyPanel = cfg.settingsKeyPanel;
@@ -942,6 +944,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         promptsPaused = false;
         updater.check();
+        askForTvListings();
         if (pendingSearch != null) {
             String q = pendingSearch;
             pendingSearch = null;
@@ -2251,6 +2254,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         launchApp(pkg);
     }
 
+    private boolean installed(String pkg) {
+        try {
+            getPackageManager().getPackageInfo(pkg, 0);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** An intent: or plain URI into its app; the app itself when the URI is broken. */
     private void openUri(String uri, String pkg) {
         try {
@@ -2564,9 +2576,77 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
+    /**
+     * What build-and-install grants over adb, asked for on a TV set up any other way: Android's own "Allow", once
+     * per permission, the first times Home comes up. The TV's channel listings (the shelf's SmartTube posters),
+     * the location (the temperature and the Wi-Fi name; Wi-Fi gives it, there is no GPS), Bluetooth (the
+     * headphones button). A "no" is not asked again; the launcher works on without it.
+     */
+    private void askForTvListings() {
+        handler.removeCallbacks(tvListingsAsk);
+        if (!missingPermissions().isEmpty()) handler.postDelayed(tvListingsAsk, 1500);
+    }
+
+    private List<String> missingPermissions() {
+        android.content.SharedPreferences st = getSharedPreferences("setup", MODE_PRIVATE);
+        List<String> out = new ArrayList<>();
+        boolean channels = false;
+        for (String pkg : channelApps) if (installed(pkg)) channels = true;
+        if (channels) out.add("android.permission.READ_TV_LISTINGS");
+        if (weather != null || btnWifi.getVisibility() == View.VISIBLE) {
+            out.add(android.Manifest.permission.ACCESS_FINE_LOCATION);
+            out.add(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+        }
+        if (Build.VERSION.SDK_INT >= 31) out.add("android.permission.BLUETOOTH_CONNECT");
+        List<String> missing = new ArrayList<>();
+        for (String p : out) {
+            if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    && !st.getBoolean("asked_" + p, false)) missing.add(p);
+        }
+        return missing;
+    }
+
+    private Intent appDetails() {
+        return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+    }
+
+    /** The Now Playing card reads media sessions only as an allowed notification listener. */
+    private boolean notificationAccess() {
+        String on = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        return on != null && on.contains(getPackageName());
+    }
+
+    /** Any of the setup permissions still not granted, asked or not. */
+    private boolean anyPermissionMissing() {
+        for (String p : new String[]{"android.permission.READ_TV_LISTINGS", android.Manifest.permission.ACCESS_FINE_LOCATION}) {
+            if (checkSelfPermission(p) != android.content.pm.PackageManager.PERMISSION_GRANTED) return true;
+        }
+        return false;
+    }
+
+    /** Asked only over Home itself (not a popup, not another app); otherwise the next time Home comes up. */
+    private final Runnable tvListingsAsk = () -> {
+        if (isFinishing() || !hasWindowFocus() || openPopup != null || searching) return;
+        List<String> missing = missingPermissions();
+        if (missing.isEmpty()) return;
+        android.content.SharedPreferences.Editor e = getSharedPreferences("setup", MODE_PRIVATE).edit();
+        for (String p : missing) e.putBoolean("asked_" + p, true);
+        e.apply();
+        requestPermissions(missing.toArray(new String[0]), TV_LISTINGS_REQUEST);
+    };
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == TV_LISTINGS_REQUEST) {
+            // Whatever was allowed shows at once: the posters, the temperature and Wi-Fi name, the headphones.
+            stopFeed();
+            if (lastFocused >= 0 && lastFocused < COLUMNS && adapter.appCount() > 0) showHero(lastFocused, lastDockTop);
+            if (weather != null) refreshWeather();
+            updateWifiLabel();
+            AudioDevices.refresh(this);
+            updateAudioButton();
+        }
         if (requestCode == RECORD_AUDIO_REQUEST) {
             if (results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) startVoice();
             else if (!searching) openSearch("");   // typing, then
@@ -3946,6 +4026,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
+        // A TV set up without adb where something was not allowed: one row to where it can be turned on.
+        if (!notificationAccess()) {
+            addSettingsMenuRow(rows, popup, R.string.access_now_playing, () -> {
+                Intent i = new Intent("android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS")
+                        .putExtra("android.provider.extra.NOTIFICATION_LISTENER_COMPONENT_NAME",
+                                new ComponentName(this, NowPlayingListener.class).flattenToString());
+                if (i.resolveActivity(getPackageManager()) == null) i = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+                if (i.resolveActivity(getPackageManager()) == null) i = appDetails();
+                open(i);
+            });
+        } else if (anyPermissionMissing()) {
+            addSettingsMenuRow(rows, popup, R.string.access_permissions, () -> open(appDetails()));
+        }
         int left = SleepTimer.minutesLeft(this);
         addSettingsMenuRow(rows, popup, left > 0 ? getString(R.string.sleep_timer_left, left) : getString(R.string.sleep_timer),
                 this::showSleepMenu);

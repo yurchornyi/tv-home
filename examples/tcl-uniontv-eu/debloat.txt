@@ -1,0 +1,42 @@
+# TCL UnionTV, EU build (persist.tcl.client_type TCL-EU-RT2841-S1), Realtek RT2841, Android TV 9 (API 28),
+# build PPR2.180905.006.A1, 1.4 GB RAM with ro.config.low_ram=true, en-GB. Based on examples/thomson-32he5800
+# (same platform and client family); the choices below follow the owner's answers for this unit.
+#
+# Apply:   TV_HOST=<tv ip> tools/disable.sh examples/tcl-uniontv-eu/debloat.txt
+# Undo:    TV_HOST=<tv ip> tools/restore.sh examples/tcl-uniontv-eu/debloat.txt
+# Everything is DISABLED, not uninstalled. Comment out any line you want to keep.
+#
+# Kept on purpose: Kyivstar TV, Surfshark VPN, Netflix, YouTube, SmartTube, Rezka (installed by hand),
+# voice assistant (katniss, pumpkin), Chromecast (mediashell), firmware updates (versionUpdateApp, rc.ota),
+# USB media players (ui_mediaCenter, videoplayer, audioplayer, imageplayer), Ambient screensaver (backdrop).
+#
+# DO NOT DISABLE (load-bearing or unclear, run as android.uid.system):
+# com.tcl.tv com.tcl.tvinput com.tcl.tvpassthrough com.tcl.sourcemananger   # Live TV, HDMI, tuner, Source menu
+# com.tcl.autopair com.tcl.tcl_bt_rcu_service com.tcl.keycustomfunctionservice  # remote, BT pairing
+# com.tcl.framework.custom com.tcl.keyhelp com.tcl.partnercustomizer  # key handling
+# com.tcl.inputmethod.international com.tcl.settings com.tcl.initsetup com.tcl.factory.view
+# com.tcl.common.terminalmanagerplus com.tcl.xian.StartandroidService com.tcl.appstatecontroller
+# com.tcl.copydatatotv com.android.ListenNetStateService
+# com.realtek.netflix.setting                                  # Netflix ESN/config
+
+# Telemetry and analytics
+com.tcl.bi                              # TCL analytics (BI)
+com.google.android.feedback
+com.google.android.tv.bugreportsender
+android.autoinstalls.config.tcl.device  # Play auto-installs of partner apps
+com.google.android.partnersetup         # partner-app attribution
+
+# Content, ads and promos
+com.google.android.tvrecommendations
+com.google.android.leanbacklauncher.recommendations
+com.tcl.appmarket2                      # TCL app store (Play Store stays)
+com.tcl.usercenter                      # TCL account / phone binding web pages
+com.tcl.esticker                        # retail energy-label sticker
+com.tcl.useragreement                   # TCL agreement screen, done after setup
+
+# Background services
+com.tcl.tvweishi                        # "TV Guard" cleaner with its own installer
+
+# Preloaded apps
+com.google.android.play.games
+com.google.android.videos               # Play Movies & TV

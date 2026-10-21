@@ -83,7 +83,7 @@ if ! printf '%s' "$START_OUT" | grep -qF 'Status: ok' || printf '%s' "$START_OUT
   exit 1
 fi
 printf '%s\n' \
-  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; echo location-granted" \
+  "pm grant com.gathin.tvhome android.permission.ACCESS_FINE_LOCATION 2>/dev/null; pm grant com.gathin.tvhome android.permission.ACCESS_COARSE_LOCATION 2>/dev/null; echo location-granted" \
   "pm grant com.gathin.tvhome android.permission.BLUETOOTH_CONNECT 2>/dev/null; appops set com.gathin.tvhome SYSTEM_ALERT_WINDOW allow; echo bluetooth-and-overlay-granted" \
   "cmd notification allow_listener com.gathin.tvhome/com.gathin.tvhome.NowPlayingListener; echo now-playing-allowed" \
   "pm grant com.gathin.tvhome android.permission.READ_TV_LISTINGS 2>/dev/null; echo tv-listings-granted" \

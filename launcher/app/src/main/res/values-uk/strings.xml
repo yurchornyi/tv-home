@@ -100,6 +100,8 @@
     <string name="search_series">Серіал · %s</string>
     <string name="search_video">Відео · %s</string>
     <string name="continue_row">Продовжити</string>
+    <string name="access_now_playing">Дозволити «Зараз грає»</string>
+    <string name="access_permissions">Дозволити постери й погоду</string>
     <string name="sleep_timer">Таймер сну</string>
     <string name="sleep_timer_left">Таймер сну: %d хв</string>
     <string name="sleep_minutes">%d хв</string>

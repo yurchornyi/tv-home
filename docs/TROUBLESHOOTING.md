@@ -199,3 +199,19 @@ adb shell settings put secure accessibility_enabled 1
 
 (or tick "TV Home sleep timer" under Settings → Accessibility). The launcher says so with a message when the timer is set
 while the service is off.
+
+## A new TV set up without adb: no posters, no channels
+
+`build-and-install.sh` grants the launcher what it needs over adb. A TV that got the launcher another way (the
+self-update, an APK) now sets itself up:
+
+- On the first starts Home shows Android's own "Allow" for the TV's channel listings (SmartTube posters), the
+  location (temperature, Wi-Fi name) and Bluetooth (headphones). Answer "Allow". A "Don't allow" is not asked
+  again; the Settings menu (the gear) then has "Allow posters and weather", which opens the launcher's app page.
+- The Now Playing card needs notification access, which no dialog can grant: the gear's menu shows "Allow Now
+  Playing" until it is on.
+- A TV that was never set up takes the owner's tile order, dock and channel choices from
+  `assets/defaults.json`, which `release.sh` makes from `backups/xgimi.json` (`tools/make-defaults.py`). Refresh
+  that backup with `tools/backup-settings.sh xgimi` before a release to pass on new choices.
+- SmartTube publishes the channels the posters come from only while a launcher it knows is installed (the stock
+  Google TV launcher, or `install-channels-stub.sh`).

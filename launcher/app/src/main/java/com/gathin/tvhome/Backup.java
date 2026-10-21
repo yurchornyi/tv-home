@@ -89,34 +89,86 @@ final class Backup {
                     }
                 }
             }
-            JSONObject prefs = o.optJSONObject("prefs");
-            if (prefs != null) {
-                for (String name : PREFS) {
-                    JSONObject p = prefs.optJSONObject(name);
-                    if (p == null) continue;
-                    SharedPreferences.Editor e = ctx.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear();
-                    for (Iterator<String> it = p.keys(); it.hasNext(); ) {
-                        String k = it.next();
-                        Object v = p.get(k);
-                        if (v instanceof Boolean) e.putBoolean(k, (Boolean) v);
-                        else if (v instanceof Integer) e.putInt(k, (Integer) v);
-                        else if (v instanceof Long) e.putLong(k, (Long) v);
-                        else if (v instanceof JSONArray) {
-                            Set<String> set = new HashSet<>();
-                            JSONArray a = (JSONArray) v;
-                            for (int i = 0; i < a.length(); i++) set.add(a.getString(i));
-                            e.putStringSet(k, set);
-                        } else e.putString(k, String.valueOf(v));
-                    }
-                    e.apply();
-                }
-            }
+            writePrefs(ctx, o.optJSONObject("prefs"));
             st.edit().putString("imported", hash).putString("exported", hash).apply();
             Log.i(TAG, "settings restored from " + f);
             return true;
         } catch (Exception e) {
             Log.w(TAG, "import failed: " + e);
             return false;
+        }
+    }
+
+    /**
+     * A TV that has never been set up starts as the owner's other TVs are, from assets/defaults.json (release.sh
+     * makes it from backups/xgimi.json): the tile order and the dock, what was added to or taken off Home, Kyivstar
+     * TV's shelf in channel mode with its channels. Once, and only what this TV has not chosen itself: a file that
+     * is there already, or preferences that hold anything, are kept. Apps the TV lacks are simply skipped.
+     */
+    static void applyDefaultsIfFresh(Context ctx) {
+        SharedPreferences st = state(ctx);
+        if (st.getBoolean("defaults_applied", false)) return;
+        st.edit().putBoolean("defaults_applied", true).apply();
+        JSONObject o;
+        try (InputStream in = ctx.getAssets().open("defaults.json")) {
+            o = new JSONObject(new String(readAll(in), StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            Log.w(TAG, "no defaults: " + e);
+            return;
+        }
+        try {
+            JSONObject files = o.optJSONObject("files");
+            if (files != null) {
+                for (String name : FILES) {
+                    File f = new File(ctx.getFilesDir(), name);
+                    if (!files.has(name) || f.exists()) continue;
+                    AtomicFile af = new AtomicFile(f);
+                    FileOutputStream out = af.startWrite();
+                    try {
+                        out.write(files.getString(name).getBytes(StandardCharsets.UTF_8));
+                        af.finishWrite(out);
+                    } catch (Exception e) {
+                        af.failWrite(out);
+                        throw e;
+                    }
+                }
+            }
+            JSONObject prefs = o.optJSONObject("prefs");
+            if (prefs != null) {
+                JSONObject fresh = new JSONObject();
+                for (String name : PREFS) {
+                    if (prefs.has(name) && ctx.getSharedPreferences(name, Context.MODE_PRIVATE).getAll().isEmpty()) {
+                        fresh.put(name, prefs.get(name));
+                    }
+                }
+                writePrefs(ctx, fresh);
+            }
+            Log.i(TAG, "defaults applied");
+        } catch (Exception e) {
+            Log.w(TAG, "defaults failed: " + e);
+        }
+    }
+
+    private static void writePrefs(Context ctx, JSONObject prefs) throws Exception {
+        if (prefs == null) return;
+        for (String name : PREFS) {
+            JSONObject p = prefs.optJSONObject(name);
+            if (p == null) continue;
+            SharedPreferences.Editor e = ctx.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear();
+            for (Iterator<String> it = p.keys(); it.hasNext(); ) {
+                String k = it.next();
+                Object v = p.get(k);
+                if (v instanceof Boolean) e.putBoolean(k, (Boolean) v);
+                else if (v instanceof Integer) e.putInt(k, (Integer) v);
+                else if (v instanceof Long) e.putLong(k, (Long) v);
+                else if (v instanceof JSONArray) {
+                    Set<String> set = new HashSet<>();
+                    JSONArray a = (JSONArray) v;
+                    for (int i = 0; i < a.length(); i++) set.add(a.getString(i));
+                    e.putStringSet(k, set);
+                } else e.putString(k, String.valueOf(v));
+            }
+            e.apply();
         }
     }
 

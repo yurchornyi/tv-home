@@ -22,6 +22,8 @@ fi
 CODE=$(($(sed -n 's/^ *versionCode \([0-9]*\)$/\1/p' app/build.gradle) + 1))
 sed -i '' "s/^\( *versionCode \)[0-9]*$/\1$CODE/; s/^\( *versionName \)'[^']*'$/\1'$VERSION'/" app/build.gradle
 grep -q "versionCode $CODE" app/build.gradle || { echo "could not bump the version" >&2; exit 1; }
+# New TVs start from the owner's latest saved settings (backups/xgimi.json, tools/backup-settings.sh).
+python3 -I ../tools/make-defaults.py
 ./gradlew assembleRelease -q --console=plain || { git checkout -- app/build.gradle; echo "build failed; version left as it was" >&2; exit 1; }
 APK=app/build/outputs/apk/release/app-release.apk
 OUT=$(mktemp -d)
