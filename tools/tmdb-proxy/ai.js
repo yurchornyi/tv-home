@@ -9,7 +9,10 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
 /** One request to Claude for a JSON object in `schema`; null when it declines or the answer is unusable. */
 async function ask(env, system, user, schema, maxTokens) {
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_KEY.trim() });
+  // Through Sentra when connected (its Claude key, limits and spend tracking), else straight with ANTHROPIC_KEY.
+  const client = env.SENTRA_TOKEN
+    ? new Anthropic({ apiKey: env.SENTRA_TOKEN.trim(), baseURL: env.SENTRA_URL.replace(/\/+$/, '') + '/anthropic' })
+    : new Anthropic({ apiKey: env.ANTHROPIC_KEY.trim() });
   let response;
   try {
     response = await client.beta.messages.create({

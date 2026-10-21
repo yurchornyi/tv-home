@@ -9,3 +9,6 @@ workers_dev = true
 name = "AI_LIMIT"
 namespace_id = "1001"
 simple = { limit = 12, period = 60 }
+
+[vars]
+SENTRA_URL = "https://sentra.landing-1a0.workers.dev"
