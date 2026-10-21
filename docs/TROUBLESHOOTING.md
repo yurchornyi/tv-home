@@ -100,6 +100,10 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   `tools/tv.py 'pm uninstall -k --user 0 com.google.android.apps.tv.launcherx'`. The explicit start then
   fails quietly and Home stays on the new launcher. To bring it back:
   `tools/tv.py 'pm install-existing --user 0 com.google.android.apps.tv.launcherx'`.
+  One catch: SmartTube publishes its home-screen channels (which the launcher's top shelf shows for it,
+  `shelf_channel_apps`) only while a launcher it knows is installed, and Google's counts even disabled.
+  `launcher/install-channels-stub.sh` installs an empty app named `com.tv.leanback.launcher`, a name SmartTube
+  accepts, and then removes Google's launcher for the user; the channels keep coming.
 - **No on-screen keyboard** after switching launchers, seen on Xiaomi: the default input method
   pointed at a Baidu keyboard that isn't installed. Fix:
   `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`

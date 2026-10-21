@@ -1,0 +1,47 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:2:1-20:12
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:2:1-20:12
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:2:1-20:12
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:2:1-20:12
+	package
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:2:11-69
+application
+ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:7:5-19:19
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:7:5-19:19
+	android:extractNativeLibs
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	android:label
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:8:9-46
+	android:allowBackup
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:9:9-36
+activity#com.tv.leanback.launcher.Nothing
+ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:10:9-18:20
+	android:excludeFromRecents
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:13:13-46
+	android:exported
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:12:13-36
+	android:theme
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:14:13-59
+	android:name
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:11:13-36
+intent-filter#action:name:android.intent.action.MAIN
+ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:15:13-17:29
+action#android.intent.action.MAIN
+ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:16:17-69
+	android:name
+		ADDED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml:16:25-66
+uses-sdk
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/chornyi/Projects/tv-home/launcher/channels-stub/src/main/AndroidManifest.xml

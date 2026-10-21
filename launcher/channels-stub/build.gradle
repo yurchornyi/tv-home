@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+
+// An empty app whose only job is its package name: SmartTube (and apps like it) publish their home-screen
+// channels only when a launcher they know is installed, and com.tv.leanback.launcher is one of the names it
+// accepts. With this on the TV the stock Google launcher can be removed for good (see install-channels-stub.sh)
+// and the channels keep coming for the top shelf (ChannelFeed). No code, no activity, nothing to see.
+android {
+    namespace 'com.tv.leanback.launcher'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.tv.leanback.launcher'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}

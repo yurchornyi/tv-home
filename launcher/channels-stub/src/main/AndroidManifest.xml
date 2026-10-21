@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Only the package name matters (channels-stub/build.gradle). The activity exists so other apps can see the
+         package at all: since Android 11 an app sees only the packages it names or those with an activity for an
+         intent it declares, and SmartTube declares ACTION_MAIN. No launcher category, so no tile anywhere; opened
+         by mistake it closes at once. -->
+    <application
+        android:label="TV Home channels stub"
+        android:allowBackup="false">
+        <activity
+            android:name=".Nothing"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

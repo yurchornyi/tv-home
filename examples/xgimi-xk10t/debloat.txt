@@ -13,8 +13,10 @@
 # The stock launcher came back: on wake from standby XGIMI's system (uid 0) starts
 # com.google.android.apps.tv.launcherx/.home.HomeActivity by name, and after a week disabled the package was
 # found enabled again (by what, the log no longer showed), so Google's home took the screen until the next
-# install. Disabling is not enough here: remove it for the user instead (data kept), which nothing re-enables:
-#   tools/tv.py 'pm uninstall -k --user 0 com.google.android.apps.tv.launcherx'
+# install. Disabling is not enough here: remove it for the user instead (data kept), which nothing re-enables.
+# SmartTube publishes its home-screen channels (the launcher's top shelf for it) only while a launcher it knows
+# is installed, Google's among them, so first install the stub that carries such a name, then remove Google's:
+#   TV_HOST=<ip> launcher/install-channels-stub.sh
 # Bring it back with: tools/tv.py 'pm install-existing --user 0 com.google.android.apps.tv.launcherx'
 #
 # DO NOT DISABLE on XGIMI (projector hardware, inputs, remote):
