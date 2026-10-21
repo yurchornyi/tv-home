@@ -121,6 +121,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ShelfFeed shelfFeed;
     private final Set<String> feedApps = new HashSet<>();
     private String feedPkg;
+    /** Android's package change counter at the last tile rebuild, and when that was (appsMayHaveChanged). */
+    private int packageSeq;
+    private long tilesBuiltAt;
+    /** Bumped whenever the carousel stops, so backdrops still loading for an earlier visit are dropped. */
+    private int feedGen;
     private List<ShelfFeed.Item> feedItems;
     private int feedIndex;
     private float lastDockTop;
@@ -139,7 +144,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private final Runnable npTick = new Runnable() {
         @Override public void run() {
             updateNowPlayingProgress();
-            handler.postDelayed(this, 1000);
+            // Paused, the bar stands still: no need to ask the player every second.
+            NowPlaying.Track t = nowPlaying.track();
+            if (t != null && t.playing) handler.postDelayed(this, 1000);
         }
     };
     private final Runnable feedTick = new Runnable() {
@@ -297,9 +304,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Updates send REMOVED followed by ADDED; keep the tile until the new APK is ready.
             if (Intent.ACTION_PACKAGE_REMOVED.equals(intent.getAction())
                     && intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return;
-            reloadApps(false);
-            if (appLibrary != null) appLibrary.refresh();
+            // Play updates many apps in a row: rebuild once when the burst is over, not once per app.
+            handler.removeCallbacks(packagesChanged);
+            handler.postDelayed(packagesChanged, 600);
         }
+    };
+    private final Runnable packagesChanged = () -> {
+        reloadApps(false);
+        if (appLibrary != null) appLibrary.refresh();
     };
     private final Runnable minuteTick = new Runnable() {
         @Override
@@ -697,7 +709,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (rebuildOnResume) {
             tilesReady = false;
-            reloadApps(true);
+            reloadApps(true, appsMayHaveChanged());
         }
         rebuildOnResume = false;
         updateGreeting();
@@ -706,6 +718,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
+        handler.removeCallbacks(minuteTick);
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -725,6 +738,26 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
     private void reloadApps(boolean animate) {
+        reloadApps(animate, true);
+    }
+
+    /**
+     * Back on Home from an app: false when no package was installed, updated or removed meanwhile, so the tiles stay
+     * as they are and only focus and the entrance are redone (a full rebuild reads every app's label and banner, a
+     * visible hitch on a slow TV). Every quarter of an hour a full rebuild happens anyway, for changes Android's
+     * sequence number may not count (an app disabled from adb).
+     */
+    private boolean appsMayHaveChanged() {
+        if (SystemClock.elapsedRealtime() - tilesBuiltAt > 15 * 60_000L) return true;
+        try {
+            return getPackageManager().getChangedPackages(packageSeq) != null;
+        } catch (RuntimeException e) {
+            return true;
+        }
+    }
+
+    /** rebuild false: keep the tiles, redo focus and the entrance only (see appsMayHaveChanged). */
+    private void reloadApps(boolean animate, boolean rebuild) {
         cancelPendingFocusScroll();
         RecyclerView.ViewHolder footer = grid.findViewHolderForAdapterPosition(adapter.appCount());
         final boolean restoreLibrary = adapter.isLibraryAt(adapter.appCount()) && footer != null
@@ -742,8 +775,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ambient.setAlpha(0f);
             hideShelfArt(false);
         }
-        reloadTiles();
-        if (animate && animations && !reducedMotion) grid.scheduleLayoutAnimation();
+        if (rebuild) reloadTiles();
+        if (animate && animations && !reducedMotion) {
+            grid.scheduleLayoutAnimation();
+            if (!rebuild) grid.requestLayout();   // nothing was rebound: start the entrance anyway
+        }
 
         if (restoreFocus) {
             // Keep a focused footer at the end even when the app count changes.
@@ -772,6 +808,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final String returnKey = lastFocusedKey;
         final int returnSlot = lastFocused;
         final List<Cards.Card> none = Collections.emptyList();
+        try {
+            android.content.pm.ChangedPackages changed = getPackageManager().getChangedPackages(packageSeq);
+            if (changed != null) packageSeq = changed.getSequenceNumber();
+        } catch (RuntimeException ignored) {
+        }
+        tilesBuiltAt = SystemClock.elapsedRealtime();
         cards = moduleCards ? CardFeature.run(() -> Cards.discover(this, hiddenApps, Cards.load(Cards.storeFile(this))), none) : none;
         adapter.reload(cards.isEmpty() ? none : CardFeature.run(() -> Cards.shown(cards), none));
         lastFocusedKey = returnKey;
@@ -824,7 +866,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onStop() {
         super.onStop();
         unregisterReceiver(packageReceiver);
+        handler.removeCallbacks(packagesChanged);
         rebuildOnResume = true;
+        // Another app is in front: let go of the big pictures (a backdrop is ~2 MB); they reload when Home returns.
+        heroArt.animate().cancel();
+        heroArt.setImageDrawable(null);
+        heroArt.setAlpha(0f);
+        heroFade.setAlpha(0f);
+        heroArtShown = null;
+        npCoverShown = null;
+        npBackdrop = null;
+        if (shelfFeed != null) shelfFeed.trimMemory();
     }
 
     @Override
@@ -839,6 +891,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        handler.removeCallbacksAndMessages(null);
+        if (shelfFeed != null) shelfFeed.close();
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -1141,11 +1195,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * change fires for a moved tile, so focusTile's already-focused path calls onTileFocused itself.
      */
     private void refocusAfterLayout(int pos) {
+        // Holding an arrow sends a move per key repeat: only the newest one may set focus, or an older wait could
+        // land after it and pull focus back to the tile just swapped.
+        int gen = ++refocusGen;
         grid.postOnAnimation(new Runnable() {
             int frames;
 
             @Override
             public void run() {
+                if (gen != refocusGen) return;
                 if ((grid.hasPendingAdapterUpdates() || grid.isLayoutRequested()) && ++frames < 10) {
                     grid.postOnAnimation(this);
                     return;
@@ -1155,6 +1213,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
     }
+
+    private int refocusGen;
 
     @Override
     public void onBackPressed() {
@@ -1440,8 +1500,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopFeed();
         feedPkg = pkg;
         if (heroArtShown == null) showShelfArt(position);
+        int gen = feedGen;
         shelfFeed.items(pkg, items -> {
-            if (!pkg.equals(feedPkg)) return;
+            if (gen != feedGen || !pkg.equals(feedPkg)) return;
             boolean first = feedItems == null;
             feedItems = items;
             if (first) {
@@ -1462,8 +1523,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return;
         ShelfFeed.Item item = feedItems.get(feedIndex % feedItems.size());
         String pkg = feedPkg;
+        int gen = feedGen;
         shelfFeed.image(item.backdrop, (backdrop, bitmap) -> {
-            if (!pkg.equals(feedPkg)) return;
+            if (gen != feedGen || !pkg.equals(feedPkg)) return;
+            if (bitmap == null) {
+                // This backdrop failed to load: move on to the next one later instead of stopping here.
+                handler.postDelayed(feedTick, 8000);
+                return;
+            }
             BitmapDrawable art = new BitmapDrawable(getResources(), bitmap);
             heroArt.animate().cancel();
             heroFade.animate().cancel();
@@ -1499,6 +1566,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
+        feedGen++;
         if (feedPkg == null) return;
         feedPkg = null;
         feedItems = null;
@@ -2213,7 +2281,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         }
-        btnInputs.setVisibility(any && showInputs ? View.VISIBLE : View.GONE);
+        boolean show = any && showInputs;
+        boolean hadFocus = btnInputs.hasFocus();
+        btnInputs.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show && hadFocus) firstPill().requestFocus();
     }
 
     /** The leftmost visible pill of the top bar (Settings is always there). */
@@ -2305,8 +2376,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             btnAudio.setContentDescription(name);
         }
         if (on == (btnAudio.getVisibility() == View.VISIBLE)) return;
-        if (!on && btnAudio.hasFocus()) btnWifi.requestFocus();
+        boolean hadFocus = btnAudio.hasFocus();
         btnAudio.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (!on && hadFocus) firstPill().requestFocus();   // never leave the remote with nothing focused
     }
 
     /**
@@ -2400,7 +2472,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         try {
             startActivity(view);
             return;
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
             if (inputAction.isEmpty()) {
                 Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
                 return;

@@ -50,6 +50,7 @@ final class ShelfFeed {
     }
 
     interface ItemsListener { void onItems(List<Item> items); }
+    /** bitmap is null when the backdrop could not be loaded. */
     interface ImageListener { void onImage(String backdrop, Bitmap bitmap); }
 
     private static final String TAG = "TvHome.ShelfFeed";
@@ -67,6 +68,11 @@ final class ShelfFeed {
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Map<String, List<Item>> lists = new HashMap<>();
     private final Set<String> loading = new HashSet<>();
+    /** When a list last failed to load (offline, TMDB down): not retried on every focus, only after RETRY_MS. */
+    private final Map<String, Long> failedAt = new HashMap<>();
+    private static final long RETRY_MS = 5 * 60 * 1000L;
+    /** Backdrops being fetched, with everyone waiting for each: one download however often it is asked for. */
+    private final Map<String, List<ImageListener>> waiting = new HashMap<>();
     private final LruCache<String, Bitmap> images = new LruCache<>(3);
 
     ShelfFeed(Context ctx, String key) {
@@ -92,7 +98,11 @@ final class ShelfFeed {
         }
         if (!known.isEmpty()) listener.onItems(known);
         boolean fresh = System.currentTimeMillis() - prefs().getLong(group + "_at", 0) < MAX_AGE_MS;
-        if ((fresh && !known.isEmpty()) || !loading.add(group)) return;
+        if (fresh && !known.isEmpty()) return;
+        Long failed = failedAt.get(group);
+        if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) return;
+        if (!loading.add(group)) return;
+        if (io.isShutdown()) return;
         io.execute(() -> {
             List<Item> got = new ArrayList<>();
             JSONArray raw = new JSONArray();
@@ -112,7 +122,11 @@ final class ShelfFeed {
             }
             main.post(() -> {
                 loading.remove(group);
-                if (got.isEmpty()) return;
+                if (got.isEmpty()) {
+                    failedAt.put(group, System.currentTimeMillis());
+                    return;
+                }
+                failedAt.remove(group);
                 Collections.shuffle(got);
                 lists.put(group, got);
                 prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
@@ -128,6 +142,15 @@ final class ShelfFeed {
             listener.onImage(backdrop, hit);
             return;
         }
+        List<ImageListener> queue = waiting.get(backdrop);
+        if (queue != null) {
+            queue.add(listener);
+            return;
+        }
+        queue = new ArrayList<>();
+        queue.add(listener);
+        if (io.isShutdown()) return;
+        waiting.put(backdrop, queue);
         io.execute(() -> {
             Bitmap b = null;
             try {
@@ -142,16 +165,31 @@ final class ShelfFeed {
                 BitmapFactory.Options o = new BitmapFactory.Options();
                 o.inPreferredConfig = Bitmap.Config.RGB_565;
                 b = BitmapFactory.decodeFile(f.getPath(), o);
+                if (b == null) f.delete();   // a broken download: fetch it again next time, not never show it
             } catch (Exception e) {
                 Log.w(TAG, "image failed: " + e);
             }
             Bitmap done = b;
             main.post(() -> {
-                if (done == null) return;
-                images.put(backdrop, done);
-                listener.onImage(backdrop, done);
+                List<ImageListener> all = waiting.remove(backdrop);
+                if (all == null) return;
+                if (done != null) images.put(backdrop, done);
+                for (ImageListener l : all) l.onImage(backdrop, done);
             });
         });
+    }
+
+    /** Stops the download thread; the activity is going away and nothing will hear the answers. */
+    void close() {
+        io.shutdownNow();
+        main.removeCallbacksAndMessages(null);
+        waiting.clear();
+        images.evictAll();
+    }
+
+    /** Frees the decoded backdrops (Home is behind another app); they come back from disk when needed. */
+    void trimMemory() {
+        images.evictAll();
     }
 
     private void collect(String path, List<Item> into, JSONArray raw) throws Exception {

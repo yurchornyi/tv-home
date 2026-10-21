@@ -188,6 +188,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final List<String> tileColorsKept;
     private final List<String> iconTiles;
     private final java.util.Map<String, int[]> tileDeepColors = new HashMap<>();
+    /** Darkened banners by app version, so reload() (every install, every reorder) does not redo the pixel work. */
+    private final Map<String, Drawable.ConstantState> darkBanners = new HashMap<>();
+    /** Banners DarkBanner left as they are (their colours are calm already). */
+    private final Set<String> calmBanners = new HashSet<>();
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -353,8 +357,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (banner == null || !isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight())) return null;
         String pkg = ri.activityInfo.packageName;
         if (!darkTiles || tileColorsKept.contains(pkg)) return banner;
+        String key = pkg + '/' + ri.activityInfo.name + '@' + ri.activityInfo.applicationInfo.sourceDir + ':' + id;
+        try {
+            key += ":" + pm.getPackageInfo(pkg, 0).lastUpdateTime;
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+        Drawable.ConstantState known = darkBanners.get(key);
+        if (known != null) return known.newDrawable(ctx.getResources());
+        if (calmBanners.contains(key)) return banner;
         int[] deep = tileDeepColors.get(pkg);
-        return DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
+        Drawable dark = DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
+        if (dark == banner) calmBanners.add(key);
+        else if (dark.getConstantState() != null) darkBanners.put(key, dark.getConstantState());
+        return dark;
     }
 
     /**
@@ -454,7 +469,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try {
                 ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
+            } catch (ActivityNotFoundException | SecurityException ignored) {
             }
             return true;
         });

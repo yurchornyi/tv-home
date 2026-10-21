@@ -90,7 +90,12 @@ final class NowPlaying {
 
     /** Playback position now, extrapolated from the last state the app reported. */
     long position() {
-        PlaybackState s = current != null ? current.getPlaybackState() : null;
+        PlaybackState s;
+        try {
+            s = current != null ? current.getPlaybackState() : null;
+        } catch (RuntimeException e) {
+            return 0;
+        }
         if (s == null) return 0;
         long pos = s.getPosition();
         if (s.getState() == PlaybackState.STATE_PLAYING && s.getLastPositionUpdateTime() > 0) {
@@ -104,8 +109,11 @@ final class NowPlaying {
         watched.clear();
         if (controllers != null) {
             for (MediaController c : controllers) {
-                c.registerCallback(callback, main);
-                watched.add(c);
+                try {
+                    c.registerCallback(callback, main);
+                    watched.add(c);
+                } catch (RuntimeException ignored) {
+                }
             }
         }
         pick();
@@ -141,7 +149,9 @@ final class NowPlaying {
             }
         }
         if (closed) found = null;
+        // describe() reads the metadata again; a player that just let its session go returns none, then nothing shows.
         Track next = found == null ? null : describe(found);
+        if (next == null) found = null;
         boolean same = next != null && track != null && next.title.equals(track.title) && next.artist.equals(track.artist);
         // Players resend the same cover as a new bitmap with every metadata update; keep the first one for the
         // track, so the card does not rebuild its backdrop (a visible flicker) on each update.
@@ -155,9 +165,16 @@ final class NowPlaying {
         if (changed) listener.onNowPlayingChanged();
     }
 
+    /** The track this session reports, or null when it has no metadata or title any more. */
     private Track describe(MediaController c) {
-        MediaMetadata m = c.getMetadata();
-        String title = m.getString(MediaMetadata.METADATA_KEY_TITLE);
+        MediaMetadata m;
+        try {
+            m = c.getMetadata();
+        } catch (RuntimeException e) {
+            return null;
+        }
+        String title = m != null ? m.getString(MediaMetadata.METADATA_KEY_TITLE) : null;
+        if (title == null) return null;
         String artist = first(m.getString(MediaMetadata.METADATA_KEY_ARTIST),
                 m.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST), m.getString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE));
         Bitmap cover = m.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
@@ -174,44 +191,69 @@ final class NowPlaying {
     }
 
     private static int state(MediaController c) {
-        PlaybackState s = c.getPlaybackState();
-        return s != null ? s.getState() : PlaybackState.STATE_NONE;
+        try {
+            PlaybackState s = c.getPlaybackState();
+            return s != null ? s.getState() : PlaybackState.STATE_NONE;
+        } catch (RuntimeException e) {   // the player's process died mid-call
+            return PlaybackState.STATE_NONE;
+        }
     }
 
     private static boolean hasTitle(MediaController c) {
-        MediaMetadata m = c.getMetadata();
-        return m != null && m.getString(MediaMetadata.METADATA_KEY_TITLE) != null;
+        try {
+            MediaMetadata m = c.getMetadata();
+            return m != null && m.getString(MediaMetadata.METADATA_KEY_TITLE) != null;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     // ---- remote control of the player, from the card's buttons ----
 
     void playPause() {
         if (current == null) return;
-        if (state(current) == PlaybackState.STATE_PLAYING) current.getTransportControls().pause();
-        else current.getTransportControls().play();
+        boolean playing = state(current) == PlaybackState.STATE_PLAYING;
+        send(c -> {
+            if (playing) c.pause();
+            else c.play();
+        });
     }
 
     void next() {
-        if (current != null) current.getTransportControls().skipToNext();
+        send(MediaController.TransportControls::skipToNext);
     }
 
     void previous() {
-        if (current != null) current.getTransportControls().skipToPrevious();
+        send(MediaController.TransportControls::skipToPrevious);
+    }
+
+    /** A button press for the player; one that quit a moment ago must not take Home down with it. */
+    private void send(java.util.function.Consumer<MediaController.TransportControls> action) {
+        if (current == null) return;
+        try {
+            action.accept(current.getTransportControls());
+        } catch (RuntimeException ignored) {
+        }
     }
 
     /** Stops the player and hides the card until something plays again. */
     void close() {
-        if (current != null) {
-            current.getTransportControls().pause();
-            current.getTransportControls().stop();
-        }
+        send(c -> {
+            c.pause();
+            c.stop();
+        });
         closed = true;
         pick();
     }
 
     /** The cover blurred into the shelf's backdrop: a tiny copy scaled back up with filtering, darkened a little. */
     static android.graphics.drawable.BitmapDrawable soft(Context ctx, Bitmap cover) {
-        Bitmap tiny = Bitmap.createScaledBitmap(cover, 8, 8, true);
+        Bitmap tiny;
+        try {
+            tiny = Bitmap.createScaledBitmap(cover, 8, 8, true);
+        } catch (RuntimeException e) {   // a recycled or hardware cover: the card shows without the backdrop
+            return null;
+        }
         android.graphics.ColorMatrix cm = new android.graphics.ColorMatrix();
         cm.setSaturation(1.4f);
         android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix();
