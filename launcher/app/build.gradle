@@ -19,8 +19,8 @@ android {
         applicationId 'com.gathin.tvhome'
         minSdk 26
         targetSdk 34
-        versionCode 24
-        versionName '2.23'
+        versionCode 25
+        versionName '2.24'
         buildConfigField 'String', 'TMDB_KEY', '"' + tmdbKey.replace('"', '') + '"'
     }
 
