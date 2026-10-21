@@ -77,6 +77,9 @@
     <string name="app_library">Усі програми</string>
     <string name="watch_now">Дивитися</string>
     <string name="live_badge">НАЖИВО</string>
+    <string name="update_to">Оновити до %s</string>
+    <string name="update_ready">Лаунчер %s завантажено: утримуйте OK на «Налаштуваннях», щоб установити</string>
+    <string name="update_failed">Не вдалося встановити оновлення</string>
     <string name="shelf_mode_channels">Полиця: канали</string>
     <string name="shelf_mode_posters">Полиця: постери</string>
     <string name="choose_channels">Вибрати канали…</string>

@@ -80,6 +80,10 @@
     <!-- The top shelf button that opens the film or video shown. -->
     <string name="watch_now">Watch</string>
     <string name="live_badge">LIVE</string>
+    <!-- Self-update (Updater): the Settings menu row, the hint once a build is downloaded, and the failure. -->
+    <string name="update_to">Update to %s</string>
+    <string name="update_ready">Launcher %s is downloaded: hold OK on Settings to install</string>
+    <string name="update_failed">The update could not be installed</string>
     <!-- Tile menu: an app's shelf shows its live channels or posters; the picker for the channels. -->
     <string name="shelf_mode_channels">Shelf: channels</string>
     <string name="shelf_mode_posters">Shelf: posters</string>

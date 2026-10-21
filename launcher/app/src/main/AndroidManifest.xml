@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- The programs apps publish to Android TV's home-screen channels, for the top shelf (ChannelFeed). -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- Self-update (Updater): hands a downloaded build to Android's installer, which asks to confirm. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
@@ -146,6 +148,11 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- The installer's answer about a self-update (Updater, UpdateReceiver). -->
+        <receiver
+            android:name=".UpdateReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".BluetoothReceiver"

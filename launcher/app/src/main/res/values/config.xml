@@ -174,6 +174,11 @@
          VPN you use. Empty: the pill opens Wi-Fi settings. The green VPN badge shows for any VPN either way;
          with an app set here, a red "VPN off" badge also shows while no VPN is up. -->
     <string name="vpn_app" translatable="false"></string>
+
+    <!-- Self-update (Updater): the JSON launcher/release.sh publishes with each release; the launcher reads it
+         every few hours, downloads a newer build and offers "Update to ..." in the Settings menu (hold OK on the
+         Settings pill). Empty: the launcher never looks. A theme can set "update_url". -->
+    <string name="update_url" translatable="false">https://github.com/yurchornyi/tv-home/releases/latest/download/update.json</string>
     <!-- The dock as its own row: a lighter band, no names under the tiles, parked low on the screen with the top
          shelf above it. false makes the dock apps simply the first tiles of one plain grid (still in dock_apps
          order, no empty slots), with names under every tile and the glow behind every focused tile. -->

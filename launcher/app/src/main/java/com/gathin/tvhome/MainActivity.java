@@ -140,6 +140,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private android.widget.HorizontalScrollView shelfChannelsScroll;
     private LinearLayout shelfChannels;
     private LiveChannels liveChannels;
+    private Updater updater;
     private String channelsPkg;
     /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
     private final Set<String> postersOff = new HashSet<>();
@@ -382,6 +383,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfChannelsScroll = findViewById(R.id.shelfChannelsScroll);
         shelfChannels = findViewById(R.id.shelfChannels);
         liveChannels = new LiveChannels(this);
+        updater = new Updater(this, cfg.updateUrl, version -> {
+            // Said once per downloaded build; the Settings menu keeps the row until it is installed.
+            if (!version.equals(getSharedPreferences("updater", MODE_PRIVATE).getString("told", ""))) {
+                getSharedPreferences("updater", MODE_PRIVATE).edit().putString("told", version).apply();
+                Toast.makeText(this, getString(R.string.update_ready, version), Toast.LENGTH_LONG).show();
+            }
+        });
         postersOff.addAll(getSharedPreferences("shelf", MODE_PRIVATE).getStringSet("posters_off", Collections.emptySet()));
         shelfOpen.setOnClickListener(v -> openFeedItem());
         shelfOpen.setOnKeyListener((v, keyCode, event) -> {
@@ -758,6 +766,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
+        updater.check();
         nowPlaying.start();
         AudioDevices.addListener(audioListener);
         AudioDevices.refresh(this);
@@ -3027,6 +3036,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        String update = updater.readyVersion();
+        if (update != null) addSettingsMenuRow(rows, popup, getString(R.string.update_to, update), updater::install);
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
@@ -3041,6 +3052,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addSettingsMenuRow(rows, popup, getString(title), action);
+    }
+
+    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);
