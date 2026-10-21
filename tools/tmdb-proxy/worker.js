@@ -1,4 +1,5 @@
 import { command, picks, about, HttpError } from './ai.js';
+import { featured as kickFeatured, play as kickPlay } from './kick.js';
 
 // The launcher's TMDB requests go through here (ShelfFeed, config.xml tmdb_proxy), so the TMDB key lives only in
 // this Worker's secret (TMDB_KEY) and never in the APK or on GitHub. Only the few read-only paths the top shelf
@@ -47,6 +48,8 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'POST' && AI_ROUTES[url.pathname]) return ai(request, env, url.pathname);
     if (request.method !== 'GET') return new Response('GET only', { status: 405 });
+    if (url.pathname === '/kick/featured') return kickFeatured(url, ctx);
+    if (url.pathname === '/kick/play') return kickPlay(url);
     if (!ALLOWED.some((re) => re.test(url.pathname))) return new Response('Not found', { status: 404 });
     if (!env.TMDB_KEY) return new Response('Not configured', { status: 503 });
 

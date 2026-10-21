@@ -122,6 +122,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private ShelfFeed shelfFeed;
     /** The AI features through the Worker (AiClient): spoken commands, picks, the shelf poster's two lines. */
     private AiClient ai;
+    /** Kick's live streams for its shelf (KickFeed). */
+    private KickFeed kickFeed;
     /** A line under the search row: "thinking", why a pick fits, or what the AI could not do. */
     private TextView searchNote;
     /** Two lines on the film the shelf shows (AiClient.about), between its title and the Watch pill. */
@@ -597,6 +599,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         channelApps.addAll(cfg.shelfChannelApps);
         shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY, getString(R.string.tmdb_proxy));
         ai = new AiClient(this, getString(R.string.tmdb_proxy));
+        kickFeed = new KickFeed(getString(R.string.tmdb_proxy));
         channelFeed = new ChannelFeed(this);
         if (!cfg.showClock) findViewById(R.id.leftBlock).setVisibility(View.INVISIBLE);
         greeting = findViewById(R.id.greeting);
@@ -1814,8 +1817,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean showFeed(int position) {
         String pkg = adapter.pkgAt(position);
         boolean fromChannels = channelApps.contains(pkg) && channelFeed.enabled();
+        boolean fromKick = KickFeed.PACKAGE.equals(pkg) && kickFeed.enabled();
         if (!topShelfArt || postersOff.contains(pkg)
-                || !(fromChannels || (shelfFeed.enabled() && feedApps.contains(pkg)))) {
+                || !(fromChannels || fromKick || (shelfFeed.enabled() && feedApps.contains(pkg)))) {
             stopFeed();
             return false;
         }
@@ -1837,7 +1841,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 showFeedItem();
             }
         };
-        if (fromChannels) channelFeed.items(pkg, onItems);
+        if (fromKick) kickFeed.items(onItems);
+        else if (fromChannels) channelFeed.items(pkg, onItems);
         else shelfFeed.items(pkg, onItems);
         return true;
     }
@@ -2258,6 +2263,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Opens a shelf item (also from Search and the Continue row) and remembers it. */
     private void openItem(String pkg, ShelfFeed.Item item) {
         recents.item(pkg, item);
+        if (item.open != null && item.open.startsWith("kick:")) {
+            playKick(item.open.substring(5));
+            return;
+        }
         if (item.open != null) {
             openUri(item.open, pkg);
             return;
@@ -2287,6 +2296,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * A Kick stream: Kick's TV app opens no particular channel, so the stream itself goes to a video player on the
+     * TV (Just Player, ViMu, VLC, MX), with a fresh link; without one, or when it went offline, Kick opens.
+     */
+    private void playKick(String slug) {
+        shelfOpen.setAlpha(0.5f);
+        kickFeed.play(slug, url -> {
+            shelfOpen.setAlpha(1f);
+            if (url == null) {
+                launchApp(KickFeed.PACKAGE);
+                return;
+            }
+            for (String player : new String[]{"com.brouken.player", "net.gtvbox.videoplayer", "org.videolan.vlc",
+                    "com.mxtech.videoplayer.ad", "is.xyz.mpv"}) {
+                if (!installed(player)) continue;
+                android.util.Log.i("TvHome", "kick " + slug + " in " + player);
+                open(new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "application/x-mpegURL").setPackage(player));
+                return;
+            }
+            launchApp(KickFeed.PACKAGE);
+        });
     }
 
     /** An intent: or plain URI into its app; the app itself when the URI is broken. */
@@ -2933,6 +2965,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         Map<String, List<ShelfFeed.Item>> out = new java.util.LinkedHashMap<>();
         for (String pkg : channelApps) if (labels.containsKey(pkg)) out.put(pkg, new ArrayList<>(channelFeed.cached(pkg)));
         for (String pkg : feedApps) if (labels.containsKey(pkg)) out.put(pkg, new ArrayList<>(shelfFeed.cached(pkg)));
+        if (labels.containsKey(KickFeed.PACKAGE)) out.put(KickFeed.PACKAGE, new ArrayList<>(kickFeed.cached()));
         return out;
     }
 
