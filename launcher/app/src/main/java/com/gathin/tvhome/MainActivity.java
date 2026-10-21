@@ -209,6 +209,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (t != null && t.playing) handler.postDelayed(this, 1000);
         }
     };
+    /** The ease Apple TV moves things with: a quick start that settles very softly. */
+    private static final android.animation.TimeInterpolator EASE =
+            new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f);
+
     /** m:ss, or h:mm:ss past an hour. */
     private static String clock(long ms) {
         long s = ms / 1000;
@@ -1867,9 +1871,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             ambientScreen.setAlpha(0f);
             ambientCover.setScaleX(0.88f);
             ambientCover.setScaleY(0.88f);
-            ambientScreen.animate().alpha(1f).setDuration(600).start();
-            ambientCover.animate().scaleX(1f).scaleY(1f).setDuration(900)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(2.2f))
+            ambientScreen.animate().alpha(1f).setDuration(550).setInterpolator(EASE).start();
+            ambientCover.animate().scaleX(1f).scaleY(1f).setDuration(1000).setInterpolator(EASE)
                     .withEndAction(this::startCoverFloat).start();
         } else {
             ambientScreen.setAlpha(1f);
@@ -1884,15 +1887,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (ambientScreen.getVisibility() != View.VISIBLE || !animations || reducedMotion) return;
         if (ambientTurn != null) ambientTurn.cancel();
         ambientTurn = android.animation.ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
-        ambientTurn.setDuration(24000);
+        ambientTurn.setDuration(32000);
         ambientTurn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
         ambientTurn.setInterpolator(new android.view.animation.LinearInterpolator());
         ambientTurn.addUpdateListener(a -> {
             float p = (float) a.getAnimatedValue();
-            ambientCover.setRotationY(5f * (float) Math.sin(p));
-            ambientCover.setRotationX(2.5f * (float) Math.sin(p * 2f));
-            ambientCover.setTranslationY(7 * density * (float) Math.sin(p * 3f));
-            float breath = 1f + 0.012f * (float) Math.sin(p * 4f);
+            ambientCover.setRotationY(4f * (float) Math.sin(p));
+            ambientCover.setRotationX(2f * (float) Math.sin(p * 2f));
+            ambientCover.setTranslationY(5 * density * (float) Math.sin(p * 3f));
+            float breath = 1f + 0.01f * (float) Math.sin(p * 4f);
             ambientCover.setScaleX(breath);
             ambientCover.setScaleY(breath);
         });
@@ -1902,16 +1905,52 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void fillAmbient() {
         NowPlaying.Track t = nowPlaying.track();
         if (t == null) return;
-        ambientTitle.setText(t.title);
-        ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
+        String artist = t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app;
+        boolean smooth = animations && !reducedMotion && ambientScreen.getVisibility() == View.VISIBLE
+                && ambientScreen.getAlpha() > 0.5f;
+        if (!t.title.contentEquals(ambientTitle.getText()) || !artist.contentEquals(ambientArtist.getText())) {
+            if (smooth && ambientTitle.length() > 0) {
+                // The next track's name dissolves in where the last one was, as Apple Music does it.
+                for (TextView v : new TextView[]{ambientTitle, ambientArtist}) {
+                    String text = v == ambientTitle ? t.title : artist;
+                    v.animate().cancel();
+                    v.animate().alpha(0f).setDuration(160).setInterpolator(EASE).withEndAction(() -> {
+                        v.setText(text);
+                        v.animate().alpha(1f).setDuration(420).setInterpolator(EASE).start();
+                    }).start();
+                }
+            } else {
+                ambientTitle.setText(t.title);
+                ambientArtist.setText(artist);
+                ambientTitle.setAlpha(1f);
+                ambientArtist.setAlpha(1f);
+            }
+        }
         ambientPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
         // A track that came without its cover yet (the next one, a moment before its art) keeps the last cover
         // up; the player never drops out of the full screen over it.
         if (t.cover == null) return;
         if (t.cover != ambientCoverShown) {
             ambientCoverShown = t.cover;
-            ambientCover.setImageBitmap(t.cover);
-            ambientBg.setCover(t.cover);
+            BitmapDrawable next = new BitmapDrawable(getResources(), t.cover);
+            Drawable now = ambientCover.getDrawable();
+            if (now instanceof android.graphics.drawable.TransitionDrawable) {
+                now = ((android.graphics.drawable.TransitionDrawable) now).getDrawable(1);
+            }
+            if (smooth && now != null) {
+                // One cover dissolves into the next; nothing blinks in between.
+                android.graphics.drawable.TransitionDrawable cross =
+                        new android.graphics.drawable.TransitionDrawable(new Drawable[]{now, next});
+                cross.setCrossFadeEnabled(true);
+                ambientCover.setImageDrawable(cross);
+                cross.startTransition(700);
+                handler.postDelayed(() -> {
+                    if (ambientCover.getDrawable() == cross) ambientCover.setImageDrawable(next);
+                }, 760);
+            } else {
+                ambientCover.setImageDrawable(next);
+            }
+            ambientBg.setCover(t.cover);   // its colours glide over to the new cover's (AmbientView)
         }
     }
 
@@ -1948,9 +1987,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 + ((ViewGroup.MarginLayoutParams) ambientControls.getLayoutParams()).topMargin) / 2f;
         block.animate().cancel();
         if (animations && !reducedMotion) {
-            ambientControls.animate().alpha(0f).setDuration(600).start();
-            block.animate().translationY(shift).setDuration(700)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
+            ambientControls.animate().alpha(0f).translationY(10 * density).setDuration(500).setInterpolator(EASE).start();
+            block.animate().translationY(shift).setDuration(1100).setInterpolator(EASE).start();
         } else {
             ambientControls.setAlpha(0f);
             block.setTranslationY(shift);
@@ -1966,11 +2004,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             View block = (View) ambientControls.getParent();
             block.animate().cancel();
             if (animations && !reducedMotion) {
-                ambientControls.animate().alpha(1f).setDuration(250).start();
-                block.animate().translationY(0f).setDuration(300)
-                        .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
+                ambientControls.animate().alpha(1f).translationY(0f).setDuration(380).setInterpolator(EASE).start();
+                block.animate().translationY(0f).setDuration(480).setInterpolator(EASE).start();
             } else {
                 ambientControls.setAlpha(1f);
+                ambientControls.setTranslationY(0f);
                 block.setTranslationY(0f);
             }
         }
@@ -1997,14 +2035,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientControlsShown = true;
         ambientControls.animate().cancel();
         ambientControls.setAlpha(1f);
+        ambientControls.setTranslationY(0f);
         ((View) ambientControls.getParent()).animate().cancel();
         ((View) ambientControls.getParent()).setTranslationY(0f);
         if (animations && !reducedMotion) {
             // Out: the sheet dissolves as the cover settles back a little, the reverse of its opening.
             ambientCover.animate().cancel();
-            ambientCover.animate().scaleX(0.94f).scaleY(0.94f).setDuration(350)
-                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f)).start();
-            ambientScreen.animate().alpha(0f).setDuration(350).withEndAction(() -> {
+            ambientCover.animate().scaleX(0.94f).scaleY(0.94f).setDuration(380).setInterpolator(EASE).start();
+            ambientScreen.animate().alpha(0f).setDuration(380).setInterpolator(EASE).withEndAction(() -> {
                 if (ambientScreen.getAlpha() == 0f) {
                     ambientScreen.setVisibility(View.GONE);
                     ambientBg.stop();

@@ -623,8 +623,8 @@
 
             <ImageView
                 android:id="@+id/ambientCover"
-                android:layout_width="300dp"
-                android:layout_height="300dp"
+                android:layout_width="236dp"
+                android:layout_height="236dp"
                 android:scaleType="centerCrop"
                 android:elevation="28dp"
                 android:contentDescription="@string/now_playing" />
@@ -633,12 +633,12 @@
                 android:id="@+id/ambientTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
+                android:layout_marginTop="30dp"
                 android:maxWidth="760dp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:textColor="#FFFFFFFF"
-                android:textSize="32sp"
+                android:textSize="28sp"
                 android:fontFamily="@font/outfit_medium"
                 android:letterSpacing="-0.01"
                 android:includeFontPadding="false"
@@ -650,12 +650,12 @@
                 android:id="@+id/ambientArtist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="9dp"
+                android:layout_marginTop="7dp"
                 android:maxWidth="760dp"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:textColor="#D1FFFFFF"
-                android:textSize="19sp"
+                android:textSize="17sp"
                 android:fontFamily="@font/outfit_regular"
                 android:includeFontPadding="false"
                 android:shadowColor="#40000000"
@@ -663,9 +663,9 @@
 
             <!-- The bar with the time gone and the time left at its ends, as a music player draws it. -->
             <LinearLayout
-                android:layout_width="440dp"
+                android:layout_width="420dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="22dp"
                 android:orientation="vertical">
 
                 <ProgressBar
@@ -710,7 +710,7 @@
                 android:id="@+id/ambientControls"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
+                android:layout_marginTop="14dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:clipChildren="false"

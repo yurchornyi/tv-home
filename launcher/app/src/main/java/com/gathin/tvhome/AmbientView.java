@@ -22,6 +22,11 @@ public class AmbientView extends View {
     private int base = 0xFF14113A;
     private long start = System.nanoTime();
     private boolean running;
+    /** The palette being left (a new cover's colours glide in over MIX_MS), or null when settled. */
+    private int[] fromColors;
+    private int fromBase;
+    private long mixStart;
+    private static final float MIX_MS = 1600f;
 
     public AmbientView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -76,12 +81,37 @@ public class AmbientView extends View {
             hsv[2] = Math.max(0.25f, hsv[2] * (i % 2 == 0 ? 0.7f : 0.85f));
             out[i] = Color.HSVToColor(hsv);
         }
+        // Start the glide from whatever is on screen now, even mid-glide, so a quick skip never jumps.
+        float m = mix();
+        int[] nowColors = new int[4];
+        for (int i = 0; i < 4; i++) nowColors[i] = fromColors == null ? colors[i] : blend(fromColors[i], colors[i], m);
+        int nowBase = fromColors == null ? base : blend(fromBase, base, m);
+        fromColors = nowColors;
+        fromBase = nowBase;
+        mixStart = System.nanoTime();
         colors = out;
         Color.colorToHSV(out[0], hsv);
         hsv[1] = Math.min(1f, hsv[1] * 0.9f);
         hsv[2] = 0.1f;
         base = Color.HSVToColor(hsv);
         invalidate();
+    }
+
+    /** 0..1 through the glide, eased; 1 when settled. */
+    private float mix() {
+        if (fromColors == null) return 1f;
+        float f = (System.nanoTime() - mixStart) / 1e6f / MIX_MS;
+        if (f >= 1f) {
+            fromColors = null;
+            return 1f;
+        }
+        return f * f * (3f - 2f * f);
+    }
+
+    private static int blend(int a, int b, float t) {
+        int ar = (a >> 16) & 0xFF, ag = (a >> 8) & 0xFF, ab = a & 0xFF;
+        int br = (b >> 16) & 0xFF, bg = (b >> 8) & 0xFF, bb = b & 0xFF;
+        return 0xFF000000 | ((int) (ar + (br - ar) * t) << 16) | ((int) (ag + (bg - ag) * t) << 8) | (int) (ab + (bb - ab) * t);
     }
 
     void start() {
@@ -97,7 +127,8 @@ public class AmbientView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         int w = getWidth(), h = getHeight();
-        canvas.drawColor(base);
+        float m = mix();
+        canvas.drawColor(fromColors == null ? base : blend(fromBase, base, m));
         float t = (System.nanoTime() - start) / 1e9f;
         for (int i = 0; i < colors.length; i++) {
             // Each blob wanders on its own Lissajous path and breathes, so the colours visibly flow into each other.
@@ -106,12 +137,12 @@ public class AmbientView extends View {
             float cy = h * (0.5f + 0.5f * (float) Math.cos(t * 0.29f + ph * 1.3f));
             float r = Math.max(w, h) * (0.55f + 0.18f * (float) Math.sin(t * 0.43f + ph * 2.1f));
             int alpha = 0x90 + (int) (0x48 * (0.5f + 0.5f * Math.sin(t * 0.23f + ph)));
-            int c = colors[i];
+            int c = fromColors == null ? colors[i] : blend(fromColors[i], colors[i], m);
             paint.setShader(new RadialGradient(cx, cy, r, new int[]{c & 0x00FFFFFF | (alpha << 24), c & 0x00FFFFFF},
                     new float[]{0f, 1f}, Shader.TileMode.CLAMP));
             canvas.drawRect(0, 0, w, h, paint);
         }
         paint.setShader(null);
-        if (running) postInvalidateOnAnimation();
+        if (running || fromColors != null) postInvalidateOnAnimation();
     }
 }
