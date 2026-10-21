@@ -33,7 +33,9 @@
 # com.xgimi.overseas.xgimiatvbootwizard  # first-boot wizard
 #
 # Kept by choice on this unit: Netflix, Play Store, Google Assistant (katniss, tv.assistant),
-# Chromecast (mediashell), XGIMI accessory OTA (com.xgimi.ota.accessories), Google ambient screensaver (dreamx).
+# Chromecast (mediashell), XGIMI accessory OTA (com.xgimi.ota.accessories), Google ambient screensaver (dreamx),
+# which stays the screensaver here (the owner prefers it to the launcher's ClockDream):
+#   settings put secure screensaver_components com.google.android.apps.tv.dreamx/.service.Backdrop
 
 # Store demo, factory and test tools
 fusion.android.tv.demo                 # RetailDisplay store demo

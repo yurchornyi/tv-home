@@ -113,7 +113,9 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
 - **The screensaver as a music player**: the launcher's "Clock and music" screensaver shows the clock, and while
   music plays (Spotify, SmartTube...) the full-screen player with the cover and a backdrop in its colours. Pick
   it in Settings → System → Screensaver, or over adb:
-  `tools/tv.py 'settings put secure screensaver_components com.gathin.tvhome/.ClockDream'`.
+  `tools/tv.py 'settings put secure screensaver_components com.gathin.tvhome/.ClockDream'`. It is optional: the
+  XGIMI XK10T keeps Google TV's own screensaver (`com.google.android.apps.tv.dreamx/.service.Backdrop`), put
+  back the same way if the launcher's was picked.
 - **One build, a projector and a TV**: `launcher/app/src/main/assets/profiles.json` holds per-device overrides
   of config.xml keys (the XGIMI entry hides the Inputs pill; the default entry shows it), matched by the model,
   device, product or manufacturer Android reports. Add an entry for a new TV instead of a second config.xml.
