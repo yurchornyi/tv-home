@@ -28,45 +28,58 @@ public class AmbientView extends View {
         setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
-    /** Picks the palette from a cover; null keeps the default. */
+    /**
+     * Picks the palette from the cover, the way a music app's player does: its dominant hues by how much of the
+     * picture they cover, lifted a little so they glow; a grey cover gives greys. Null keeps the default.
+     */
     void setCover(Bitmap cover) {
         if (cover == null) return;
-        Bitmap small = Bitmap.createScaledBitmap(cover, 24, 24, true);
-        int[] px = new int[24 * 24];
-        small.getPixels(px, 0, 24, 0, 0, 24, 24);
+        Bitmap small = Bitmap.createScaledBitmap(cover, 32, 32, true);
+        int[] px = new int[32 * 32];
+        small.getPixels(px, 0, 32, 0, 0, 32, 32);
         small.recycle();
-        // Four well-separated hues among the saturated pixels; fall back to the pixel's own colour when dull.
+        // 12 hue buckets plus one for the greys; each remembers how many pixels, and their mean saturation/value.
+        int buckets = 13;
+        int[] count = new int[buckets];
+        float[] sumH = new float[buckets], sumS = new float[buckets], sumV = new float[buckets];
         float[] hsv = new float[3];
-        int[] picked = new int[4];
-        float[] pickedHue = new float[4];
+        for (int c : px) {
+            Color.colorToHSV(c, hsv);
+            int b = hsv[1] < 0.18f ? 12 : (int) (hsv[0] / 30f) % 12;
+            count[b]++;
+            sumH[b] += hsv[0];
+            sumS[b] += hsv[1];
+            sumV[b] += hsv[2];
+        }
+        Integer[] order = new Integer[buckets];
+        for (int i = 0; i < buckets; i++) order[i] = i;
+        java.util.Arrays.sort(order, (a, b) -> Integer.compare(count[b], count[a]));
+        int[] out = new int[4];
         int n = 0;
-        int[] order = px.clone();
-        java.util.Arrays.sort(order);   // deterministic walk; saturation decides below
-        for (int pass = 0; pass < 2 && n < 4; pass++) {
-            float minSat = pass == 0 ? 0.45f : 0.15f;
-            for (int c : px) {
-                Color.colorToHSV(c, hsv);
-                if (hsv[1] < minSat || hsv[2] < 0.25f) continue;
-                boolean far = true;
-                for (int i = 0; i < n; i++) {
-                    float d = Math.abs(hsv[0] - pickedHue[i]);
-                    if (Math.min(d, 360 - d) < 28) { far = false; break; }
-                }
-                if (!far) continue;
-                hsv[1] = Math.min(1f, hsv[1] * 1.15f);
-                hsv[2] = Math.max(0.55f, Math.min(0.9f, hsv[2]));
-                pickedHue[n] = hsv[0];
-                picked[n++] = Color.HSVToColor(hsv);
-                if (n == 4) break;
+        for (int i = 0; i < buckets && n < 4; i++) {
+            int b = order[i];
+            if (count[b] < px.length / 40) continue;   // under 2.5 % of the picture: not its colour
+            float h = sumH[b] / count[b], sat = sumS[b] / count[b], v = sumV[b] / count[b];
+            if (b == 12) {
+                // Greys: two tones of the cover's own grey, so a black-and-white cover gets a quiet dark backdrop.
+                out[n++] = Color.HSVToColor(new float[]{0f, 0f, Math.max(0.3f, Math.min(0.55f, v))});
+                if (n < 4) out[n++] = Color.HSVToColor(new float[]{0f, 0f, Math.max(0.18f, Math.min(0.4f, v * 0.6f))});
+            } else {
+                out[n++] = Color.HSVToColor(new float[]{h, Math.max(0.55f, Math.min(1f, sat * 1.3f)),
+                        Math.max(0.5f, Math.min(0.9f, v * 1.15f))});
             }
         }
         if (n == 0) return;
-        int[] out = new int[4];
-        for (int i = 0; i < 4; i++) out[i] = picked[i % n];
+        // Fewer colours than blobs: the rest are the first ones again, shifted in brightness so they still differ.
+        for (int i = n; i < 4; i++) {
+            Color.colorToHSV(out[i % n], hsv);
+            hsv[2] = Math.max(0.25f, hsv[2] * (i % 2 == 0 ? 0.7f : 0.85f));
+            out[i] = Color.HSVToColor(hsv);
+        }
         colors = out;
-        Color.colorToHSV(colors[0], hsv);
-        hsv[1] = Math.min(1f, hsv[1] + 0.1f);
-        hsv[2] = 0.16f;
+        Color.colorToHSV(out[0], hsv);
+        hsv[1] = Math.min(1f, hsv[1] * 0.9f);
+        hsv[2] = 0.1f;
         base = Color.HSVToColor(hsv);
         invalidate();
     }

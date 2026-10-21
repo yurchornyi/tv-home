@@ -141,15 +141,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private LinearLayout shelfChannels;
     private LiveChannels liveChannels;
     private Updater updater;
-    /** The full-screen Now Playing (ambient screen) and the wait before it comes up by itself. */
+    /** The full-screen Now Playing (ambient screen), opened from the card's expand button. */
     private View ambientScreen;
     private AmbientView ambientBg;
     private ImageView ambientCover;
     private TextView ambientTitle, ambientArtist;
     private android.widget.ProgressBar ambientProgress;
+    private ImageView ambientPlay;
     private Bitmap ambientCoverShown;
-    private static final long AMBIENT_AFTER_MS = 25_000L;
-    private final Runnable ambientTick = this::showAmbientIfPlaying;
     private String channelsPkg;
     /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
     private final Set<String> postersOff = new HashSet<>();
@@ -403,6 +402,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientTitle = findViewById(R.id.ambientTitle);
         ambientArtist = findViewById(R.id.ambientArtist);
         ambientProgress = findViewById(R.id.ambientProgress);
+        ambientPlay = findViewById(R.id.ambientPlay);
         ambientCover.setOutlineProvider(new android.view.ViewOutlineProvider() {
             @Override public void getOutline(View v, android.graphics.Outline o) {
                 o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 18 * density);
@@ -793,7 +793,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return;
         }
         promptsPaused = false;
-        armAmbient();
         updater.check();
         nowPlaying.start();
         AudioDevices.addListener(audioListener);
@@ -945,7 +944,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         stopFeed();
         handler.removeCallbacks(minuteTick);
         handler.removeCallbacks(weatherTick);
-        handler.removeCallbacks(ambientTick);
         hideAmbient();
         AudioDevices.removeListener(audioListener);
         nowPlaying.stop();
@@ -1033,11 +1031,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (ambientScreen.getVisibility() == View.VISIBLE) {
-            // Any key brings Home back; the key itself goes no further (it only meant "wake").
-            if (event.getAction() == KeyEvent.ACTION_DOWN) hideAmbient();
-            return true;
+            // The remote drives the music here: OK pauses or plays, Left and Right skip; any other key brings
+            // Home back and goes no further (it only meant "wake").
+            if (event.getAction() != KeyEvent.ACTION_DOWN) return true;
+            switch (event.getKeyCode()) {
+                case KeyEvent.KEYCODE_DPAD_CENTER: case KeyEvent.KEYCODE_ENTER: case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE: case KeyEvent.KEYCODE_MEDIA_PLAY: case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                    nowPlaying.playPause();
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_RIGHT: case KeyEvent.KEYCODE_MEDIA_NEXT:
+                    nowPlaying.next();
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_LEFT: case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                    nowPlaying.previous();
+                    return true;
+                default:
+                    hideAmbient();
+                    return true;
+            }
         }
-        armAmbient();
         if (handleSettingsKey(event)) return true;
         if (!reordering) return super.dispatchKeyEvent(event);
         if (dockEditing) return dispatchDockEdit(event);
@@ -1651,24 +1663,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- the ambient screen (full-screen Now Playing) ---------------------------------------------
 
-    /** Restarts the wait for the ambient screen: it comes up after AMBIENT_AFTER_MS without a key while music plays. */
-    private void armAmbient() {
-        handler.removeCallbacks(ambientTick);
-        handler.postDelayed(ambientTick, AMBIENT_AFTER_MS);
-    }
-
-    private void showAmbientIfPlaying() {
-        NowPlaying.Track t = nowPlaying.track();
-        if (t == null || !t.playing || openPopup != null || appLibrary != null || reordering || !hasWindowFocus()) {
-            armAmbient();
-            return;
-        }
-        showAmbient();
-    }
-
+    /** The full-screen player, only ever on the owner's own press (the card's expand button). */
     private void showAmbient() {
         if (nowPlaying.track() == null) return;
-        handler.removeCallbacks(ambientTick);
         fillAmbient();
         if (ambientScreen.getVisibility() == View.VISIBLE) return;
         ambientScreen.setVisibility(View.VISIBLE);
@@ -1694,6 +1691,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (t == null) return;
         ambientTitle.setText(t.title);
         ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
+        ambientPlay.setImageResource(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play);
         if (t.cover != ambientCoverShown) {
             ambientCoverShown = t.cover;
             ambientCover.setImageBitmap(t.cover);
@@ -1703,7 +1701,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void hideAmbient() {
-        armAmbient();
         if (ambientScreen.getVisibility() != View.VISIBLE) return;
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         ambientScreen.animate().cancel();

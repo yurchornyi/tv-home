@@ -553,8 +553,8 @@
         </FrameLayout>
     </LinearLayout>
 
-    <!-- Full-screen Now Playing (ambient screen): the cover over a flowing backdrop in its colours, shown after a
-         while without a key press while music plays, or from the card's expand button; any key brings Home back. -->
+    <!-- Full-screen Now Playing (ambient screen): the cover over a flowing backdrop in its colours, title, artist,
+         progress; opened from the card's expand button. OK pauses, Left/Right skip, any other key brings Home back. -->
     <FrameLayout
         android:id="@+id/ambientScreen"
         android:layout_width="match_parent"
@@ -615,6 +615,37 @@
                 android:layout_marginTop="26dp"
                 android:max="1000"
                 android:progressDrawable="@drawable/now_playing_progress" />
+
+            <!-- What the remote does here: Left and Right skip, OK pauses or plays. -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:alpha="0.85">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:src="@drawable/ic_np_prev"
+                    android:contentDescription="@null" />
+
+                <ImageView
+                    android:id="@+id/ambientPlay"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="36dp"
+                    android:layout_marginEnd="36dp"
+                    android:src="@drawable/ic_np_pause"
+                    android:contentDescription="@null" />
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:src="@drawable/ic_np_next"
+                    android:contentDescription="@null" />
+            </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 
