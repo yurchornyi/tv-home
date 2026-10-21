@@ -15,6 +15,9 @@ export ANDROID_HOME=${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools
 VERSION=$1; NOTES=${2:-"Launcher $1"}
 [ -n "$VERSION" ] || { echo "usage: release.sh <versionName> [notes]" >&2; exit 1; }
 REPO=${RELEASE_REPO:-yurchornyi/tv-home}
+if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+  echo "v$VERSION is already released; pick the next number, e.g. $(git tag -l 'v*' | sort -V | tail -1 | sed 's/^v//' | awk -F. '{print $1"."$2+1}')" >&2; exit 1
+fi
 [ -z "$(git status --porcelain app/build.gradle)" ] || { echo "app/build.gradle has uncommitted changes; commit or revert them first" >&2; exit 1; }
 CODE=$(($(sed -n 's/^ *versionCode \([0-9]*\)$/\1/p' app/build.gradle) + 1))
 sed -i '' "s/^\( *versionCode \)[0-9]*$/\1$CODE/; s/^\( *versionName \)'[^']*'$/\1'$VERSION'/" app/build.gradle
