@@ -106,7 +106,8 @@
     <string name="sleep_off">Вимкнути таймер</string>
     <string name="sleep_set">ТБ засне через %d хв</string>
     <string name="sleep_in">сон через %d хв</string>
-    <string name="sleep_service_off">Служба сну вимкнена: запустіть build-and-install.sh ще раз або ввімкніть «Таймер сну» у Спеціальних можливостях</string>
+    <string name="sleep_service_off">Служба сну вимкнена: запустіть build-and-install.sh ще раз або ввімкніть «Таймер сну TV Home» у Спеціальних можливостях</string>
+    <string name="sleep_service_name">Таймер сну TV Home</string>
     <string name="sleep_service_description">Присипляє ТБ, коли спливає таймер сну лаунчера.</string>
     <string name="shelf_posters_hide">Прибрати постери з полиці</string>
     <string name="shelf_posters_show">Показувати постери на полиці</string>

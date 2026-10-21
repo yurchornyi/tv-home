@@ -197,5 +197,5 @@ adb shell settings put secure enabled_accessibility_services com.gathin.tvhome/.
 adb shell settings put secure accessibility_enabled 1
 ```
 
-(or tick "Sleep timer" under Settings → Accessibility). The launcher says so with a message when the timer is set
+(or tick "TV Home sleep timer" under Settings → Accessibility). The launcher says so with a message when the timer is set
 while the service is off.

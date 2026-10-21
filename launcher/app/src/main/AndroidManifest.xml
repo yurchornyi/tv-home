@@ -164,7 +164,7 @@
         <service
             android:name=".SleepService"
             android:exported="true"
-            android:label="@string/sleep_timer"
+            android:label="@string/sleep_service_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
