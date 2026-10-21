@@ -575,8 +575,8 @@
 
             <ImageView
                 android:id="@+id/ambientCover"
-                android:layout_width="360dp"
-                android:layout_height="360dp"
+                android:layout_width="290dp"
+                android:layout_height="290dp"
                 android:scaleType="centerCrop"
                 android:elevation="24dp"
                 android:contentDescription="@string/now_playing" />

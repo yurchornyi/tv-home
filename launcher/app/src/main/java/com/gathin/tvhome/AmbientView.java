@@ -99,14 +99,15 @@ public class AmbientView extends View {
         int w = getWidth(), h = getHeight();
         canvas.drawColor(base);
         float t = (System.nanoTime() - start) / 1e9f;
-        float r = Math.max(w, h) * 0.62f;
         for (int i = 0; i < colors.length; i++) {
-            // Each blob wanders on its own slow Lissajous path.
+            // Each blob wanders on its own Lissajous path and breathes, so the colours visibly flow into each other.
             float ph = i * 1.9f;
-            float cx = w * (0.5f + 0.42f * (float) Math.sin(t * 0.19f + ph) * (float) Math.cos(t * 0.08f + ph * 0.7f));
-            float cy = h * (0.5f + 0.45f * (float) Math.cos(t * 0.15f + ph * 1.3f));
+            float cx = w * (0.5f + 0.48f * (float) Math.sin(t * 0.37f + ph) * (float) Math.cos(t * 0.17f + ph * 0.7f));
+            float cy = h * (0.5f + 0.5f * (float) Math.cos(t * 0.29f + ph * 1.3f));
+            float r = Math.max(w, h) * (0.55f + 0.18f * (float) Math.sin(t * 0.43f + ph * 2.1f));
+            int alpha = 0x90 + (int) (0x48 * (0.5f + 0.5f * Math.sin(t * 0.23f + ph)));
             int c = colors[i];
-            paint.setShader(new RadialGradient(cx, cy, r, new int[]{c & 0x00FFFFFF | 0xB8000000, c & 0x00FFFFFF},
+            paint.setShader(new RadialGradient(cx, cy, r, new int[]{c & 0x00FFFFFF | (alpha << 24), c & 0x00FFFFFF},
                     new float[]{0f, 1f}, Shader.TileMode.CLAMP));
             canvas.drawRect(0, 0, w, h, paint);
         }

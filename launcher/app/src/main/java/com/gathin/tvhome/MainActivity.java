@@ -148,6 +148,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView ambientTitle, ambientArtist;
     private android.widget.ProgressBar ambientProgress;
     private ImageView ambientPlay;
+    /** The cover's slow turn in space while the full-screen player shows. */
+    private android.animation.ValueAnimator ambientTurn;
     private Bitmap ambientCoverShown;
     private String channelsPkg;
     /** Apps whose shelf posters the owner switched off (tile menu), kept in preferences. */
@@ -409,6 +411,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
         ambientCover.setClipToOutline(true);
+        ambientCover.setCameraDistance(9000 * density);
         findViewById(R.id.npExpand).setOnClickListener(v -> showAmbient());
         updater = new Updater(this, cfg.updateUrl, version -> {
             // Said once per downloaded build; the Settings menu keeps the row until it is installed.
@@ -1665,12 +1668,28 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The full-screen player, only ever on the owner's own press (the card's expand button). */
     private void showAmbient() {
-        if (nowPlaying.track() == null) return;
+        NowPlaying.Track t = nowPlaying.track();
+        if (t == null || t.cover == null) return;   // nothing to show without a cover
         fillAmbient();
         if (ambientScreen.getVisibility() == View.VISIBLE) return;
         ambientScreen.setVisibility(View.VISIBLE);
         ambientBg.start();
         getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (animations && !reducedMotion) {
+            // The cover turns a little in space and floats, as if hung in the light.
+            if (ambientTurn != null) ambientTurn.cancel();
+            ambientTurn = android.animation.ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
+            ambientTurn.setDuration(14000);
+            ambientTurn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            ambientTurn.setInterpolator(new android.view.animation.LinearInterpolator());
+            ambientTurn.addUpdateListener(a -> {
+                float p = (float) a.getAnimatedValue();
+                ambientCover.setRotationY(11f * (float) Math.sin(p));
+                ambientCover.setRotationX(4f * (float) Math.sin(p * 2 + 1.1f));
+                ambientCover.setTranslationY(8 * density * (float) Math.sin(p * 1.5f + 0.4f));
+            });
+            ambientTurn.start();
+        }
         ambientScreen.animate().cancel();
         if (animations && !reducedMotion) {
             ambientScreen.setAlpha(0f);
@@ -1692,10 +1711,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientTitle.setText(t.title);
         ambientArtist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
         ambientPlay.setImageResource(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play);
+        if (t.cover == null) {
+            hideAmbient();   // a track without a cover has no full-screen player
+            return;
+        }
         if (t.cover != ambientCoverShown) {
             ambientCoverShown = t.cover;
             ambientCover.setImageBitmap(t.cover);
-            ambientCover.setVisibility(t.cover != null ? View.VISIBLE : View.INVISIBLE);
             ambientBg.setCover(t.cover);
         }
     }
@@ -1703,6 +1725,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void hideAmbient() {
         if (ambientScreen.getVisibility() != View.VISIBLE) return;
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (ambientTurn != null) {
+            ambientTurn.cancel();
+            ambientTurn = null;
+        }
         ambientScreen.animate().cancel();
         if (animations && !reducedMotion) {
             ambientScreen.animate().alpha(0f).setDuration(350).withEndAction(() -> {
