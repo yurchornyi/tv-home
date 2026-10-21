@@ -14,6 +14,8 @@ import java.util.Random;
  * Screensaver: the launcher's thin clock and date on black, over a slow ambient glow.
  * Every minute the clock drifts to a new spot and the glow shifts colour, so nothing burns in.
  * No network, no images: cheap enough for a 1 GB TV.
+ * While music plays (NowPlaying) it is the full-screen player instead: the cover turning slowly over a backdrop
+ * flowing in the cover's colours, the clock small in a corner.
  */
 public class ClockDream extends DreamService {
 
@@ -27,6 +29,13 @@ public class ClockDream extends DreamService {
     private GradientDrawable glow;
     private int colorIndex;
     private int glowColor;
+    private NowPlaying nowPlaying;
+    private View player;
+    private AmbientView playerBg;
+    private android.widget.ImageView cover;
+    private android.widget.TextView title, artist;
+    private android.graphics.Bitmap coverShown;
+    private ValueAnimator turn;
 
     private final Runnable tick = new Runnable() {
         @Override
@@ -54,6 +63,67 @@ public class ClockDream extends DreamService {
                 glow.setGradientRadius((r - l) * 0.55f));
         colorIndex = random.nextInt(PALETTE.length);
         setGlow(PALETTE[colorIndex]);
+
+        player = findViewById(R.id.dreamPlayer);
+        playerBg = findViewById(R.id.dreamAmbientBg);
+        cover = findViewById(R.id.dreamCover);
+        title = findViewById(R.id.dreamTitle);
+        artist = findViewById(R.id.dreamArtist);
+        float density = getResources().getDisplayMetrics().density;
+        cover.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override public void getOutline(View v, android.graphics.Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 18 * density);
+            }
+        });
+        cover.setClipToOutline(true);
+        cover.setCameraDistance(9000 * density);
+        nowPlaying = new NowPlaying(this, this::updatePlayer);
+    }
+
+    /** Music with a cover: the player over the clock; otherwise the clock. */
+    private void updatePlayer() {
+        NowPlaying.Track t = nowPlaying.track();
+        boolean show = t != null && t.playing && t.cover != null;   // paused music is just the clock
+        if (show) {
+            title.setText(t.title);
+            artist.setText(t.artist.isEmpty() ? t.app : t.artist + "  ·  " + t.app);
+            if (t.cover != coverShown) {
+                coverShown = t.cover;
+                cover.setImageBitmap(t.cover);
+                playerBg.setCover(t.cover);
+            }
+        }
+        if (show == (player.getVisibility() == View.VISIBLE)) return;
+        player.animate().cancel();
+        if (show) {
+            player.setVisibility(View.VISIBLE);
+            playerBg.start();
+            player.animate().alpha(1f).setDuration(900).start();
+            float density = getResources().getDisplayMetrics().density;
+            if (turn != null) turn.cancel();
+            turn = ValueAnimator.ofFloat(0f, (float) (2 * Math.PI));
+            turn.setDuration(14000);
+            turn.setRepeatCount(ValueAnimator.INFINITE);
+            turn.setInterpolator(new android.view.animation.LinearInterpolator());
+            turn.addUpdateListener(a -> {
+                float p = (float) a.getAnimatedValue();
+                cover.setRotationY(11f * (float) Math.sin(p));
+                cover.setRotationX(4f * (float) Math.sin(p * 2 + 1.1f));
+                cover.setTranslationY(8 * density * (float) Math.sin(p * 1.5f + 0.4f));
+            });
+            turn.start();
+        } else {
+            if (turn != null) {
+                turn.cancel();
+                turn = null;
+            }
+            player.animate().alpha(0f).setDuration(900).withEndAction(() -> {
+                if (player.getAlpha() == 0f) {
+                    player.setVisibility(View.GONE);
+                    playerBg.stop();
+                }
+            }).start();
+        }
     }
 
     @Override
@@ -65,11 +135,16 @@ public class ClockDream extends DreamService {
             content.animate().alpha(1f).setDuration(1200).start();
         });
         handler.postDelayed(tick, MOVE_MS);
+        nowPlaying.start();
+        updatePlayer();
     }
 
     @Override
     public void onDreamingStopped() {
         handler.removeCallbacks(tick);
+        nowPlaying.stop();
+        if (turn != null) turn.cancel();
+        playerBg.stop();
         super.onDreamingStopped();
     }
 

@@ -110,6 +110,10 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   `launcher/release.sh 2.7 "what changed"` from the machine that signs the builds (the debug key in
   `~/.android/debug.keystore`): a build signed elsewhere is refused as foreign. `tools/kyivstar-channels.py`
   refreshes the Kyivstar TV channel list before a release when needed.
+- **The screensaver as a music player**: the launcher's "Clock and music" screensaver shows the clock, and while
+  music plays (Spotify, SmartTube...) the full-screen player with the cover and a backdrop in its colours. Pick
+  it in Settings → System → Screensaver, or over adb:
+  `tools/tv.py 'settings put secure screensaver_components com.gathin.tvhome/.ClockDream'`.
 - **No on-screen keyboard** after switching launchers, seen on Xiaomi: the default input method
   pointed at a Baidu keyboard that isn't installed. Fix:
   `tools/tv.py 'ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME'`

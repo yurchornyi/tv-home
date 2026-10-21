@@ -23,7 +23,7 @@
     <string name="stats_cpu">CPU %1$d%%</string>
     <string name="stats_memory">Пам\'ять: вільно %1$d МБ</string>
     <string name="stats_storage">Сховище: вільно %1$s</string>
-    <string name="dream_name">Годинник</string>
+    <string name="dream_name">Годинник і музика</string>
     <string name="vpn">VPN</string>
     <string name="add_accessory">Підключити пристрій</string>
     <string name="now_playing">Зараз грає</string>

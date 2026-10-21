@@ -24,7 +24,7 @@
     <string name="stats_cpu">CPU %1$d%%</string>
     <string name="stats_memory">Memory %1$d MB free</string>
     <string name="stats_storage">Storage %1$s free</string>
-    <string name="dream_name">Clock</string>
+    <string name="dream_name">Clock and music</string>
     <string name="vpn">VPN</string>
     <string name="add_accessory">Pair a device</string>
     <string name="now_playing">Now playing</string>

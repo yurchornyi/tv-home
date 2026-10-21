@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Screensaver (ClockDream): clock and date that drift around a black screen over an ambient glow. -->
+<!-- Screensaver (ClockDream): clock and date that drift around a black screen over an ambient glow; while music
+     plays, the full-screen player instead (dreamPlayer): the cover over a flowing backdrop in its colours. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -59,4 +60,69 @@
             android:letterSpacing="0.14"
             android:textAllCaps="true" />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/dreamPlayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:alpha="0">
+
+        <com.gathin.tvhome.AmbientView
+            android:id="@+id/dreamAmbientBg"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/dreamCover"
+                android:layout_width="290dp"
+                android:layout_height="290dp"
+                android:scaleType="centerCrop"
+                android:elevation="24dp"
+                android:contentDescription="@string/now_playing" />
+
+            <TextView
+                android:id="@+id/dreamTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="34dp"
+                android:maxWidth="700dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#FFFFFFFF"
+                android:textSize="30sp"
+                android:fontFamily="@font/outfit_medium"
+                android:shadowColor="#66000000"
+                android:shadowRadius="10" />
+
+            <TextView
+                android:id="@+id/dreamArtist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:maxWidth="700dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#C8FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="@font/outfit_regular" />
+        </LinearLayout>
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="40dp"
+            android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="#B3FFFFFF"
+            android:textSize="24sp"
+            android:fontFamily="@font/outfit_regular" />
+    </FrameLayout>
 </FrameLayout>
