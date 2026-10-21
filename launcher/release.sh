@@ -8,13 +8,18 @@
 # the TVs refuse the update as foreign.
 set -e
 cd "$(dirname "$0")"
+# The JDK and SDK Gradle needs, where Homebrew puts them, unless the shell already says.
+export JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}
+export ANDROID_HOME=${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}
+[ -x "$JAVA_HOME/bin/java" ] || { echo "No JDK at $JAVA_HOME (brew install openjdk@17, or set JAVA_HOME)" >&2; exit 1; }
 VERSION=$1; NOTES=${2:-"Launcher $1"}
 [ -n "$VERSION" ] || { echo "usage: release.sh <versionName> [notes]" >&2; exit 1; }
 REPO=${RELEASE_REPO:-yurchornyi/tv-home}
+[ -z "$(git status --porcelain app/build.gradle)" ] || { echo "app/build.gradle has uncommitted changes; commit or revert them first" >&2; exit 1; }
 CODE=$(($(sed -n 's/^ *versionCode \([0-9]*\)$/\1/p' app/build.gradle) + 1))
 sed -i '' "s/^\( *versionCode \)[0-9]*$/\1$CODE/; s/^\( *versionName \)'[^']*'$/\1'$VERSION'/" app/build.gradle
 grep -q "versionCode $CODE" app/build.gradle || { echo "could not bump the version" >&2; exit 1; }
-./gradlew assembleRelease -q --console=plain
+./gradlew assembleRelease -q --console=plain || { git checkout -- app/build.gradle; echo "build failed; version left as it was" >&2; exit 1; }
 APK=app/build/outputs/apk/release/app-release.apk
 OUT=$(mktemp -d)
 cp "$APK" "$OUT/tv-home.apk"
