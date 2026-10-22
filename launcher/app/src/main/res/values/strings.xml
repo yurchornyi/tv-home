@@ -87,6 +87,7 @@
     <!-- Tile menu: an app's shelf shows its live channels or posters; the picker for the channels. -->
     <string name="shelf_mode_channels">Shelf: channels</string>
     <string name="shelf_mode_posters">Shelf: posters</string>
+    <string name="channel_remove">Remove %s from the shelf</string>
     <string name="choose_channels">Choose channels</string>
     <string name="channels_auto_on">Automatic order: on</string>
     <string name="channels_auto_off">Automatic order: off</string>

@@ -82,6 +82,7 @@
     <string name="update_failed">Не вдалося встановити оновлення</string>
     <string name="shelf_mode_channels">Полиця: канали</string>
     <string name="shelf_mode_posters">Полиця: постери</string>
+    <string name="channel_remove">Прибрати %s з полиці</string>
     <string name="choose_channels">Вибрати канали</string>
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
     <string name="channels_auto_off">Автоматичний порядок: вимк.</string>

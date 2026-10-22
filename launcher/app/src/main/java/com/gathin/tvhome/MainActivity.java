@@ -2250,7 +2250,35 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return false;
         });
         if (c != null) tile.setOnClickListener(v -> openChannel(pkg, c));
+        // Hold OK on a channel of an app's channel row: take it off the shelf, or choose the channels.
+        if (c != null && liveChannels.available(pkg)) {
+            tile.setOnLongClickListener(v -> {
+                showChannelMenu(pkg, c, v);
+                return true;
+            });
+        }
         return tile;
+    }
+
+    /** The small menu over a held channel tile: remove it from the shelf, or open the channel picker. */
+    private void showChannelMenu(String pkg, LiveChannels.Channel c, View anchor) {
+        if (openPopup != null) openPopup.dismiss();
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        addSettingsMenuRow(rows, popup, getString(R.string.channel_remove, c.name), () -> {
+            liveChannels.remove(pkg, c.id);
+            stopChannels(false);
+            if (lastFocused >= 0 && lastFocused < COLUMNS) showHero(lastFocused, lastDockTop);
+            View first = shelfChannels.getChildCount() > 0 ? shelfChannels.getChildAt(0) : null;
+            if (first != null) first.requestFocus();
+            else focusTile(Math.max(0, lastFocused));
+        });
+        addSettingsMenuRow(rows, popup, R.string.choose_channels, () -> openChannelPicker(pkg, lastFocused));
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), Math.min(panel.getMeasuredWidth(), (int) (420 * density))));
+        dropIn(popup, panel, anchor, Gravity.START);
+        rows.getChildAt(0).requestFocus();
     }
 
     private void openChannel(String pkg, LiveChannels.Channel c) {

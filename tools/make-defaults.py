@@ -16,8 +16,15 @@ out = {
     "_": "Starting choices for a TV that has never been set up (Backup.applyDefaultsIfFresh), made by "
          "tools/make-defaults.py from " + os.path.relpath(src, root) + ". Use counts are left out.",
     "files": backup.get("files", {}),
-    "prefs": {name: {k: v for k, v in values.items() if not k.startswith("use_")} for name, values in prefs.items()},
+    # A new TV starts with the shelf modes (channel mode, automatic order) but no channels yet: it fills its row
+    # from what is opened on it. Choices, removals and counts are this TV's own.
+    "prefs": {name: {k: v for k, v in values.items() if not k.startswith(("use_", "chosen_", "hidden_"))}
+              for name, values in prefs.items()},
 }
+# Every app in channel mode starts with the automatic order on, whatever the source TV has.
+for values in out["prefs"].values():
+    for k in [k for k in values if k.startswith("mode_")]:
+        values["auto_" + k[len("mode_"):]] = True
 with open(dst, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=1)
     f.write("\n")

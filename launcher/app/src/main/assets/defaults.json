@@ -10,7 +10,7 @@
   },
   "channels": {
    "mode_com.kyivstar.tv.tvapp": true,
-   "chosen_com.kyivstar.tv.tvapp": "[\"55f2bcefe4b0781039beb055\",\"55efdb74e4b0781039bc0760\",\"63ad904063b46c5d268c63d0\"]"
+   "auto_com.kyivstar.tv.tvapp": true
   }
  }
 }

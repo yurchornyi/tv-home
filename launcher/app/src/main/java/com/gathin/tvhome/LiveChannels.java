@@ -95,7 +95,32 @@ final class LiveChannels {
     }
 
     void setChosen(String pkg, Set<String> ids) {
-        prefs().edit().putString("chosen_" + pkg, new JSONArray(ids).toString()).apply();
+        // A channel chosen by hand is no longer one the owner took off the shelf.
+        Set<String> hidden = hiddenIds(pkg);
+        hidden.removeAll(ids);
+        prefs().edit().putString("chosen_" + pkg, new JSONArray(ids).toString())
+                .putString("hidden_" + pkg, new JSONArray(hidden).toString()).apply();
+    }
+
+    /** Channels the owner took off the shelf: the automatic order does not bring them back. */
+    Set<String> hiddenIds(String pkg) {
+        Set<String> out = new LinkedHashSet<>();
+        try {
+            JSONArray a = new JSONArray(prefs().getString("hidden_" + pkg, "[]"));
+            for (int i = 0; i < a.length(); i++) out.add(a.getString(i));
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    /** Hold OK on a channel tile, "Remove from the shelf": out of the chosen ones, and kept out of the automatic. */
+    void remove(String pkg, String id) {
+        Set<String> chosen = chosenIds(pkg);
+        chosen.remove(id);
+        Set<String> hidden = hiddenIds(pkg);
+        hidden.add(id);
+        prefs().edit().putString("chosen_" + pkg, new JSONArray(chosen).toString())
+                .putString("hidden_" + pkg, new JSONArray(hidden).toString()).apply();
     }
 
     /** The chosen channels, in the order chosen, those no longer in the list left out. */
@@ -127,29 +152,27 @@ final class LiveChannels {
         prefs().edit().putBoolean("auto_" + pkg, on).apply();
     }
 
+    /** The most channels the shelf's row holds. */
+    private static final int ROW_MAX = 12;
+
     /**
-     * What the shelf shows. Automatic: the chosen channels, the most opened first, then up to three others opened
-     * often enough to earn a place; with nothing chosen, the eight most opened. Not automatic: the chosen ones in
-     * the order they were chosen, nothing else. Empty until a choice or an opening.
+     * What the shelf shows. Automatic: it both arranges and adds: the chosen channels together with every other
+     * channel opened from Home (the shelf, Search, a voice command), the most opened first, up to twelve; the ones
+     * taken off the shelf stay off. Not automatic: the chosen ones in the order they were chosen, nothing else.
+     * Empty until a choice or an opening.
      */
     List<Channel> row(String pkg) {
         List<Channel> chosen = chosen(pkg);
         if (!automatic(pkg)) return chosen;
         Map<String, Integer> use = uses(pkg);
+        Set<String> hidden = hiddenIds(pkg);
         List<Channel> out = new ArrayList<>(chosen);
-        java.util.Comparator<Channel> byUse = (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0));
-        Collections.sort(out, byUse);   // stable: equal counts keep the chosen order
-        List<Channel> often = new ArrayList<>();
         for (Channel c : all(pkg)) {
-            if (use.getOrDefault(c.id, 0) >= 2 && !out.contains(c)) often.add(c);
+            if (use.getOrDefault(c.id, 0) >= 1 && !hidden.contains(c.id) && !out.contains(c)) out.add(c);
         }
-        Collections.sort(often, byUse);
-        int extra = chosen.isEmpty() ? 8 : 3;
-        for (Channel c : often) {
-            if (extra-- <= 0) break;
-            out.add(c);
-        }
-        return out;
+        // Stable: equal counts keep the chosen order first, then the list's.
+        Collections.sort(out, (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0)));
+        return out.size() > ROW_MAX ? new ArrayList<>(out.subList(0, ROW_MAX)) : out;
     }
 
     private Map<String, Integer> uses(String pkg) {
