@@ -284,6 +284,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(1).requestFocus();
     }
 
+    /** Between onResume and onPause: the shelf draws only then (showHero). */
+    private boolean homeInFront;
+    /** The full-screen player is fading out after Back: keys and a new open must not treat it as up. */
+    private boolean ambientHiding;
+    /** The Now Playing card is drawing back after the music stopped: Up must not go to its buttons. */
+    private boolean npHiding;
+
     /** When a key last reached Home: an update waits until the remote has rested a minute. */
     private long lastKeyAt;
 
@@ -1025,6 +1032,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        homeInFront = true;
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1053,6 +1061,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true, appsMayHaveChanged());
+        } else {
+            // Back from a dialog over Home (not another app): the shelf that onPause cleared comes back as it was.
+            grid.post(() -> {
+                View f = getCurrentFocus();
+                if (homeInFront && f != null && f.getId() == R.id.card && lastFocused >= 0 && lastFocused < COLUMNS) {
+                    showHero(lastFocused, lastDockTop);
+                }
+            });
         }
         rebuildOnResume = false;
         updateGreeting();
@@ -1189,6 +1205,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        homeInFront = false;
         endReorder();   // Home or another app while reordering keeps the order so far
         Backup.export(this);
         wallpaperPlayer.stop();
@@ -1295,7 +1312,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         lastKeyAt = SystemClock.uptimeMillis();
-        if (ambientScreen.getVisibility() == View.VISIBLE) {
+        if (ambientScreen.getVisibility() == View.VISIBLE && !ambientHiding) {
             // The full-screen player: its buttons take the arrows and OK, the media keys work from anywhere, Back
             // (or Home) brings Home back. The buttons rest out of sight after a few seconds; the first key that
             // comes then only brings them back.
@@ -1709,10 +1726,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showHero(int position, float dockTopInRoot) {
         lastDockTop = dockTopInRoot;
         lastHeroPosition = position;
-        if (searching) return;
+        // Not while another app is in front (onPause moving focus would start a carousel nobody sees).
+        if (searching || !homeInFront) return;
         if (!showNowPlaying()) {
             boolean channels = showChannels(position);   // the row sits over the posters, so both may show
-            if (!showFeed(position) && !channels && !showShelfArt(position)) hideShelfArt(animations);
+            // No posters: the app's own softened banner, also under a channel row (never the last app's picture).
+            if (!showFeed(position) && !showShelfArt(position) && !channels) hideShelfArt(animations);
         }
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
@@ -1904,9 +1923,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (pkg.equals(feedPkg)) {
             positionShelfTitle();
+            showShelfOpen(feedItems != null && !feedItems.isEmpty(), true);   // back when a channel row went away
             return true;
         }
-        boolean fromOtherFeed = feedPkg != null;
         stopFeed();
         // The last app's title goes at once: placed for this app's shelf (a channel row, another Watch pill) while
         // still holding the old, maybe two-line text, it jumped up and back down as the new title came in.
@@ -1919,15 +1938,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         feedPkg = pkg;
         // Its own softened banner right away (from another feed app the previous poster must not linger), the
         // first backdrop dissolves in over it.
-        if (heroArtShown == null || fromOtherFeed) showShelfArt(position);
+        showShelfArt(position);   // the last app's banner, poster or cover must never linger under this one
         int gen = feedGen;
         ShelfFeed.ItemsListener onItems = items -> {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
             boolean first = feedItems == null;
+            ShelfFeed.Item shown = first || feedItems.isEmpty() ? null : feedItems.get(feedIndex % feedItems.size());
             feedItems = withContinue(pkg, items);
             if (first) {
                 feedIndex = 0;
                 showFeedItem();
+            } else if (shown != null) {
+                // A fresher list: Watch must still open the film on screen, so keep its place, or show the new first.
+                int at = -1;
+                for (int i = 0; i < feedItems.size(); i++) if (feedItems.get(i).title.equals(shown.title)) at = i;
+                if (at >= 0) feedIndex = at;
+                else {
+                    feedIndex = 0;
+                    showFeedItem();
+                }
             }
         };
         if (fromKick) kickFeed.items(onItems);
@@ -1994,7 +2023,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         NowPlaying.Track t = nowPlaying.track();
         if (t == null || t.cover == null) return;   // nothing to show without a cover
         fillAmbient();
-        if (ambientScreen.getVisibility() == View.VISIBLE) return;
+        if (ambientScreen.getVisibility() == View.VISIBLE && !ambientHiding) return;
+        ambientHiding = false;
+        ambientScreen.animate().cancel();
+        ambientScreen.setVisibility(View.GONE);   // a fade-out still running is cut short; the opening starts clean
         ambientScreen.setVisibility(View.VISIBLE);
         ambientBg.start();
         ambientPlay.requestFocus();
@@ -2161,10 +2193,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void hideAmbient() {
-        if (ambientScreen.getVisibility() != View.VISIBLE) return;
+        if (ambientScreen.getVisibility() != View.VISIBLE || ambientHiding) return;
         handler.removeCallbacks(ambientRest);
         holdScreen(false);
         getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // The card may be a track behind (it only follows while the dock has focus): bring it up to date first.
+        if (nowPlaying.track() != null) showNowPlaying();
+        else hideNowPlaying(false);
         // Focus back on the card's expand button, where the player was opened from, else on the dock.
         if (ambientScreen.hasFocus()) {
             View expand = findViewById(R.id.npExpand);
@@ -2187,11 +2222,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Out: the sheet dissolves as the cover settles back a little, the reverse of its opening.
             ambientCover.animate().cancel();
             ambientCover.animate().scaleX(0.94f).scaleY(0.94f).setDuration(380).setInterpolator(EASE).start();
+            ambientHiding = true;
             ambientScreen.animate().alpha(0f).setDuration(380).setInterpolator(EASE).withEndAction(() -> {
-                if (ambientScreen.getAlpha() == 0f) {
-                    ambientScreen.setVisibility(View.GONE);
-                    ambientBg.stop();
-                }
+                if (!ambientHiding) return;   // opened again meanwhile
+                ambientHiding = false;
+                ambientScreen.setVisibility(View.GONE);
+                ambientBg.stop();
             }).start();
         } else {
             ambientScreen.setAlpha(0f);
@@ -2208,7 +2244,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     private boolean showChannels(int position) {
         String pkg = adapter.pkgAt(position);
-        if (!topShelfArt || pkg == null || !liveChannels.available(pkg) || !liveChannels.channelMode(pkg)) {
+        // No channels chosen or opened yet: the app's posters, not an empty row with a hint over them. Channels come
+        // with a choice (hold OK on the tile) or an opening (Search, a voice command).
+        if (!topShelfArt || pkg == null || !liveChannels.available(pkg) || !liveChannels.channelMode(pkg)
+                || liveChannels.row(pkg).isEmpty()) {
             stopChannels(animations);
             return false;
         }
@@ -2344,7 +2383,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void stopChannels(boolean animate) {
         if (channelsPkg == null) return;
         channelsPkg = null;
-        if (shelfChannelsScroll.hasFocus()) focusTile(lastFocused % COLUMNS);
+        // Focus moves last: moved first, the dock tile redrew the shelf (a new row) and this then hid that new row.
+        boolean hadFocus = shelfChannelsScroll.hasFocus();
         shelfChannelsScroll.animate().cancel();
         if (animate && !reducedMotion) {
             shelfChannelsScroll.animate().alpha(0f).setDuration(160).withEndAction(() -> {
@@ -2354,6 +2394,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             shelfChannelsScroll.setAlpha(0f);
             shelfChannelsScroll.setVisibility(View.GONE);
         }
+        if (hadFocus) focusTile(lastFocused % COLUMNS);
     }
 
     private void openChannelPicker(String pkg, int position) {
@@ -2364,9 +2405,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             openPopup = null;
             liveChannels.setChoice(pkg, chosen, hidden);
             stopChannels(false);
-            if (position == lastFocused) showHero(position, lastDockTop);
+            refreshShelf(position);
             focusTile(position);
         });
+    }
+
+    /** Redraws the shelf after a menu choice, only for a dock tile that has it (never over a second-row tile). */
+    private void refreshShelf(int position) {
+        if (position >= 0 && position < COLUMNS && position == lastFocused) showHero(position, lastDockTop);
+        else hideHero();
     }
 
     /** Opens what the shelf shows: the video itself, the film's page where the app has one, else the app. */
@@ -3172,7 +3219,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 else shelfOpen.setAlpha(1f);
             }
         } else if (shelfOpen.getVisibility() == View.VISIBLE) {
-            if (shelfOpen.hasFocus()) focusTile(lastFocused % COLUMNS);
+            boolean hadFocus = shelfOpen.hasFocus();
             shelfOpen.animate().cancel();
             if (animate) {
                 shelfOpen.animate().alpha(0f).setDuration(160).withEndAction(() -> {
@@ -3182,6 +3229,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 shelfOpen.setAlpha(0f);
                 shelfOpen.setVisibility(View.GONE);
             }
+            if (hadFocus) focusTile(lastFocused % COLUMNS);   // last, as in stopChannels
         }
     }
 
@@ -3194,9 +3242,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int gen = feedGen;
         shelfFeed.image(item.backdrop, (backdrop, bitmap) -> {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
+            // Paged on meanwhile (Left/Right on the pill): only the item now chosen may draw.
+            if (feedItems == null || feedItems.isEmpty() || feedItems.get(feedIndex % feedItems.size()) != item) return;
             if (bitmap == null) {
                 // This backdrop failed to load: move on to the next one later instead of stopping here.
-                handler.postDelayed(feedTick, 8000);
+                if (!shelfOpen.hasFocus()) handler.postDelayed(feedTick, 8000);
                 return;
             }
             BitmapDrawable art = new BitmapDrawable(getResources(), bitmap);
@@ -3254,7 +3304,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 heroArtShown = art;
                 title.run();
             }
-            handler.postDelayed(feedTick, 8000);
+            if (!shelfOpen.hasFocus()) handler.postDelayed(feedTick, 8000);   // standing still while choosing
             // Fetch the next backdrop now, so the swap does not wait on the network.
             ShelfFeed.Item next = feedItems.get((feedIndex + 1) % feedItems.size());
             shelfFeed.image(next.backdrop, (b, bmp) -> { });
@@ -3309,12 +3359,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hideNowPlaying(animations);
             return false;
         }
+        npHiding = false;
         stopFeed();
         stopChannels(false);
         shelfTitle.animate().cancel();
         shelfTitle.setAlpha(0f);
         shelfLive.setAlpha(0f);
         showShelfOpen(false, false);
+        // Full screen only with a cover (showAmbient): no button that does nothing.
+        findViewById(R.id.npExpand).setVisibility(t.cover != null ? View.VISIBLE : View.GONE);
         npTitle.setText(t.title);
         fitTitle(npTitle, 32f, 24f);
         npPlay.setCompoundDrawablesRelativeWithIntrinsicBounds(t.playing ? R.drawable.ic_np_pause : R.drawable.ic_np_play, 0, 0, 0);
@@ -3377,6 +3430,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void hideNowPlaying(boolean animate) {
         handler.removeCallbacks(npTick);
         if (npCard.getVisibility() != View.VISIBLE) return;
+        boolean hadFocus = npCard.hasFocus();
+        npHiding = true;
         npCard.animate().cancel();
         if (animate && !reducedMotion) {
             // Music over: the card draws back into a pill and is gone.
@@ -3398,6 +3453,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             npCard.setAlpha(0f);
             npCard.setVisibility(View.GONE);
         }
+        if (hadFocus) focusTile(lastFocused % COLUMNS);   // never left on a card that is going away
     }
 
     private void hideShelfArt(boolean animate) {
@@ -3642,13 +3698,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
                 // Dock row: the Now Playing buttons when the card is up, otherwise the top bar.
-                if (npCard.getVisibility() == View.VISIBLE && npCard.getAlpha() > 0f) {
+                if (searching) {   // search is open with focus left on the dock: back to its field
+                    searchField.requestFocus();
+                    return true;
+                }
+                if (npCard.getVisibility() == View.VISIBLE && npCard.getAlpha() > 0f && !npHiding) {
                     npPlay.requestFocus();
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
                 }
                 // A poster on the shelf: its Watch pill.
-                if (shelfOpen.getVisibility() == View.VISIBLE && shelfOpen.getAlpha() > 0f && feedPkg != null) {
+                if (shelfOpen.getVisibility() == View.VISIBLE && shelfOpen.getAlpha() > 0f && feedPkg != null
+                        && channelsPkg == null) {
                     shelfOpen.requestFocus();
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
@@ -3705,7 +3766,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 liveChannels.setChannelMode(pkg, !channelMode);
                 stopChannels(false);
                 stopFeed();
-                showHero(position, lastDockTop);
+                refreshShelf(position);
             });
             if (channelMode) {
                 addSettingsMenuRow(rows, popup, R.string.choose_channels, () -> openChannelPicker(pkg, position));
@@ -3713,18 +3774,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 addSettingsMenuRow(rows, popup, auto ? R.string.channels_auto_on : R.string.channels_auto_off, () -> {
                     liveChannels.setAutomatic(pkg, !auto);
                     stopChannels(false);
-                    showHero(position, lastDockTop);
+                    refreshShelf(position);
                 });
             }
         }
-        if (!channelMode && (feedApps.contains(pkg) || channelApps.contains(pkg))) {
+        if (feedApps.contains(pkg) || channelApps.contains(pkg)) {   // posters show under a channel row too
             boolean off = postersOff.contains(pkg);
             addSettingsMenuRow(rows, popup, off ? R.string.shelf_posters_show : R.string.shelf_posters_hide, () -> {
                 if (off) postersOff.remove(pkg);
                 else postersOff.add(pkg);
                 getSharedPreferences("shelf", MODE_PRIVATE).edit().putStringSet("posters_off", new HashSet<>(postersOff)).apply();
                 if (off) stopFeed();   // so the carousel starts afresh on the next focus
-                showHero(position, lastDockTop);
+                refreshShelf(position);
             });
         }
         addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> hideFromHome(pkg));
