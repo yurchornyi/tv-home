@@ -3258,7 +3258,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (!shelfOpen.hasFocus()) handler.postDelayed(feedTick, 8000);
                 return;
             }
-            BitmapDrawable art = new BitmapDrawable(getResources(), bitmap);
+            // Centre-cropped by itself, so it shares the banners' FIT_XY and a dissolve never changes its shape.
+            Drawable art = new CropDrawable(new BitmapDrawable(getResources(), bitmap));
             heroArt.animate().cancel();
             heroFade.animate().cancel();
             shelfTitle.animate().cancel();
@@ -3294,7 +3295,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 android.graphics.drawable.TransitionDrawable cross = new android.graphics.drawable.TransitionDrawable(
                         new Drawable[]{from, art});
                 cross.setCrossFadeEnabled(true);
-                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
                 heroArt.setImageDrawable(cross);
                 heroArt.setAlpha(1f);
                 cross.startTransition(700);
@@ -3310,7 +3311,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     title.run();
                 }
             } else {
-                heroArt.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                heroArt.setScaleType(ImageView.ScaleType.FIT_XY);
                 heroArt.setImageDrawable(art);
                 heroArt.setAlpha(1f);
                 heroArtShown = art;
