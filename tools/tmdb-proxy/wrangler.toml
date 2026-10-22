@@ -4,7 +4,10 @@ compatibility_date = "2026-10-01"
 account_id = "175aa69489121cb4274c780bc5195f18"   # Cloudflare account "Basic"
 workers_dev = true
 
-# The AI routes (ai.js): per-address limit, so the public URL cannot be used to spend the Anthropic balance.
+[observability]
+enabled = true
+
+# The AI routes (ai.js): per-address limit, so the public URL cannot be used to spend the Sentra (Claude) allowance.
 [[ratelimits]]
 name = "AI_LIMIT"
 namespace_id = "1001"
