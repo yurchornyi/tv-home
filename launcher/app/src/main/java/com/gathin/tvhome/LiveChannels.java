@@ -55,12 +55,16 @@ final class LiveChannels {
         List<Channel> known = lists.get(pkg);
         if (known != null) return known;
         List<Channel> out = new ArrayList<>();
-        try (InputStream in = ctx.getAssets().open("channels/" + pkg + ".json")) {
+        // The list is kept under the app's first package name (Aliases); its deep links open the one installed here.
+        String listed = Aliases.canonical(pkg);
+        try (InputStream in = ctx.getAssets().open("channels/" + listed + ".json")) {
             JSONArray a = new JSONArray(new String(readAll(in), StandardCharsets.UTF_8));
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
                 String logo = o.isNull("logo") ? null : o.optString("logo", null);
-                out.add(new Channel(o.getString("id"), o.getString("name"), logo, o.getString("open")));
+                String open = o.getString("open");
+                if (!listed.equals(pkg) && open.startsWith(listed + ":")) open = pkg + open.substring(listed.length());
+                out.add(new Channel(o.getString("id"), o.getString("name"), logo, open));
             }
         } catch (Exception ignored) {
             // no list for this app

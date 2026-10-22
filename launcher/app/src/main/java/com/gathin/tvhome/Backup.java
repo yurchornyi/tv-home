@@ -70,7 +70,9 @@ final class Backup {
             try (InputStream in = new FileInputStream(f)) {
                 raw = readAll(in);
             }
-            JSONObject o = new JSONObject(new String(raw, StandardCharsets.UTF_8));
+            // A backup from another TV may name an app by another of its package names (Aliases).
+            JSONObject o = (JSONObject) Aliases.localizeJson(ctx.getPackageManager(),
+                    new JSONObject(new String(raw, StandardCharsets.UTF_8)));
             String hash = Integer.toHexString(o.toString(1).hashCode());
             SharedPreferences st = state(ctx);
             if (hash.equals(st.getString("imported", "")) || hash.equals(st.getString("exported", ""))) return false;
@@ -111,7 +113,8 @@ final class Backup {
         st.edit().putBoolean("defaults_applied", true).apply();
         JSONObject o;
         try (InputStream in = ctx.getAssets().open("defaults.json")) {
-            o = new JSONObject(new String(readAll(in), StandardCharsets.UTF_8));
+            o = (JSONObject) Aliases.localizeJson(ctx.getPackageManager(),
+                    new JSONObject(new String(readAll(in), StandardCharsets.UTF_8)));
         } catch (Exception e) {
             Log.w(TAG, "no defaults: " + e);
             return;

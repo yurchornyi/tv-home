@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.util.Log;
@@ -303,6 +304,13 @@ final class Config {
             inputKeycodes = intArray(json, "input_key_keycodes", inputKeycodes);
             appKeys = stringList(json, "app_keys", appKeys);
         }
+        // An app known by another package name on this TV (Aliases) counts as the one named here.
+        PackageManager pm = ctx.getPackageManager();
+        dock = Aliases.localize(pm, dock);
+        hidden = Aliases.localize(pm, hidden);
+        gridApps = Aliases.localize(pm, gridApps);
+        shelfFeedApps = Aliases.localize(pm, shelfFeedApps);
+        shelfChannelApps = Aliases.localize(pm, shelfChannelApps);
         // A theme push or reset invalidates choices made on the TV. On first use, remember the
         // current theme without clearing choices from an older launcher version.
         SharedPreferences choices = ctx.getSharedPreferences(SETTINGS_NAME, Context.MODE_PRIVATE);
