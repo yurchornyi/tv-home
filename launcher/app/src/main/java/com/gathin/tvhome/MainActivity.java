@@ -2528,11 +2528,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /**
      * The shelf button's word. Watch (or Continue) only where it opens that very title: a link of its own (SmartTube,
-     * Kick, a Continue entry), a search inside the app that lands on it (HDRezka), Netflix with the title's
-     * Netflix id. Elsewhere it can only open the app (Kyivstar and KIK take no title by name), and says Open.
+     * Kick, a Continue entry), KIK finding it by name (or HDRezka's search), Netflix with the title's
+     * Netflix id. Elsewhere it can only open the app (Kyivstar takes no title by name), and says Open.
      */
     private int shelfLabel(String pkg, ShelfFeed.Item item) {
-        boolean title = item.open != null || titleSearch(pkg, item.title) != null;
+        boolean title = item.open != null || titleSearch(pkg, item) != null;
         if (!title && NETFLIX_PKG.equals(pkg) && item.id > 0) {
             String id = shelfFeed.knownNetflixId(item.type, item.id);
             title = id != null && !id.isEmpty();
@@ -2542,16 +2542,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * A search for the title inside the app, when the app's own TV screen takes one: HDRezka opens its search and,
-     * with one match, the film. KIK's new screen takes no search (only its old HDRezka screen does, which looks
-     * like another app), so KIK just opens; null then.
+     * Opening the title itself inside the app, by name: KIK finds it in its catalogue and opens its page
+     * (kik.intent.action.OPEN_TITLE, with the original title and year to tell same-named films apart); HDRezka opens
+     * its search, landing on the film when there is one match. Null where the app can do neither (older KIK builds).
      */
-    private Intent titleSearch(String pkg, String title) {
+    private Intent titleSearch(String pkg, ShelfFeed.Item item) {
         if (!pkg.startsWith("rezkatv.web.app")) return null;
+        // A Continue entry keeps only the name and TMDB id: the original title and year come from the poster list.
+        if (item.original.isEmpty() && item.id > 0) {
+            for (ShelfFeed.Item known : shelfFeed.cached(pkg)) {
+                if (known.id == item.id && known.type.equals(item.type)) {
+                    item.original = known.original;
+                    item.year = known.year;
+                    break;
+                }
+            }
+        }
+        Intent kik = new Intent("kik.intent.action.OPEN_TITLE").setPackage(pkg)
+                .putExtra(android.app.SearchManager.QUERY, item.title)
+                .putExtra("kik.original", item.original)
+                .putExtra("kik.year", item.year);
+        if (kik.resolveActivity(getPackageManager()) != null) return kik;
         Intent tv = getPackageManager().getLeanbackLaunchIntentForPackage(pkg);
         ComponentName home = tv != null ? tv.getComponent() : null;
         if (home == null) return null;
-        Intent search = new Intent(Intent.ACTION_SEARCH).putExtra(android.app.SearchManager.QUERY, title).setPackage(pkg);
+        Intent search = new Intent(Intent.ACTION_SEARCH).putExtra(android.app.SearchManager.QUERY, item.title).setPackage(pkg);
         for (android.content.pm.ResolveInfo ri : getPackageManager().queryIntentActivities(search, 0)) {
             if (ri.activityInfo != null && home.getClassName().equals(ri.activityInfo.name)) return search.setComponent(home);
         }
@@ -2577,7 +2592,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
             return;
         }
-        Intent search = titleSearch(pkg, item.title);
+        Intent search = titleSearch(pkg, item);
         if (search != null) {
             open(search);
             return;

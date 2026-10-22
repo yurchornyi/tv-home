@@ -49,6 +49,8 @@ final class ShelfFeed {
         final long id;
         /** A live stream (a program's live flag): the shelf marks it. */
         final boolean live;
+        /** TMDB's original title and first year, "" when unknown: they pick the right film in KIK's catalogue. */
+        String original = "", year = "";
 
         Item(String title, String backdrop, String open, String type, long id) {
             this(title, backdrop, open, type, id, false);
@@ -259,8 +261,13 @@ final class ShelfFeed {
             String backdrop = textless(type, r.optLong("id"));
             if (backdrop.isEmpty()) continue;
             long id = r.optLong("id");
-            into.add(new Item(title, backdrop, null, type, id));
-            raw.put(new JSONObject().put("t", title).put("b", backdrop).put("ty", type).put("id", id));
+            Item item = new Item(title, backdrop, null, type, id);
+            item.original = r.optString("original_title", r.optString("original_name", ""));
+            String date = r.optString("release_date", r.optString("first_air_date", ""));
+            item.year = date.length() >= 4 ? date.substring(0, 4) : "";
+            into.add(item);
+            raw.put(new JSONObject().put("t", title).put("b", backdrop).put("ty", type).put("id", id)
+                    .put("o", item.original).put("y", item.year));
         }
     }
 
@@ -282,7 +289,10 @@ final class ShelfFeed {
             JSONArray a = new JSONArray(json);
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
-                out.add(new Item(o.getString("t"), o.getString("b"), null, o.optString("ty", ""), o.optLong("id")));
+                Item item = new Item(o.getString("t"), o.getString("b"), null, o.optString("ty", ""), o.optLong("id"));
+                item.original = o.optString("o", "");
+                item.year = o.optString("y", "");
+                out.add(item);
             }
             Collections.shuffle(out);
         } catch (Exception ignored) {
@@ -393,6 +403,6 @@ final class ShelfFeed {
     }
 
     private SharedPreferences prefs() {
-        return ctx.getSharedPreferences("shelf_feed_v5", Context.MODE_PRIVATE);
+        return ctx.getSharedPreferences("shelf_feed_v6", Context.MODE_PRIVATE);
     }
 }
