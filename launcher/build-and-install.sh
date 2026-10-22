@@ -64,7 +64,10 @@ APK=app/build/outputs/apk/release/app-release.apk
 "$PY" -I ../tools/b64push.py "$APK" /data/local/tmp/tvhome.apk
 # Install on its own: in the batch below a failed install (e.g. "not enough space" on a full /data)
 # would not stop the stock launcher from being disabled.
-OUT=$("$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/tvhome.apk; rm -f /data/local/tmp/tvhome.apk')
+# The launcher must be its own installer of record: Android installs an update without asking only for the app that
+# installed it, so a launcher installed by adb would show "Update this app?" at every self-update. A fresh install
+# cannot name a package that is not there yet, so the same APK goes in once more naming the launcher (-i).
+OUT=$("$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/tvhome.apk && { dumpsys package com.gathin.tvhome | grep -q "installerPackageName=com.gathin.tvhome" || pm install -r -i com.gathin.tvhome /data/local/tmp/tvhome.apk; }; rm -f /data/local/tmp/tvhome.apk')
 echo "$OUT"
 case "$OUT" in
   *Success*) ;;
@@ -82,7 +85,8 @@ if [ -n "$KIK_URL" ] && ! "$PY" -I ../tools/tv.py "pm path $KIK_PKG" 2>/dev/null
      && curl -fsSL "$KIK_APK" -o "$KIK_DIR/kik.apk" \
      && { [ -z "$KIK_SHA" ] || [ "$(shasum -a 256 "$KIK_DIR/kik.apk" | cut -d' ' -f1)" = "$KIK_SHA" ]; }; then
     "$PY" -I ../tools/b64push.py "$KIK_DIR/kik.apk" /data/local/tmp/kik.apk
-    "$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/kik.apk; rm -f /data/local/tmp/kik.apk' || true
+    # KIK updates itself too: it is made its own installer of record, as the launcher is below.
+    "$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/kik.apk && pm install -r -i rezkatv.web.app.uk /data/local/tmp/kik.apk; rm -f /data/local/tmp/kik.apk' || true
   else
     echo "WARNING: KIK could not be downloaded; the launcher will offer to install it." >&2
   fi

@@ -279,6 +279,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // Some system apps declare two leanback entry points under one name (Sony's Timers & Clock on the
         // BRAVIA VU31), which would show as two identical tiles: keep the first per package and label.
         Set<String> seen = new HashSet<>();
+        Map<String, Memo> nextMemo = new HashMap<>();
+        String locale = java.util.Locale.getDefault().toLanguageTag();
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
@@ -289,11 +291,25 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
             // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
             // redraw the tile name as something else (#117).
-            String label = card != null ? card.label : Cards.cleanLabel(String.valueOf(ri.loadLabel(pm)), pkg);
+            // What a tile shows is read from the app once per build of it (its APK path changes with every update)
+            // and kept: a rebuild after another app's update reads only that app, not every label and banner again.
+            String memoKey = component.flattenToShortString() + '@' + ri.activityInfo.applicationInfo.sourceDir + '#' + locale;
+            Memo m = memo.get(memoKey);
+            if (m == null) {
+                m = new Memo();
+                m.label = String.valueOf(ri.loadLabel(pm));
+            }
+            nextMemo.put(memoKey, m);
+            String label = card != null ? card.label : Cards.cleanLabel(m.label, pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
-            Drawable banner = loadBanner(pm, ri);
-            // The icon shows only on a tile without a banner: loading it for every app made each rebuild slower.
-            Drawable icon = banner == null ? ri.loadIcon(pm) : null;
+            if (!m.loaded) {
+                m.banner = loadBanner(pm, ri);
+                // The icon shows only on a tile without a banner: loading it for every app made each rebuild slower.
+                m.icon = m.banner == null ? ri.loadIcon(pm) : null;
+                m.loaded = true;
+            }
+            Drawable banner = copy(m.banner);
+            Drawable icon = copy(m.icon);
             if (card != null) {
                 fresh.add(new Entry(Entry.CARD, label, component, banner, icon, card.caption, card.accent));
             } else {
@@ -337,7 +353,25 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         items.clear();
         items.addAll(fresh);
+        memo.clear();
+        memo.putAll(nextMemo);   // apps that went are forgotten
         notifyDataSetChanged();
+    }
+
+    /** One app's tile as read from it: label, banner (already darkened), icon. */
+    private static final class Memo {
+        String label;
+        Drawable banner, icon;
+        boolean loaded;
+    }
+
+    private final Map<String, Memo> memo = new HashMap<>();
+
+    /** A drawable of its own for each tile view: one instance shared by two views loses its bounds and callbacks. */
+    private Drawable copy(Drawable d) {
+        if (d == null) return null;
+        Drawable.ConstantState s = d.getConstantState();
+        return s != null ? s.newDrawable(ctx.getResources()) : d;
     }
 
     private Drawable loadBanner(PackageManager pm, ResolveInfo ri) {

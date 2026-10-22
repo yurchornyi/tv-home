@@ -80,6 +80,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -2316,8 +2317,40 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             shelfChannels.addView(tile);
             return;
         }
-        for (LiveChannels.Channel c : chosen) shelfChannels.addView(channelTile(c, pkg));
+        // The row as built last time for this app, while its channels are the same: moving along the dock and back
+        // re-attaches those tiles (their logos already in) instead of building a dozen views and decoding logos again.
+        StringBuilder sig = new StringBuilder();
+        for (LiveChannels.Channel c : chosen) sig.append(c.id).append('|').append(c.name).append('|').append(c.logo).append('|').append(c.open).append('\n');
+        String signature = sig.toString();
+        ChannelRow cached = channelRows.get(pkg);
+        if (cached == null || !cached.signature.equals(signature)) {
+            List<View> tiles = new ArrayList<>();
+            for (LiveChannels.Channel c : chosen) tiles.add(channelTile(c, pkg));
+            channelRows.put(pkg, cached = new ChannelRow(signature, tiles));
+        }
+        for (View tile : cached.tiles) {
+            tile.animate().cancel();
+            tile.setScaleX(1f);
+            tile.setScaleY(1f);
+            tile.setTranslationZ(0f);
+            tile.setTranslationY(0f);
+            tile.setAlpha(1f);
+            shelfChannels.addView(tile);
+        }
     }
+
+    /** A built channel row and the channels it was built from. */
+    private static final class ChannelRow {
+        final String signature;
+        final List<View> tiles;
+
+        ChannelRow(String signature, List<View> tiles) {
+            this.signature = signature;
+            this.tiles = tiles;
+        }
+    }
+
+    private final Map<String, ChannelRow> channelRows = new HashMap<>();
 
     /** One channel tile: its logo on a dark card, or its name; null makes the "choose channels" tile. */
     private View channelTile(LiveChannels.Channel c, String pkg) {
