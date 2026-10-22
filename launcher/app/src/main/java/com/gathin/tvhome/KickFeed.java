@@ -35,6 +35,8 @@ final class KickFeed {
     private List<ShelfFeed.Item> known = Collections.emptyList();
     private long readAt;
     private boolean loading;
+    /** Everyone who asked while the list loaded; all hear it. */
+    private final List<ShelfFeed.ItemsListener> waiters = new ArrayList<>();
 
     KickFeed(String proxy) {
         String p = proxy == null ? "" : proxy.trim();
@@ -52,7 +54,9 @@ final class KickFeed {
     void items(ShelfFeed.ItemsListener listener) {
         if (!enabled()) return;
         if (!known.isEmpty()) listener.onItems(known);
-        if (System.currentTimeMillis() - readAt < MAX_AGE_MS || loading) return;
+        if (System.currentTimeMillis() - readAt < MAX_AGE_MS) return;
+        if (!waiters.contains(listener)) waiters.add(listener);
+        if (loading) return;
         loading = true;
         new Thread(() -> {
             List<ShelfFeed.Item> got = new ArrayList<>();
@@ -71,10 +75,12 @@ final class KickFeed {
             main.post(() -> {
                 loading = false;
                 readAt = System.currentTimeMillis();
+                List<ShelfFeed.ItemsListener> all = new ArrayList<>(waiters);
+                waiters.clear();
                 if (got.isEmpty()) return;
                 boolean first = known.isEmpty();
                 known = got;
-                if (first) listener.onItems(got);
+                if (first) for (ShelfFeed.ItemsListener l : all) l.onItems(got);
             });
         }, "kick-feed").start();
     }

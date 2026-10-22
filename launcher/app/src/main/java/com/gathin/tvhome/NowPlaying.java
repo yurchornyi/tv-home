@@ -55,10 +55,18 @@ final class NowPlaying {
     /** When it was closed: a player answering the pause with a last "playing" state must not reopen it. */
     private long closedAt;
 
+    /**
+     * Each session's track as last read. A player reports its state many times a second while seeking or buffering,
+     * and reading the metadata again copies the cover across processes each time: the track is read again only when
+     * the metadata changes (or a fetched cover arrives); a state change just updates "playing".
+     */
+    private final java.util.Map<Object, Track> described = new java.util.HashMap<>();
+    private final java.util.Map<String, String> labels = new java.util.HashMap<>();
+
     private final MediaController.Callback callback = new MediaController.Callback() {
         @Override public void onPlaybackStateChanged(PlaybackState state) { pick(); }
-        @Override public void onMetadataChanged(MediaMetadata metadata) { pick(); }
-        @Override public void onSessionDestroyed() { pick(); }
+        @Override public void onMetadataChanged(MediaMetadata metadata) { described.clear(); pick(); }
+        @Override public void onSessionDestroyed() { described.clear(); pick(); }
     };
 
     private final MediaSessionManager.OnActiveSessionsChangedListener sessions = this::watch;
@@ -134,6 +142,7 @@ final class NowPlaying {
     private void watch(List<MediaController> controllers) {
         for (MediaController c : watched) c.unregisterCallback(callback);
         watched.clear();
+        described.clear();   // sessions came or went: their tracks are read afresh
         if (controllers != null) {
             for (MediaController c : controllers) {
                 try {
@@ -218,6 +227,19 @@ final class NowPlaying {
 
     /** The track this session reports, or null when it has no metadata or title any more. */
     private Track describe(MediaController c) {
+        Object key = c.getSessionToken();
+        boolean playing = state(c) == PlaybackState.STATE_PLAYING;
+        Track known = described.get(key);
+        if (known != null) {
+            return known.playing == playing ? known
+                    : new Track(known.title, known.artist, known.app, known.pkg, known.cover, known.duration, playing);
+        }
+        Track read = read(c);
+        if (read != null) described.put(key, read);
+        return read;
+    }
+
+    private Track read(MediaController c) {
         MediaMetadata m;
         try {
             m = c.getMetadata();
@@ -247,14 +269,18 @@ final class NowPlaying {
             if (uri == null) uri = m.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI);
             if (uri != null && uri.startsWith("http")) {
                 cover = CoverArt.cached(uri);
-                if (cover == null) CoverArt.fetch(uri, () -> main.post(this::pick));
+                if (cover == null) CoverArt.fetch(uri, () -> main.post(() -> { described.clear(); pick(); }));
             }
         }
-        String app = c.getPackageName();
-        try {
-            PackageManager pm = ctx.getPackageManager();
-            app = String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(c.getPackageName(), 0)));
-        } catch (PackageManager.NameNotFoundException ignored) {
+        String app = labels.get(c.getPackageName());
+        if (app == null) {
+            app = c.getPackageName();
+            try {
+                PackageManager pm = ctx.getPackageManager();
+                app = String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(c.getPackageName(), 0)));
+            } catch (PackageManager.NameNotFoundException ignored) {
+            }
+            labels.put(c.getPackageName(), app);
         }
         return new Track(title, artist, app, c.getPackageName(), cover, m.getLong(MediaMetadata.METADATA_KEY_DURATION),
                 state(c) == PlaybackState.STATE_PLAYING);

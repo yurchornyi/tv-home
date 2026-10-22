@@ -118,6 +118,8 @@ public final class LauncherSettingsActivity extends Activity {
     private Updater updater;
     private String updateState;   // null: version only; else what the Version row says now
     private float density;
+    /** The signature's turning mark; stopped when the screen goes, or it would keep ticking on Home's thread. */
+    private android.animation.ObjectAnimator turn;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -160,6 +162,7 @@ public final class LauncherSettingsActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
         updater.onUpToDate(null);
+        if (turn != null) turn.cancel();
         super.onDestroy();
     }
 
@@ -218,7 +221,7 @@ public final class LauncherSettingsActivity extends Activity {
         left.addView(madeBy, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         if (animations && !reducedMotion) {
-            android.animation.ObjectAnimator turn = android.animation.ObjectAnimator.ofFloat(mark, View.ROTATION, 0f, 360f);
+            turn = android.animation.ObjectAnimator.ofFloat(mark, View.ROTATION, 0f, 360f);
             turn.setDuration(6000);
             turn.setRepeatCount(android.animation.ValueAnimator.INFINITE);
             turn.setInterpolator(new android.view.animation.LinearInterpolator());
@@ -231,7 +234,7 @@ public final class LauncherSettingsActivity extends Activity {
         scroll.setVerticalScrollBarEnabled(false);
         // A faded margin at the top and bottom: the focused row stops short of the screen edge, as on Apple TV.
         scroll.setVerticalFadingEdgeEnabled(true);
-        scroll.setFadingEdgeLength(dp(72));
+        scroll.setFadingEdgeLength(dp(36));
         scroll.setClipToPadding(false);
         scroll.setPadding(0, dp(64), dp(56), dp(56));
         LinearLayout list = new LinearLayout(this);
@@ -341,7 +344,7 @@ public final class LauncherSettingsActivity extends Activity {
             }
             SleepTimer.set(this, minutes);
         }
-        markChanged();
+        // Not markChanged(): the timer needs no rebuild of Home, whose clock line picks it up on return.
     }
 
     private void markChanged() {

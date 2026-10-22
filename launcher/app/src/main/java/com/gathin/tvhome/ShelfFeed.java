@@ -84,6 +84,10 @@ final class ShelfFeed {
     private final String region;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    /** Pictures load on their own thread: a list fetch is a dozen requests, and a backdrop must not wait behind it. */
+    private final ExecutorService pics = Executors.newSingleThreadExecutor();
+    /** Everyone who asked for a list while it was loading; all hear the answer, not only the first. */
+    private final Map<String, List<ItemsListener>> listWaiters = new HashMap<>();
     private final Map<String, List<Item>> lists = new HashMap<>();
     private final Set<String> loading = new HashSet<>();
     /** When a list last failed to load (offline, TMDB down): not retried on every focus, only after RETRY_MS. */
@@ -91,7 +95,10 @@ final class ShelfFeed {
     private static final long RETRY_MS = 5 * 60 * 1000L;
     /** Backdrops being fetched, with everyone waiting for each: one download however often it is asked for. */
     private final Map<String, List<ImageListener>> waiting = new HashMap<>();
-    private final LruCache<String, Bitmap> images = new LruCache<>(3);
+    /** Pictures by size, about 10 MB: a few backdrops (1.8 MB each at 1280 px) and a channel row's logos together. */
+    private final LruCache<String, Bitmap> images = new LruCache<String, Bitmap>(10 * 1024 * 1024) {
+        @Override protected int sizeOf(String k, Bitmap b) { return b.getAllocationByteCount(); }
+    };
 
     ShelfFeed(Context ctx, String key, String proxy) {
         this.ctx = ctx.getApplicationContext();
@@ -137,6 +144,9 @@ final class ShelfFeed {
         if (fresh && !known.isEmpty()) return;
         Long failed = failedAt.get(group);
         if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) return;
+        List<ItemsListener> waiters = listWaiters.get(group);
+        if (waiters == null) listWaiters.put(group, waiters = new ArrayList<>());
+        if (!waiters.contains(listener)) waiters.add(listener);
         if (!loading.add(group)) return;
         if (io.isShutdown()) return;
         io.execute(() -> {
@@ -158,6 +168,7 @@ final class ShelfFeed {
             }
             main.post(() -> {
                 loading.remove(group);
+                List<ItemsListener> all = listWaiters.remove(group);
                 if (got.isEmpty()) {
                     failedAt.put(group, System.currentTimeMillis());
                     return;
@@ -166,7 +177,7 @@ final class ShelfFeed {
                 Collections.shuffle(got);
                 lists.put(group, got);
                 prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
-                listener.onItems(got);
+                if (all != null) for (ItemsListener l : all) l.onItems(got);
             });
         });
     }
@@ -185,9 +196,9 @@ final class ShelfFeed {
         }
         queue = new ArrayList<>();
         queue.add(listener);
-        if (io.isShutdown()) return;
+        if (pics.isShutdown()) return;
         waiting.put(backdrop, queue);
-        io.execute(() -> {
+        pics.execute(() -> {
             Bitmap b = null;
             try {
                 String name = backdrop.replaceAll("[^A-Za-z0-9._-]", "_");
@@ -222,6 +233,7 @@ final class ShelfFeed {
     /** Stops the download thread; the activity is going away and nothing will hear the answers. */
     void close() {
         io.shutdownNow();
+        pics.shutdownNow();
         main.removeCallbacksAndMessages(null);
         waiting.clear();
         images.evictAll();

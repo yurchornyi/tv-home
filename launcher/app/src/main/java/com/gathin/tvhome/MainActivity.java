@@ -94,6 +94,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** What Launcher settings asked Home to do once it is back; static, so it outlives a recreate(). */
     private static String settingsThen;
+    /** recreate() is under way: this instance is about to be replaced. */
+    private boolean recreating;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
@@ -315,7 +317,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private final Runnable autoUpdate = new Runnable() {
         @Override public void run() {
-            if (updater == null || updater.readyVersion() == null || isFinishing()) return;
+            if (updater == null || updater.readyVersion() == null || isFinishing() || isDestroyed()) return;
             NowPlaying.Track t = nowPlaying.track();
             boolean idle = hasWindowFocus() && openPopup == null && !searching
                     && ambientScreen.getVisibility() != View.VISIBLE
@@ -332,6 +334,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     };
 
     private void scheduleAutoUpdate() {
+        if (isDestroyed()) return;   // a download that finished after a recreate() reports to the old instance
         handler.removeCallbacks(autoUpdate);
         handler.postDelayed(autoUpdate, 30_000);
     }
@@ -522,6 +525,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // The root is opaque black already: without this the window's own black is one more full-screen pass a frame.
+        getWindow().setBackgroundDrawable(null);
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Backup.importIfChanged(this);   // a backup.json put in the files folder (restore) before anything reads
@@ -1043,7 +1048,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     protected void onResume() {
-        if (settingsThen != null && !isChangingConfigurations()) {   // not the instance a recreate() is replacing
+        if (recreating) {
+            // recreate() was asked for in onActivityResult; this instance still gets onResume before it goes. The new
+            // one does the work (and runs settingsThen): doing it here too reloaded the tiles twice and lost the action.
+            super.onResume();
+            return;
+        }
+        if (settingsThen != null) {
             String then = settingsThen;
             settingsThen = null;
             handler.postDelayed(() -> runSettingsAction(then), 350);
@@ -1116,7 +1127,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean changed = resultCode == RESULT_OK
                     || (data != null && data.getBooleanExtra(LauncherSettingsActivity.EXTRA_CHANGED, false));
             if (then != null) settingsThen = then;
-            if (changed) recreate();
+            if (changed) {
+                recreating = true;
+                recreate();
+            }
         }
         if (requestCode == VOICE_REQUEST) {
             java.util.ArrayList<String> heard = data == null ? null
@@ -1232,7 +1246,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         homeInFront = false;
         endReorder();   // Home or another app while reordering keeps the order so far
-        Backup.export(this);
+        Backup.exportLater(this);
         wallpaperPlayer.stop();
         stopAmbientAnimation();
         heroName.animate().cancel();
@@ -3282,7 +3296,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             heroFade.setAlpha(1f);
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
-                shelfTitle.setText(item.title);
+                String tidy = ShelfText.clean(item.title);
+                shelfTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ShelfText.size(tidy));
+                shelfTitle.setText(tidy);
                 shelfOpen.setText(item == continueItem ? R.string.continue_row : R.string.watch_now);
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();

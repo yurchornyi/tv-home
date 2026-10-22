@@ -42,6 +42,18 @@ final class Backup {
         return ctx.getSharedPreferences("backup", Context.MODE_PRIVATE);
     }
 
+    private static final java.util.concurrent.ExecutorService EXPORT =
+            java.util.concurrent.Executors.newSingleThreadExecutor();
+
+    /**
+     * export() off the main thread. Home calls it in onPause, and Android starts the app that was opened only once
+     * Home's onPause returns: reading three files and two preference stores there delayed every launch.
+     */
+    static void exportLater(Context ctx) {
+        Context app = ctx.getApplicationContext();
+        EXPORT.execute(() -> export(app));
+    }
+
     /** Writes the file when something changed since the last time. */
     static void export(Context ctx) {
         File f = file(ctx);

@@ -37,16 +37,33 @@ final class CoverArt {
                 HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
                 c.setConnectTimeout(8000);
                 c.setReadTimeout(8000);
+                byte[] data;
                 try (InputStream in = c.getInputStream()) {
-                    BitmapFactory.Options o = new BitmapFactory.Options();
-                    o.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                    bmp = BitmapFactory.decodeStream(in, null, o);
+                    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                    byte[] buf = new byte[16384];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                        if (out.size() > 8 * 1024 * 1024) throw new java.io.IOException("cover too large");
+                    }
+                    data = out.toByteArray();
                 }
+                // Podcast art is often 3000 px (36 MB decoded): read the size first and decode a smaller copy.
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(data, 0, data.length, o);
+                int sample = 1;
+                while (o.outWidth / (sample * 2) >= 800) sample *= 2;
+                o = new BitmapFactory.Options();
+                o.inSampleSize = sample;
+                o.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                bmp = BitmapFactory.decodeByteArray(data, 0, data.length, o);
                 if (bmp != null && bmp.getWidth() > 800) {
                     bmp = Bitmap.createScaledBitmap(bmp, 800, 800 * bmp.getHeight() / bmp.getWidth(), true);
                 }
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {   // an OutOfMemoryError here would take the launcher down
                 Log.w(TAG, "cover failed: " + e);
+                bmp = null;
             }
             synchronized (CoverArt.class) {
                 loading.remove(url);
