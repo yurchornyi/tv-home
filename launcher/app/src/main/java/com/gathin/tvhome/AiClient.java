@@ -18,10 +18,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The AI features through the launcher's Worker (config.xml tmdb_proxy, tools/tmdb-proxy/ai.js), which holds the
- * Anthropic key: a spoken command as one action, picks for a mood, two lines on a film. Answers come back on the
- * main thread; null means "not now" (no network, no key on the Worker, too many requests) and the caller falls back
- * to what works without AI. Descriptions are kept per film on this TV, so each is asked once.
+ * The AI features through the launcher's Worker (config.xml tmdb_proxy, tools/tmdb-proxy/ai.js), which holds
+ * SENTRA_TOKEN and asks Claude through Sentra: a spoken command as one action, picks for a mood, two lines on a film.
+ * Answers come back on the main thread; null means "not now" (no network, no Sentra token on the Worker, too many
+ * requests) and the caller falls back to what works without AI. Descriptions are kept per film on this TV, so each
+ * is asked once.
  */
 final class AiClient {
 
@@ -33,7 +34,7 @@ final class AiClient {
     private final SharedPreferences cache;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
-    /** Set when the Worker said it has no key: no more asking until the launcher restarts. */
+    /** Set when the Worker said it has no Sentra token: no more asking until the launcher restarts. */
     private volatile boolean off;
 
     AiClient(Context ctx, String proxy) {
@@ -105,7 +106,7 @@ final class AiClient {
                     os.write(body.toString().getBytes(StandardCharsets.UTF_8));
                 }
                 int code = c.getResponseCode();
-                if (code == 503) off = true;   // the Worker has no key yet
+                if (code == 503) off = true;   // the Worker has no Sentra token yet
                 if (code == 200) {
                     try (InputStream in = c.getInputStream()) {
                         out = new JSONObject(read(in));

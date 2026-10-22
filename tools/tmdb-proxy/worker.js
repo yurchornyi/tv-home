@@ -39,6 +39,7 @@ async function ai(request, env, path) {
     return json(await AI_ROUTES[path](env, body || {}));
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message }, e.status);
+    console.error('AI route failed', path, e instanceof Error ? `${e.name}: ${e.message}` : String(e));
     return json({ error: 'failed' }, 500);
   }
 }
