@@ -108,6 +108,7 @@ printf '%s\n' \
   "pm grant com.gathin.tvhome android.permission.RECORD_AUDIO 2>/dev/null; echo microphone-granted" \
   "pm grant com.gathin.tvhome android.permission.WRITE_SECURE_SETTINGS 2>/dev/null; echo self-repair-granted" \
   "appops set com.gathin.tvhome REQUEST_INSTALL_PACKAGES allow 2>/dev/null; echo self-update-allowed" \
+  "appops set com.gathin.tvhome SCHEDULE_EXACT_ALARM allow 2>/dev/null; echo exact-alarms-allowed" \
   "cmd package compile -m speed -f com.gathin.tvhome" \
   "$DISABLE_STOCK" \
   "cmd package set-home-activity --user 0 com.gathin.tvhome/.MainActivity" \

@@ -92,6 +92,8 @@ import java.util.Set;
 public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
+    /** What Launcher settings asked Home to do once it is back; static, so it outlives a recreate(). */
+    private static String settingsThen;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
@@ -1041,6 +1043,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     protected void onResume() {
+        if (settingsThen != null && !isChangingConfigurations()) {   // not the instance a recreate() is replacing
+            String then = settingsThen;
+            settingsThen = null;
+            handler.postDelayed(() -> runSettingsAction(then), 350);
+        }
         super.onResume();
         homeInFront = true;
         // A festival that started or ended while Home was in the background: rebuild with or without it.
@@ -1102,7 +1109,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if (requestCode == LAUNCHER_SETTINGS_REQUEST) {
+            // A row that acts on Home itself (add an app, reorder, module cards) closes Launcher settings and runs
+            // here; when a setting changed too, Home is rebuilt first and runs it once it is back (onResume).
+            String then = data == null ? null : data.getStringExtra(LauncherSettingsActivity.EXTRA_THEN);
+            boolean changed = resultCode == RESULT_OK
+                    || (data != null && data.getBooleanExtra(LauncherSettingsActivity.EXTRA_CHANGED, false));
+            if (then != null) settingsThen = then;
+            if (changed) recreate();
+        }
         if (requestCode == VOICE_REQUEST) {
             java.util.ArrayList<String> heard = data == null ? null
                     : data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
@@ -4524,9 +4539,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.tv_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        addSettingsMenuRow(rows, popup, R.string.add_to_home, this::onLibraryRequested);
-        addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         // A TV set up without adb where something was not allowed: one row to where it can be turned on.
         if (!notificationAccess()) {
             addSettingsMenuRow(rows, popup, R.string.access_now_playing, () -> {
@@ -4549,6 +4561,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
                 ? Gravity.START : Gravity.END);
         rows.getChildAt(0).requestFocus();
+    }
+
+    private void runSettingsAction(String what) {
+        if (isFinishing() || isDestroyed()) return;
+        switch (what) {
+            case LauncherSettingsActivity.THEN_ADD: onLibraryRequested(); break;
+            case LauncherSettingsActivity.THEN_REORDER: toggleReorder(); break;
+            case LauncherSettingsActivity.THEN_MODULES: if (moduleCards) showModuleCards(); break;
+            default: break;
+        }
     }
 
     /** The sleep timer's choices (SleepTimer): in so many minutes the TV goes to standby. */

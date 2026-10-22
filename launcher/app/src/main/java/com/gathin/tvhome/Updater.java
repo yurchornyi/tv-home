@@ -39,6 +39,12 @@ final class Updater {
     private final Listener listener;
     private final Handler main = new Handler(Looper.getMainLooper());
     private volatile boolean busy;
+    /** Told on the main thread when a check finds nothing newer (Launcher settings shows "Up to date"). */
+    private volatile Runnable upToDate;
+
+    void onUpToDate(Runnable r) {
+        upToDate = r;
+    }
 
     Updater(Context ctx, String url, Listener listener) {
         this.ctx = ctx.getApplicationContext();
@@ -70,7 +76,11 @@ final class Updater {
             return;
         }
         long since = System.currentTimeMillis() - prefs().getLong("checked_at", 0);
-        if (since < (now ? 3 * 60 * 1000L : CHECK_MS)) return;
+        if (since < (now ? 3 * 60 * 1000L : CHECK_MS)) {
+            Runnable r = upToDate;
+            if (now && r != null) main.post(r);   // looked a moment ago and found nothing
+            return;
+        }
         busy = true;
         new Thread(() -> {
             try {
@@ -79,7 +89,11 @@ final class Updater {
                 String name = info.optString("versionName", String.valueOf(code));
                 String apk = info.optString("apk", "");
                 prefs().edit().putLong("checked_at", System.currentTimeMillis()).apply();
-                if (code <= BuildConfig.VERSION_CODE || apk.isEmpty()) return;
+                if (code <= BuildConfig.VERSION_CODE || apk.isEmpty()) {
+                    Runnable r = upToDate;
+                    if (r != null) main.post(r);
+                    return;
+                }
                 File tmp = new File(ctx.getCacheDir(), "update.part");
                 download(apk, tmp);
                 if (!tmp.renameTo(apkFile())) throw new IllegalStateException("rename failed");

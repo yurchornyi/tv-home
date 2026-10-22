@@ -150,4 +150,30 @@
     </plurals>
     <!-- The greeting, then greeting_name: "Good morning, Mr. Trịnh". -->
     <string name="greeting_with_name">%1$s, %2$s</string>
+    <string name="columns_hint">How many apps fit in each row on Home. Left and Right change it.</string>
+    <string name="follow_theme_short">Look as in theme</string>
+    <string name="settings_reset">Reset</string>
+    <string name="settings_in_use">In use</string>
+    <string name="animations_label">Animations</string>
+    <string name="animations_hint">Smooth movement of tiles, posters and menus. Turn it off on a slow TV.</string>
+    <string name="settings_section_home">Home screen</string>
+    <string name="settings_section_motion">Motion</string>
+    <string name="settings_section_tv">TV</string>
+    <string name="settings_section_about">About</string>
+    <string name="sleep_hint">The TV goes to sleep after this many minutes. A minute before, a card offers to extend it. Left and Right change it.</string>
+    <string name="sleep_value_left">%d min left</string>
+    <string name="home_settings_hint">Choose which home screen the TV uses.</string>
+    <string name="tv_settings_hint">The TV\'s own settings: network, picture, sound, accounts.</string>
+    <string name="version_label">Version</string>
+    <string name="version_hint">Updates install by themselves within an hour. OK checks now.</string>
+    <string name="checking">Checking</string>
+    <string name="up_to_date">Up to date</string>
+    <string name="sleep_warning">The TV will sleep in %s</string>
+    <string name="sleep_warning_hint">Still watching? Extend the timer.</string>
+    <string name="sleep_extend">+%d min</string>
+    <string name="sleep_extend_hours">+%d h</string>
+    <string name="made_by">Made by Chornyi</string>
+    <string name="add_to_home_hint">Put an app from the library on Home.</string>
+    <string name="reorder_settings_hint">Move the apps on Home into the order you like.</string>
+    <string name="module_cards_hint">Cards that modules add to Home.</string>
 </resources>

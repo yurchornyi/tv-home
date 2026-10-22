@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The signature's mark: a thin circle, its right half filled. Launcher settings turns it slowly (LauncherSettingsActivity). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <path
+        android:pathData="M9,1a8,8 0,1 1,0 16a8,8 0,1 1,0 -16z"
+        android:strokeColor="#FF9A98A3"
+        android:strokeWidth="1" />
+    <path
+        android:pathData="M9,1a8,8 0,0 1,0 16z"
+        android:fillColor="#FF9A98A3" />
+</vector>

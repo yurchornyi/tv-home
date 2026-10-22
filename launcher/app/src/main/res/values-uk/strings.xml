@@ -142,4 +142,30 @@
         <item quantity="other">%1$d програми</item>
     </plurals>
     <string name="greeting_with_name">%1$s, %2$s</string>
+    <string name="columns_hint">Скільки програм вміщається в рядку на головному екрані. Змінюйте стрілками вліво і вправо.</string>
+    <string name="follow_theme_short">Вигляд як у темі</string>
+    <string name="settings_reset">Скинути</string>
+    <string name="settings_in_use">Увімкнено</string>
+    <string name="animations_label">Анімація</string>
+    <string name="animations_hint">Плавний рух плиток, постерів і меню. На повільному телевізорі можна вимкнути.</string>
+    <string name="settings_section_home">Головний екран</string>
+    <string name="settings_section_motion">Рух</string>
+    <string name="settings_section_tv">Телевізор</string>
+    <string name="settings_section_about">Про лаунчер</string>
+    <string name="sleep_hint">Телевізор засне через вибрану кількість хвилин. За хвилину до цього з\'явиться картка, щоб продовжити. Змінюйте стрілками вліво і вправо.</string>
+    <string name="sleep_value_left">ще %d хв</string>
+    <string name="home_settings_hint">Виберіть, який головний екран використовує телевізор.</string>
+    <string name="tv_settings_hint">Власні налаштування телевізора: мережа, зображення, звук, акаунти.</string>
+    <string name="version_label">Версія</string>
+    <string name="version_hint">Оновлення встановлюються самі протягом години. OK перевіряє зараз.</string>
+    <string name="checking">Перевіряю</string>
+    <string name="up_to_date">Остання версія</string>
+    <string name="sleep_warning">Телевізор засне через %s</string>
+    <string name="sleep_warning_hint">Дивитеся далі? Продовжте таймер.</string>
+    <string name="sleep_extend">+%d хв</string>
+    <string name="sleep_extend_hours">+%d год</string>
+    <string name="made_by">Зроблено Чорним</string>
+    <string name="add_to_home_hint">Додайте програму з бібліотеки на головний екран.</string>
+    <string name="reorder_settings_hint">Переставте програми на головному екрані в зручному порядку.</string>
+    <string name="module_cards_hint">Картки, які модулі додають на головний екран.</string>
 </resources>

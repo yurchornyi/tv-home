@@ -22,6 +22,10 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- The full-screen player keeps the screen on, with no screensaver, while it is up (MainActivity.holdScreen). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- The sleep timer's alarms (SleepTimer): Android 14 refuses even setAlarmClock without an exact-alarm right.
+         USE_EXACT_ALARM is granted at install from API 33; SCHEDULE_EXACT_ALARM covers 31-32. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- Granted once over adb by build-and-install (a development permission): the launcher keeps its sleep timer
          service and Now Playing access switched on by itself after updates (SelfSetup). -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
@@ -166,6 +170,13 @@
                 <action android:name="com.gathin.tvhome.action.SLEEP_NOW" />
             </intent-filter>
         </receiver>
+        <!-- A minute before the sleep timer ends: the card offering to extend it (SleepWarning). -->
+        <receiver
+            android:name=".SleepWarning$Receiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
+        <!-- Exported only to the shell (DUMP), like SleepReceiver, so the card can be tried over adb:
+             am broadcast -n 'com.gathin.tvhome/.SleepWarning$Receiver' -->
         <service
             android:name=".SleepService"
             android:exported="true"
