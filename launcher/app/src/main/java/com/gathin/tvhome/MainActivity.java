@@ -1091,7 +1091,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         tilesBuiltAt = SystemClock.elapsedRealtime();
         cards = moduleCards ? CardFeature.run(() -> Cards.discover(this, hiddenApps, Cards.load(Cards.storeFile(this))), none) : none;
+        long t0 = SystemClock.uptimeMillis();
         adapter.reload(cards.isEmpty() ? none : CardFeature.run(() -> Cards.shown(cards), none));
+        android.util.Log.i("TvHome", "tiles built in " + (SystemClock.uptimeMillis() - t0) + " ms");
         lastFocusedKey = returnKey;
         lastFocused = returnSlot;
     }

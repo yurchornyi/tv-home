@@ -14,6 +14,9 @@ import android.graphics.drawable.Drawable;
  */
 final class DarkBanner {
 
+    /** Bumped when the darkening changes, so banners saved by an older build are made again (TileCache). */
+    static final int VERSION = 1;
+
     /** The background a pure white pixel becomes: the same near-black as the tiles. */
     private static final int DARK = 28;
 

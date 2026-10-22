@@ -344,6 +344,19 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (iconTiles.contains(ri.activityInfo.packageName)) return null;
         int id = ri.activityInfo.banner;
         if (id == 0) id = ri.activityInfo.applicationInfo.banner;
+        // A darkened banner made on an earlier start comes from the disk as it is: no decoding the app's artwork and
+        // no pass over its pixels, which on a TV just switched on took seconds for a home screen of apps.
+        String cacheKey = darkTiles && !tileColorsKept.contains(ri.activityInfo.packageName) ? bannerKey(pm, ri, id) : null;
+        if (cacheKey != null) {
+            Drawable.ConstantState known = darkBanners.get(cacheKey);
+            if (known != null) return known.newDrawable(ctx.getResources());
+            Bitmap saved = TileCache.read(ctx, cacheKey);
+            if (saved != null) {
+                Drawable d = new android.graphics.drawable.BitmapDrawable(ctx.getResources(), saved);
+                darkBanners.put(cacheKey, d.getConstantState());
+                return d;
+            }
+        }
         Drawable banner = null;
         if (id != 0) {
             try {
@@ -358,20 +371,37 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A square "banner" counts as none: the tile shows the app's icon and name instead of a blur.
         if (banner == null || !isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight())) return null;
         String pkg = ri.activityInfo.packageName;
-        if (!darkTiles || tileColorsKept.contains(pkg)) return banner;
+        if (cacheKey == null) return banner;
+        String key = cacheKey;
+        if (calmBanners.contains(key) || TileCache.isCalm(ctx, key)) {
+            calmBanners.add(key);
+            return banner;
+        }
+        int[] deep = tileDeepColors.get(pkg);
+        Drawable dark = DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
+        if (dark == banner) {
+            calmBanners.add(key);
+            TileCache.markCalm(ctx, key);
+        } else if (dark.getConstantState() != null) {
+            darkBanners.put(key, dark.getConstantState());
+            if (dark instanceof android.graphics.drawable.BitmapDrawable) {
+                TileCache.write(ctx, key, ((android.graphics.drawable.BitmapDrawable) dark).getBitmap());
+            }
+        }
+        return dark;
+    }
+
+    /** What a darkened banner depends on: the app's build, the banner resource, the deep colours asked for. */
+    private String bannerKey(PackageManager pm, ResolveInfo ri, int id) {
+        String pkg = ri.activityInfo.packageName;
         String key = pkg + '/' + ri.activityInfo.name + '@' + ri.activityInfo.applicationInfo.sourceDir + ':' + id;
         try {
             key += ":" + pm.getPackageInfo(pkg, 0).lastUpdateTime;
         } catch (PackageManager.NameNotFoundException ignored) {
         }
-        Drawable.ConstantState known = darkBanners.get(key);
-        if (known != null) return known.newDrawable(ctx.getResources());
-        if (calmBanners.contains(key)) return banner;
         int[] deep = tileDeepColors.get(pkg);
-        Drawable dark = DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
-        if (dark == banner) calmBanners.add(key);
-        else if (dark.getConstantState() != null) darkBanners.put(key, dark.getConstantState());
-        return dark;
+        if (deep != null) key += ":" + java.util.Arrays.toString(deep);
+        return key + ":v" + DarkBanner.VERSION;
     }
 
     /**
