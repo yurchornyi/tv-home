@@ -93,11 +93,14 @@
     <string name="kik_install">Install KIK</string>
     <string name="kik_not_now">Not now</string>
     <string name="kik_downloading">Downloading KIK</string>
+    <string name="channels_section_shelf">On the shelf</string>
+    <string name="channels_section_all">All channels</string>
+    <string name="channels_section_never">Never show</string>
     <string name="choose_channels">Choose channels</string>
     <string name="channels_auto_on">Automatic order: on</string>
     <string name="channels_auto_off">Automatic order: off</string>
     <string name="channels_on_shelf">Channels on the shelf: %s</string>
-    <string name="channels_hint">OK ticks a channel, Back keeps the choice</string>
+    <string name="channels_hint">OK ticks a channel, hold OK to never show it, Back keeps the choice</string>
     <string name="channels_empty">Hold OK on the tile to choose channels</string>
     <!-- Search (SearchDialog): the pill, the field's hint, the voice button, and the kinds of match. -->
     <string name="search">Search</string>

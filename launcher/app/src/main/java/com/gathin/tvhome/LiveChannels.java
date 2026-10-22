@@ -102,6 +102,14 @@ final class LiveChannels {
                 .putString("hidden_" + pkg, new JSONArray(hidden).toString()).apply();
     }
 
+    /** The picker's answer: what is on the shelf, and what is never shown (the picker's bottom part). */
+    void setChoice(String pkg, Set<String> chosen, Set<String> hidden) {
+        Set<String> on = new LinkedHashSet<>(chosen);
+        on.removeAll(hidden);
+        prefs().edit().putString("chosen_" + pkg, new JSONArray(on).toString())
+                .putString("hidden_" + pkg, new JSONArray(hidden).toString()).apply();
+    }
+
     /** Channels the owner took off the shelf: the automatic order does not bring them back. */
     Set<String> hiddenIds(String pkg) {
         Set<String> out = new LinkedHashSet<>();

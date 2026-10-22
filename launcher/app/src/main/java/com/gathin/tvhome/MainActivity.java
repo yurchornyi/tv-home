@@ -2359,9 +2359,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void openChannelPicker(String pkg, int position) {
         if (openPopup != null) openPopup.dismiss();
         String label = adapter.labelAt(position);
-        openPopup = ChannelPicker.show(this, label != null ? label : pkg, liveChannels.all(pkg), liveChannels.chosenIds(pkg), chosen -> {
+        openPopup = ChannelPicker.show(this, label != null ? label : pkg, liveChannels.all(pkg), liveChannels.chosenIds(pkg),
+                liveChannels.hiddenIds(pkg), shelfFeed::image, (chosen, hidden) -> {
             openPopup = null;
-            liveChannels.setChosen(pkg, chosen);
+            liveChannels.setChoice(pkg, chosen, hidden);
             stopChannels(false);
             if (position == lastFocused) showHero(position, lastDockTop);
             focusTile(position);
@@ -2694,7 +2695,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (String pkg : liveChannelPackages()) {
             String app = labels.get(pkg);
             if (app == null) continue;   // not installed
+            Set<String> never = liveChannels.hiddenIds(pkg);
             for (LiveChannels.Channel c : liveChannels.all(pkg)) {
+                if (never.contains(c.id)) continue;   // "Never show" holds for Search too
                 out.add(new SearchIndex.Result(c.name, getString(R.string.search_channel, app), null, c.logo, false, 1,
                         () -> openChannel(pkg, c)));
             }
@@ -2902,7 +2905,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (Map.Entry<String, String> e : labels.entrySet()) b.add("apps", "pkg", e.getKey(), "label", e.getValue());
         for (String pkg : liveChannelPackages()) {
             if (!labels.containsKey(pkg)) continue;
-            for (LiveChannels.Channel c : liveChannels.all(pkg)) b.add("channels", "id", c.id, "name", c.name, "app", pkg);
+            Set<String> never = liveChannels.hiddenIds(pkg);
+            for (LiveChannels.Channel c : liveChannels.all(pkg)) {
+                if (!never.contains(c.id)) b.add("channels", "id", c.id, "name", c.name, "app", pkg);
+            }
         }
         for (Map.Entry<String, List<ShelfFeed.Item>> e : shelfTitles(labels).entrySet()) {
             for (ShelfFeed.Item item : e.getValue()) b.addTitle(item.title, e.getKey(), item.live);

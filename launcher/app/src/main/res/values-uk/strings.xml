@@ -88,11 +88,14 @@
     <string name="kik_install">Встановити KIK</string>
     <string name="kik_not_now">Не зараз</string>
     <string name="kik_downloading">Завантажую KIK</string>
+    <string name="channels_section_shelf">На полиці</string>
+    <string name="channels_section_all">Усі канали</string>
+    <string name="channels_section_never">Ніколи не показувати</string>
     <string name="choose_channels">Вибрати канали</string>
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
     <string name="channels_auto_off">Автоматичний порядок: вимк.</string>
     <string name="channels_on_shelf">Канали на полиці: %s</string>
-    <string name="channels_hint">OK додає або прибирає канал, Назад зберігає вибір</string>
+    <string name="channels_hint">OK додає або прибирає, утримання OK — ніколи не показувати, Назад зберігає</string>
     <string name="channels_empty">Утримуйте OK на плитці, щоб вибрати канали</string>
     <string name="search">Пошук</string>
     <string name="search_hint">Програма, канал чи фільм</string>
