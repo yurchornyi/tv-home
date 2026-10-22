@@ -95,6 +95,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** What Launcher settings asked Home to do once it is back; static, so it outlives a recreate(). */
     private static String settingsThen;
+    /** The grid's top padding (the dock's place) has been set. */
+    private boolean gridPlaced;
+    /** Home has drawn its first frame; until then focus moves place rows at once instead of scrolling to them. */
+    private boolean firstFrameShown;
     /** recreate() is under way: this instance is about to be replaced. */
     private boolean recreating;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
@@ -804,8 +808,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
+                // The first time: the rows go straight to their place. RecyclerView otherwise keeps the tiles where
+                // the old padding had them and slides them down, which looked like Home coming up wrong.
+                if (!gridPlaced) grid.scrollToPosition(0);
             }
+            // A layout asked for during layout runs again before anything draws, so the next frame has the rows in
+            // place: from here the first frame may draw (firstFrame).
+            gridPlaced = true;
         });
+
+        // The first frame waits for the tiles: their row's place (the padding above) is only known after a first
+        // layout, so without this Home showed the clock alone, then the tiles too high, then moved them down.
+        android.view.ViewTreeObserver.OnPreDrawListener firstFrame = new android.view.ViewTreeObserver.OnPreDrawListener() {
+            private final long since = SystemClock.uptimeMillis();
+            @Override public boolean onPreDraw() {
+                boolean ready = gridPlaced && tilesReady && adapter != null && adapter.getItemCount() > 0
+                        && grid.getChildCount() > 0 && !grid.isLayoutRequested() && !root.isLayoutRequested();
+                if (ready || SystemClock.uptimeMillis() - since > 1500) {
+                    root.getViewTreeObserver().removeOnPreDrawListener(this);
+                    firstFrameShown = true;
+                    return true;
+                }
+                return false;
+            }
+        };
+        root.getViewTreeObserver().addOnPreDrawListener(firstFrame);
 
         // Keep the glass glued to its tile while the grid scrolls.
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -1747,7 +1774,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // actually off; reduced motion does it in one jump so it does not fight the highlight.
             boolean scroll = Math.abs(dy) > (int) (8 * density);
             if (scroll) {
-                if (!animations || reducedMotion) grid.scrollBy(0, dy);
+                // Before Home's first frame the row goes straight to its place: the first layout used the old
+                // padding, and a smooth scroll from there showed the tiles coming up from below.
+                if (!animations || reducedMotion || !firstFrameShown) grid.scrollBy(0, dy);
                 else grid.smoothScrollBy(0, dy);
             }
             showHero(position, scroll ? r.top - dy : r.top);

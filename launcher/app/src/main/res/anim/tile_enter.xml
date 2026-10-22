@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Home's tiles as it starts: each fades in where it belongs, growing a touch, the way Apple TV's home appears.
+     No rise from below: the row must not seem to come up from the bottom of the screen. -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
     android:interpolator="@android:interpolator/decelerate_cubic"
-    android:duration="420">
+    android:duration="380">
     <alpha android:fromAlpha="0.0" android:toAlpha="1.0" />
-    <translate android:fromYDelta="22%" android:toYDelta="0%" />
     <scale
-        android:fromXScale="0.94" android:toXScale="1.0"
-        android:fromYScale="0.94" android:toYScale="1.0"
+        android:fromXScale="0.96" android:toXScale="1.0"
+        android:fromYScale="0.96" android:toYScale="1.0"
         android:pivotX="50%" android:pivotY="50%" />
 </set>
