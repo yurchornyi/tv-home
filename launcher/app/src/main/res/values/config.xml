@@ -79,6 +79,8 @@
     <string-array name="shelf_feed_apps">
         <item>com.netflix.ninja</item>
         <item>rezkatv.web.app</item>
+        <!-- KIK, the owner's film app (the newer HDRezka build) -->
+        <item>rezkatv.web.app.uk</item>
         <item>com.kyivstar.tv.tvapp</item>
     </string-array>
 

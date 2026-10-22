@@ -3261,12 +3261,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
                 shelfLive.animate().cancel();
+                // Under a channel row the channels are what the shelf offers: the poster stays a backdrop, with no
+                // title (it sat higher there than over the Watch pill, so moving along the dock made it jump).
+                float shown = channelsPkg == null ? 1f : 0f;
                 if (animate) {
-                    shelfTitle.animate().alpha(1f).setDuration(400).start();
-                    shelfLive.animate().alpha(1f).setDuration(400).start();
+                    shelfTitle.animate().alpha(shown).setDuration(400).start();
+                    shelfLive.animate().alpha(shown).setDuration(400).start();
                 } else {
-                    shelfTitle.setAlpha(1f);
-                    shelfLive.setAlpha(1f);
+                    shelfTitle.setAlpha(shown);
+                    shelfLive.setAlpha(shown);
                 }
                 showShelfOpen(true, animate);
             };
