@@ -36,6 +36,9 @@ KEY = os.path.join(KEYDIR, "adbkey")
 ADB_KEY = os.path.join(os.path.expanduser("~"), ".android", "adbkey")
 if not os.path.exists(KEY) and os.path.exists(ADB_KEY) and os.path.exists(ADB_KEY + ".pub"):
     KEY = ADB_KEY
+# TV_ADBKEY names another key file, e.g. ~/.android/adbkey for an emulator that already trusts it.
+if os.environ.get("TV_ADBKEY"):
+    KEY = os.path.expanduser(os.environ["TV_ADBKEY"])
 
 
 def get_signer():

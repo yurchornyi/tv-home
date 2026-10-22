@@ -143,7 +143,7 @@ async function tmdbFind(env, title, year, kind, lang) {
   u.searchParams.set('query', title);
   u.searchParams.set('language', lang);
   if (Number.isInteger(year)) u.searchParams.set(kind === 'tv' ? 'first_air_date_year' : 'year', String(year));
-  const r = await fetch(tmdbUrl(env, u), { headers: tmdbHeaders(env) });
+  const r = await fetch(tmdbUrl(env, u), { headers: tmdbHeaders(env), cache: 'no-store' });
   if (!r.ok) return null;
   const data = await r.json();
   const best = (data.results || []).find((x) => x.backdrop_path) || null;
@@ -190,7 +190,7 @@ export async function about(env, body) {
   const lang = str(body.lang, 10) || 'uk-UA';
   const u = new URL(`https://api.themoviedb.org/3/${kind}/${id}`);
   u.searchParams.set('language', lang);
-  const r = await fetch(tmdbUrl(env, u), { headers: tmdbHeaders(env) });
+  const r = await fetch(tmdbUrl(env, u), { headers: tmdbHeaders(env), cache: 'no-store' });
   if (!r.ok) throw new HttpError(404, 'unknown title');
   const d = await r.json();
   const facts = [

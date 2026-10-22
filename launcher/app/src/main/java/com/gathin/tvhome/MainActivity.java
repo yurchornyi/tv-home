@@ -524,6 +524,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Backup.importIfChanged(this);   // a backup.json put in the files folder (restore) before anything reads
         Backup.applyDefaultsIfFresh(this);   // a new TV starts from the owner's usual shelf and channel choices
+        SelfSetup.ensure(this);   // the sleep timer and Now Playing stay switched on, update after update
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
         settingsKeyPanel = cfg.settingsKeyPanel;
@@ -4559,8 +4560,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (int minutes : new int[]{15, 30, 45, 60, 90, 120}) {
             addSettingsMenuRow(rows, popup, getString(R.string.sleep_minutes, minutes), () -> {
                 if (!SleepService.running()) {
-                    Toast.makeText(this, R.string.sleep_service_off, Toast.LENGTH_LONG).show();
-                    return;
+                    // Switched on again by the launcher itself where adb gave it the right (SelfSetup); the service
+                    // binds within a moment, long before the timer ends. Otherwise straight to where it is turned on.
+                    SelfSetup.ensure(this);
+                    if (!SelfSetup.canWriteSettings(this)) {
+                        Toast.makeText(this, R.string.sleep_service_off, Toast.LENGTH_LONG).show();
+                        open(systemIntent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                        return;
+                    }
                 }
                 SleepTimer.set(this, minutes);
                 updateGreeting();

@@ -68,7 +68,9 @@ export default {
     const headers = { Accept: 'application/json' };
     if (key.length > 40) headers.Authorization = 'Bearer ' + key;   // a v4 read token
     else upstream.searchParams.set('api_key', key);                 // a v3 key
-    const answer = await fetch(upstream.toString(), { headers });
+    // no-store: Cloudflare must not keep TMDB's own answer by URL. A v4 token travels in a header the URL does not
+    // show, so a 401 cached under an old token kept coming back, now and then, after the token changed.
+    const answer = await fetch(upstream.toString(), { headers, cache: 'no-store' });
     response = new Response(answer.body, answer);
     response.headers.delete('set-cookie');
     if (answer.ok) {

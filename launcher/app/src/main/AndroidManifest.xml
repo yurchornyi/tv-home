@@ -22,6 +22,10 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- The full-screen player keeps the screen on, with no screensaver, while it is up (MainActivity.holdScreen). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Granted once over adb by build-and-install (a development permission): the launcher keeps its sleep timer
+         service and Now Playing access switched on by itself after updates (SelfSetup). -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Spoken search in the launcher's own field (VoiceSearch); build-and-install grants it, else it is asked for once. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
