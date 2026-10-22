@@ -63,6 +63,12 @@ export default {
     const cache = caches.default;
     let response = await cache.match(cacheKey);
     if (response) return response;
+    // Only requests that reach TMDB count: a TV's few a day pass easily, while someone using the public URL as a free
+    // TMDB proxy runs into the limit long before the token could get flagged.
+    if (env.TMDB_LIMIT) {
+      const { success } = await env.TMDB_LIMIT.limit({ key: request.headers.get('cf-connecting-ip') || 'unknown' });
+      if (!success) return new Response('Slow down', { status: 429 });
+    }
 
     const key = env.TMDB_KEY.trim();
     const headers = { Accept: 'application/json' };
