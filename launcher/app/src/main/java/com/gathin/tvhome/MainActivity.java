@@ -120,14 +120,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private Drawable heroArtShown;
     /** TMDB backdrops for shelf_feed_apps: the app whose carousel runs, its list and the backdrop shown. */
     private ShelfFeed shelfFeed;
-    /** The AI features through the Worker (AiClient): spoken commands, picks, the shelf poster's two lines. */
+    /** The AI features through the Worker (AiClient): spoken commands and picks. */
     private AiClient ai;
     /** Kick's live streams for its shelf (KickFeed). */
     private KickFeed kickFeed;
     /** A line under the search row: "thinking", why a pick fits, or what the AI could not do. */
     private TextView searchNote;
-    /** Two lines on the film the shelf shows (AiClient.about), between its title and the Watch pill. */
-    private TextView shelfAbout;
     private final Set<String> feedApps = new HashSet<>();
     /** Apps whose own home-screen channel programs fill the shelf (shelf_channel_apps), read by channelFeed. */
     private final Set<String> channelApps = new HashSet<>();
@@ -247,6 +245,42 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         v.setEllipsize(scroll ? TextUtils.TruncateAt.MARQUEE : TextUtils.TruncateAt.END);
         v.setMarqueeRepeatLimit(-1);
         v.setSelected(scroll);   // a marquee runs only on a selected view
+    }
+
+    /** When a key last reached Home: an update waits until the remote has rested a minute. */
+    private long lastKeyAt;
+
+    /** The screen went off (the TV going to sleep): the best moment for a waiting update, nobody is watching. */
+    private final BroadcastReceiver screenOffReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (updater != null && updater.readyVersion() != null) {
+                android.util.Log.i("TvHome", "screen off: installing " + updater.readyVersion());
+                updater.install();
+            }
+        }
+    };
+
+    private final Runnable autoUpdate = new Runnable() {
+        @Override public void run() {
+            if (updater == null || updater.readyVersion() == null || isFinishing()) return;
+            NowPlaying.Track t = nowPlaying.track();
+            boolean idle = hasWindowFocus() && openPopup == null && !searching
+                    && ambientScreen.getVisibility() != View.VISIBLE
+                    && SystemClock.uptimeMillis() - lastKeyAt > 60_000
+                    && (t == null || !t.playing);
+            if (idle) {
+                // Home restarts for a moment as the new build takes over; with nobody at the remote it goes unseen.
+                android.util.Log.i("TvHome", "idle Home: installing " + updater.readyVersion());
+                updater.install();
+            } else {
+                handler.postDelayed(this, 30_000);
+            }
+        }
+    };
+
+    private void scheduleAutoUpdate() {
+        handler.removeCallbacks(autoUpdate);
+        handler.postDelayed(autoUpdate, 30_000);
     }
 
     /** m:ss, or h:mm:ss past an hour. */
@@ -473,7 +507,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroFade = findViewById(R.id.heroFade);
         topShelfArt = cfg.topShelfArt;
         shelfTitle = findViewById(R.id.shelfTitle);
-        shelfAbout = findViewById(R.id.shelfAbout);
         searchNote = findViewById(R.id.searchNote);
         shelfOpen = findViewById(R.id.shelfOpen);
         shelfLive = findViewById(R.id.shelfLive);
@@ -521,13 +554,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientCover.setClipToOutline(true);
         ambientCover.setCameraDistance(9000 * density);
         findViewById(R.id.npExpand).setOnClickListener(v -> showAmbient());
-        updater = new Updater(this, cfg.updateUrl, version -> {
-            // Said once per downloaded build; the Settings menu keeps the row until it is installed.
-            if (!version.equals(getSharedPreferences("updater", MODE_PRIVATE).getString("told", ""))) {
-                getSharedPreferences("updater", MODE_PRIVATE).edit().putString("told", version).apply();
-                Toast.makeText(this, getString(R.string.update_ready, version), Toast.LENGTH_LONG).show();
-            }
-        });
+        // A downloaded build installs itself (autoUpdate): when the screen goes off, or over an idle Home.
+        updater = new Updater(this, cfg.updateUrl, version -> scheduleAutoUpdate());
+        IntentFilter screenOff = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(screenOffReceiver, screenOff, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(screenOffReceiver, screenOff);
         postersOff.addAll(getSharedPreferences("shelf", MODE_PRIVATE).getStringSet("posters_off", Collections.emptySet()));
         shelfOpen.setOnClickListener(v -> openFeedItem());
         shelfOpen.setOnKeyListener((v, keyCode, event) -> {
@@ -964,6 +995,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         promptsPaused = false;
         updater.check();
+        if (updater.readyVersion() != null) scheduleAutoUpdate();
         askForTvListings();
         if (pendingSearch != null) {
             String q = pendingSearch;
@@ -1142,6 +1174,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openPopup != null) openPopup.dismiss();
         closeSearch(false);
         voice.stop();
+        handler.removeCallbacks(autoUpdate);
     }
 
     @Override
@@ -1176,6 +1209,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacksAndMessages(null);
         if (shelfFeed != null) shelfFeed.close();
         if (ai != null) ai.close();
+        try {
+            unregisterReceiver(screenOffReceiver);
+        } catch (IllegalArgumentException ignored) {
+        }
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
@@ -1218,6 +1255,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        lastKeyAt = SystemClock.uptimeMillis();
         if (ambientScreen.getVisibility() == View.VISIBLE) {
             // The full-screen player: its buttons take the arrows and OK, the media keys work from anywhere, Back
             // (or Home) brings Home back. The buttons rest out of sight after a few seconds; the first key that
@@ -1893,15 +1931,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         shelfOpen.setY(openTop);
         int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
-        float above = openTop;
-        if (shelfAbout.getVisibility() == View.VISIBLE) {
-            shelfAbout.measure(View.MeasureSpec.makeMeasureSpec(shelfAbout.getMaxWidth(), View.MeasureSpec.AT_MOST), unspecified);
-            above = openTop - 14 * density - shelfAbout.getMeasuredHeight();
-            shelfAbout.setY(above);
-            above += 4 * density;
-        }
         shelfTitle.measure(widthSpec, unspecified);
-        float titleTop = above - 14 * density - shelfTitle.getMeasuredHeight();
+        float titleTop = openTop - 14 * density - shelfTitle.getMeasuredHeight();
         shelfTitle.setY(titleTop);
         shelfLive.measure(unspecified, unspecified);
         shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
@@ -3089,7 +3120,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
                 shelfTitle.setText(item.title);
-                showAbout(item, gen);
                 shelfOpen.setText(item == continueItem ? R.string.continue_row : R.string.watch_now);
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
@@ -3144,34 +3174,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
     }
 
-    /**
-     * Two lines on the film the shelf shows, what it is about and whether it is worth it (AiClient.about), under
-     * its title; only for TMDB titles (not an app's own videos), faded in once they arrive.
-     */
-    private void showAbout(ShelfFeed.Item item, int gen) {
-        shelfAbout.animate().cancel();
-        shelfAbout.setAlpha(0f);
-        shelfAbout.setVisibility(View.GONE);
-        positionShelfTitle();
-        if (item.type.isEmpty() || item.id <= 0 || !ai.enabled()) return;
-        ai.about(item.type, item.id, a -> {
-            if (a == null || gen != feedGen || !item.title.contentEquals(shelfTitle.getText())) return;
-            String about = a.optString("about").trim(), verdict = a.optString("verdict").trim();
-            if (about.isEmpty()) return;
-            shelfAbout.setText(verdict.isEmpty() ? about : about + "\n" + verdict);
-            shelfAbout.setVisibility(View.VISIBLE);
-            positionShelfTitle();
-            if (animations && !reducedMotion) shelfAbout.animate().alpha(1f).setDuration(400).setInterpolator(EASE).start();
-            else shelfAbout.setAlpha(1f);
-        });
-    }
-
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
         feedGen++;
-        shelfAbout.animate().cancel();
-        shelfAbout.setAlpha(0f);
-        shelfAbout.setVisibility(View.GONE);
         if (feedPkg == null) return;
         feedPkg = null;
         feedItems = null;

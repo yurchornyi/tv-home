@@ -94,8 +94,8 @@ final class Updater {
     }
 
     /**
-     * Hands the downloaded APK to Android's installer. The confirmation Android shows comes back through
-     * UpdateReceiver; after the install Home restarts on its own.
+     * Hands the downloaded APK to Android's installer, asking for no confirmation; when Android still wants one it
+     * comes back through UpdateReceiver. After the install Home restarts on its own.
      */
     void install() {
         File apk = apkFile();
@@ -105,6 +105,11 @@ final class Updater {
             PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
                     PackageInstaller.SessionParams.MODE_FULL_INSTALL);
             params.setAppPackageName(ctx.getPackageName());
+            // No confirmation for the launcher's own update where Android allows it (Android 12+, when this app
+            // installed the build in place, which it has after its first self-update); otherwise Android asks.
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+            }
             int id = installer.createSession(params);
             try (PackageInstaller.Session session = installer.openSession(id)) {
                 // The stream must be closed before the commit (a second close would fail with EBADF).

@@ -56,26 +56,6 @@
         android:shadowRadius="12"
         android:shadowDy="2" />
 
-    <!-- Two lines on the film the shelf shows (AiClient.about): what it is about and whether it is worth it,
-         between its title and the Watch pill; positioned in code, gone without an answer. -->
-    <TextView
-        android:id="@+id/shelfAbout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="70dp"
-        android:maxWidth="560dp"
-        android:alpha="0"
-        android:visibility="gone"
-        android:textColor="#D9FFFFFF"
-        android:textSize="15sp"
-        android:fontFamily="@font/outfit_regular"
-        android:lineSpacingMultiplier="1.15"
-        android:maxLines="3"
-        android:ellipsize="end"
-        android:shadowColor="#99000000"
-        android:shadowRadius="10"
-        android:shadowDy="1" />
-
     <!-- The line under the search row (MainActivity.showSearchNote): the AI thinking, why a pick fits. -->
     <TextView
         android:id="@+id/searchNote"
