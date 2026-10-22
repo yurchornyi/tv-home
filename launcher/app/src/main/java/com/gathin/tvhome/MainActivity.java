@@ -1863,10 +1863,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             stopFeed();
             return false;
         }
-        positionShelfTitle();
-        if (pkg.equals(feedPkg)) return true;
+        if (pkg.equals(feedPkg)) {
+            positionShelfTitle();
+            return true;
+        }
         boolean fromOtherFeed = feedPkg != null;
         stopFeed();
+        // The last app's title goes at once: placed for this app's shelf (a channel row, another Watch pill) while
+        // still holding the old, maybe two-line text, it jumped up and back down as the new title came in.
+        shelfTitle.animate().cancel();
+        shelfTitle.setAlpha(0f);
+        shelfTitle.setText("");
+        shelfLive.animate().cancel();
+        shelfLive.setAlpha(0f);
+        positionShelfTitle();
         feedPkg = pkg;
         // Its own softened banner right away (from another feed app the previous poster must not linger), the
         // first backdrop dissolves in over it.
@@ -2169,6 +2179,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         buildChannelRow(pkg, position);
         shelfChannelsScroll.setVisibility(View.VISIBLE);
         shelfChannelsScroll.animate().cancel();
+        // In place before the first frame (measured now), then checked once laid out: no frame in the wrong spot.
+        shelfChannelsScroll.measure(View.MeasureSpec.makeMeasureSpec(root.getWidth(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        shelfChannelsScroll.setY(lastDockTop - 14 * density - shelfChannelsScroll.getMeasuredHeight());
         shelfChannelsScroll.post(() -> shelfChannelsScroll.setY(lastDockTop - 14 * density - shelfChannelsScroll.getHeight()));
         if (animations && !reducedMotion) shelfChannelsScroll.animate().alpha(1f).setDuration(300).start();
         else shelfChannelsScroll.setAlpha(1f);
