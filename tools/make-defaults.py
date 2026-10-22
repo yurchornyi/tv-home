@@ -21,6 +21,21 @@ out = {
     "prefs": {name: {k: v for k, v in values.items() if not k.startswith(("use_", "chosen_", "hidden_"))}
               for name, values in prefs.items()},
 }
+# KIK (the owner's film app) is third in a new TV's dock, in place of the older HDRezka build.
+KIK, KIK_ACTIVITY, OLD = "rezkatv.web.app.uk", "rezkatv.web.app.uk/kik.i18n.HomeActivity", "rezkatv.web.app"
+order = out["files"].get("order.txt")
+if order:
+    lines = order.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("dock "):
+            dock = [p for p in line[5:].split(",") if p and p not in (KIK, OLD)]
+            dock.insert(min(2, len(dock)), KIK)
+            lines[i] = "dock " + ",".join(dock)
+    comps = [l for l in lines if "/" in l and not l.startswith(KIK + "/") and not l.startswith(OLD + "/")]
+    head = [l for l in lines if "/" not in l and l]
+    comps.insert(min(2, len(comps)), KIK_ACTIVITY)
+    out["files"]["order.txt"] = "\n".join(head + comps) + "\n"
+
 # Every app in channel mode starts with the automatic order on, whatever the source TV has.
 for values in out["prefs"].values():
     for k in [k for k in values if k.startswith("mode_")]:

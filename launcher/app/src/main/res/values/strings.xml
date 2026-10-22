@@ -88,6 +88,11 @@
     <string name="shelf_mode_channels">Shelf: channels</string>
     <string name="shelf_mode_posters">Shelf: posters</string>
     <string name="channel_remove">Remove %s from the shelf</string>
+    <string name="add_to_home">Add an app to Home</string>
+    <string name="kik_offer">KIK is not on this TV yet. Install it?</string>
+    <string name="kik_install">Install KIK</string>
+    <string name="kik_not_now">Not now</string>
+    <string name="kik_downloading">Downloading KIK</string>
     <string name="choose_channels">Choose channels</string>
     <string name="channels_auto_on">Automatic order: on</string>
     <string name="channels_auto_off">Automatic order: off</string>

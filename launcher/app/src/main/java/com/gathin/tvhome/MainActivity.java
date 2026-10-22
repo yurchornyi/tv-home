@@ -247,6 +247,43 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         v.setSelected(scroll);   // a marquee runs only on a selected view
     }
 
+    /**
+     * KIK, the owner's own film app, belongs third on every Home (config.xml dock_apps): on a TV without it, Home
+     * offers once to install it from its GitHub release (config.xml kik_update_url); Android asks to confirm.
+     */
+    private final Runnable kikOffer = this::offerKik;
+
+    private void offerKik() {
+        String url = getString(R.string.kik_update_url);
+        android.content.SharedPreferences st = getSharedPreferences("setup", MODE_PRIVATE);
+        if (url.isEmpty() || installed("rezkatv.web.app.uk") || st.getBoolean("asked_kik", false)) return;
+        if (isFinishing() || !hasWindowFocus() || openPopup != null || searching || !missingPermissions().isEmpty()) {
+            return;   // another time Home comes up
+        }
+        st.edit().putBoolean("asked_kik", true).apply();
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        TextView title = new TextView(this);
+        title.setText(R.string.kik_offer);
+        title.setTextColor(0xF2FFFFFF);
+        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTypeface(getResources().getFont(R.font.outfit_medium));
+        title.setPadding((int) (14 * density), (int) (10 * density), (int) (14 * density), (int) (10 * density));
+        rows.addView(title);
+        PopupWindow popup = glassPopup(panel, (int) (380 * density));
+        addSettingsMenuRow(rows, popup, R.string.kik_install, () -> {
+            Toast.makeText(this, R.string.kik_downloading, Toast.LENGTH_SHORT).show();
+            AppInstaller.install(this, url, started -> {
+                if (!started) Toast.makeText(this, R.string.update_failed, Toast.LENGTH_LONG).show();
+            });
+        });
+        addSettingsMenuRow(rows, popup, R.string.kik_not_now, () -> { });
+        panel.setAlpha(0f);
+        popup.showAtLocation(root, Gravity.CENTER, 0, 0);
+        panel.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
+        rows.getChildAt(1).requestFocus();
+    }
+
     /** When a key last reached Home: an update waits until the remote has rested a minute. */
     private long lastKeyAt;
 
@@ -997,6 +1034,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updater.check();
         if (updater.readyVersion() != null) scheduleAutoUpdate();
         askForTvListings();
+        handler.removeCallbacks(kikOffer);
+        handler.postDelayed(kikOffer, 4000);
         if (pendingSearch != null) {
             String q = pendingSearch;
             pendingSearch = null;
@@ -4404,6 +4443,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         addSettingsMenuRow(rows, popup, R.string.tv_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
+        addSettingsMenuRow(rows, popup, R.string.add_to_home, this::onLibraryRequested);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         // A TV set up without adb where something was not allowed: one row to where it can be turned on.

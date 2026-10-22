@@ -83,6 +83,11 @@
     <string name="shelf_mode_channels">Полиця: канали</string>
     <string name="shelf_mode_posters">Полиця: постери</string>
     <string name="channel_remove">Прибрати %s з полиці</string>
+    <string name="add_to_home">Додати програму на головний</string>
+    <string name="kik_offer">KIK ще немає на цьому ТБ. Встановити?</string>
+    <string name="kik_install">Встановити KIK</string>
+    <string name="kik_not_now">Не зараз</string>
+    <string name="kik_downloading">Завантажую KIK</string>
     <string name="choose_channels">Вибрати канали</string>
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
     <string name="channels_auto_off">Автоматичний порядок: вимк.</string>
