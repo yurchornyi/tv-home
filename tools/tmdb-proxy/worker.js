@@ -23,7 +23,7 @@ async function ai(request, env, path) {
   const json = (o, status = 200) => new Response(JSON.stringify(o), {
     status, headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
-  if (!env.ANTHROPIC_KEY && !(env.SENTRA_TOKEN && env.SENTRA_URL)) return json({ error: 'not configured' }, 503);
+  if (!env.SENTRA_TOKEN || !env.SENTRA_URL) return json({ error: 'not configured' }, 503);
   const who = request.headers.get('cf-connecting-ip') || 'unknown';
   if (env.AI_LIMIT) {
     const { success } = await env.AI_LIMIT.limit({ key: who });

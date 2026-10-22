@@ -1,5 +1,5 @@
-// The launcher's AI features, answered by Claude through this Worker so the Anthropic key stays in the Worker's
-// ANTHROPIC_KEY secret: a spoken command turned into one action on the TV (/ai/command), a few films for a mood or
+// The launcher's AI features, answered by Claude through Sentra (the owner's AI centre: its key, limits and spend
+// tracking; SENTRA_URL in vars, SENTRA_TOKEN secret, which Sentra writes itself): a spoken command turned into one action on the TV (/ai/command), a few films for a mood or
 // company with a line on why (/ai/picks), and two sentences on a film from the shelf (/ai/about). Each answer is
 // JSON in a fixed shape (structured outputs), so the TV never parses prose.
 import Anthropic from '@anthropic-ai/sdk';
@@ -9,10 +9,7 @@ const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 
 /** One request to Claude for a JSON object in `schema`; null when it declines or the answer is unusable. */
 async function ask(env, system, user, schema, maxTokens) {
-  // Through Sentra when connected (its Claude key, limits and spend tracking), else straight with ANTHROPIC_KEY.
-  const client = env.SENTRA_TOKEN
-    ? new Anthropic({ apiKey: env.SENTRA_TOKEN.trim(), baseURL: env.SENTRA_URL.replace(/\/+$/, '') + '/anthropic' })
-    : new Anthropic({ apiKey: env.ANTHROPIC_KEY.trim() });
+  const client = new Anthropic({ apiKey: env.SENTRA_TOKEN.trim(), baseURL: env.SENTRA_URL.replace(/\/+$/, '') + '/anthropic' });
   let response;
   try {
     response = await client.beta.messages.create({

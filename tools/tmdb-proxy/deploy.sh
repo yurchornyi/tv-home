@@ -9,7 +9,5 @@ KEY=$(sed -n 's/^tmdb\.key=//p' ../../launcher/local.properties | tr -d '[:space
 npm install --silent
 npx -y wrangler@4 deploy
 printf '%s' "$KEY" | npx -y wrangler@4 secret put TMDB_KEY
-# The AI features (ai.js) need an Anthropic key: anthropic.key=... in launcher/local.properties
-# (tools/set-anthropic-key.sh). Without one the AI routes answer "not configured" and the TV uses plain search.
-AKEY=$(sed -n 's/^anthropic\.key=//p' ../../launcher/local.properties | tr -d '[:space:]')
-if [ -n "$AKEY" ]; then printf '%s' "$AKEY" | npx -y wrangler@4 secret put ANTHROPIC_KEY; fi
+# The AI features (ai.js) go through Sentra: it writes SENTRA_TOKEN into this Worker when the project is connected
+# on its dashboard (SENTRA_URL is in wrangler.toml). Without it the AI routes answer "not configured".
