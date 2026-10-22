@@ -294,10 +294,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** When a key last reached Home: an update waits until the remote has rested a minute. */
     private long lastKeyAt;
 
-    /** The screen went off (the TV going to sleep): the best moment for a waiting update, nobody is watching. */
+    /**
+     * The screen went off (the TV going to sleep): the best moment for a waiting update, nobody is watching; with none
+     * waiting yet, it looks for one to install next time. The screen coming on looks too, so a TV that is on for days
+     * with an app in front still hears of a new build.
+     */
     private final BroadcastReceiver screenOffReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (updater != null && updater.readyVersion() != null) {
+            if (updater == null) return;
+            if (Intent.ACTION_SCREEN_ON.equals(intent.getAction()) || updater.readyVersion() == null) {
+                updater.check(true);
+            } else {
                 android.util.Log.i("TvHome", "screen off: installing " + updater.readyVersion());
                 updater.install();
             }
@@ -601,8 +608,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // A downloaded build installs itself (autoUpdate): when the screen goes off, or over an idle Home.
         updater = new Updater(this, cfg.updateUrl, version -> scheduleAutoUpdate());
         IntentFilter screenOff = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        screenOff.addAction(Intent.ACTION_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(screenOffReceiver, screenOff, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(screenOffReceiver, screenOff);
+        updater.check(true);   // the launcher starting (after a reboot, say) looks at once
         postersOff.addAll(getSharedPreferences("shelf", MODE_PRIVATE).getStringSet("posters_off", Collections.emptySet()));
         shelfOpen.setOnClickListener(v -> openFeedItem());
         shelfOpen.setOnKeyListener((v, keyCode, event) -> {

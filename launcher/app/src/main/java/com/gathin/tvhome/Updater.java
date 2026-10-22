@@ -32,7 +32,7 @@ final class Updater {
     interface Listener { void onUpdateReady(String versionName); }
 
     private static final String TAG = "TvHome.Updater";
-    private static final long CHECK_MS = 6 * 60 * 60 * 1000L;
+    private static final long CHECK_MS = 60 * 60 * 1000L;
 
     private final Context ctx;
     private final String url;
@@ -57,12 +57,12 @@ final class Updater {
         return p.getString("ready_name", "");
     }
 
-    /** Looks for a newer build at most every six hours; tells the listener once one is downloaded. */
+    /** Looks for a newer build at most once an hour; tells the listener once one is downloaded. */
     void check() {
         check(false);
     }
 
-    /** now: opening the Settings menu asks at once (at most every few minutes), not on the six-hour clock. */
+    /** now: the launcher starting, the screen coming on or the Settings menu ask at once (at most every few minutes). */
     void check(boolean now) {
         if (!enabled() || busy) return;
         if (readyVersion() != null) {
