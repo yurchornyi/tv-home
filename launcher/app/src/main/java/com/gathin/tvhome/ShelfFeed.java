@@ -198,7 +198,7 @@ final class ShelfFeed {
                     try (FileOutputStream out = new FileOutputStream(f)) {
                         out.write(data);
                     }
-                    trimCache();
+                    trimCache(f);
                 }
                 BitmapFactory.Options o = new BitmapFactory.Options();
                 // A logo (PNG) keeps its transparency; a backdrop is a photo and can go without the alpha bytes.
@@ -356,12 +356,23 @@ final class ShelfFeed {
         return d;
     }
 
-    /** Keeps the newest 40 backdrops on disk (about 8 MB). */
-    private void trimCache() {
+    /**
+     * Keeps the newest 40 backdrops on disk (about 8 MB), and always the one just downloaded. A file dated in the
+     * future (the TV's clock was ahead when it was saved, then corrected) counts as the oldest: ranked as newest, it
+     * made every fresh download the one to go, deleted before it could be shown.
+     */
+    private void trimCache(File keep) {
         File[] files = cacheDir().listFiles();
         if (files == null || files.length <= 40) return;
-        java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        long now = System.currentTimeMillis() + 60_000;
+        java.util.Arrays.sort(files, (a, b) -> Long.compare(age(b, keep, now), age(a, keep, now)));
         for (int i = 40; i < files.length; i++) files[i].delete();
+    }
+
+    private static long age(File f, File keep, long now) {
+        if (f.equals(keep)) return Long.MAX_VALUE;
+        long t = f.lastModified();
+        return t > now ? 0 : t;
     }
 
     private SharedPreferences prefs() {
