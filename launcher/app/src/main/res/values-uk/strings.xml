@@ -168,4 +168,5 @@
     <string name="add_to_home_hint">Додайте програму з бібліотеки на головний екран.</string>
     <string name="reorder_settings_hint">Переставте програми на головному екрані в зручному порядку.</string>
     <string name="module_cards_hint">Картки, які модулі додають на головний екран.</string>
+    <string name="shelf_open_app">Відкрити</string>
 </resources>

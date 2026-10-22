@@ -2524,6 +2524,40 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** Opens a shelf item (also from Search and the Continue row) and remembers it. */
+    private static final String NETFLIX_PKG = "com.netflix.ninja";
+
+    /**
+     * The shelf button's word. Watch (or Continue) only where it opens that very title: a link of its own (SmartTube,
+     * Kick, a Continue entry), a search inside the app that lands on it (HDRezka), Netflix with the title's
+     * Netflix id. Elsewhere it can only open the app (Kyivstar and KIK take no title by name), and says Open.
+     */
+    private int shelfLabel(String pkg, ShelfFeed.Item item) {
+        boolean title = item.open != null || titleSearch(pkg, item.title) != null;
+        if (!title && NETFLIX_PKG.equals(pkg) && item.id > 0) {
+            String id = shelfFeed.knownNetflixId(item.type, item.id);
+            title = id != null && !id.isEmpty();
+        }
+        if (!title) return R.string.shelf_open_app;
+        return item == continueItem ? R.string.continue_row : R.string.watch_now;
+    }
+
+    /**
+     * A search for the title inside the app, when the app's own TV screen takes one: HDRezka opens its search and,
+     * with one match, the film. KIK's new screen takes no search (only its old HDRezka screen does, which looks
+     * like another app), so KIK just opens; null then.
+     */
+    private Intent titleSearch(String pkg, String title) {
+        if (!pkg.startsWith("rezkatv.web.app")) return null;
+        Intent tv = getPackageManager().getLeanbackLaunchIntentForPackage(pkg);
+        ComponentName home = tv != null ? tv.getComponent() : null;
+        if (home == null) return null;
+        Intent search = new Intent(Intent.ACTION_SEARCH).putExtra(android.app.SearchManager.QUERY, title).setPackage(pkg);
+        for (android.content.pm.ResolveInfo ri : getPackageManager().queryIntentActivities(search, 0)) {
+            if (ri.activityInfo != null && home.getClassName().equals(ri.activityInfo.name)) return search.setComponent(home);
+        }
+        return null;
+    }
+
     private void openItem(String pkg, ShelfFeed.Item item) {
         recents.item(pkg, item);
         if (item.open != null && item.open.startsWith("kick:")) {
@@ -2543,13 +2577,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
             return;
         }
-        if (pkg.startsWith("rezkatv.web.app")) {
-            // HDRezka and KIK (its newer build) open their search for the title; with one match it goes straight to
-            // the film. KIK takes Android's own search request; the older app its site's search link.
-            Intent search = new Intent(Intent.ACTION_SEARCH).putExtra(android.app.SearchManager.QUERY, item.title).setPackage(pkg);
-            if (search.resolveActivity(getPackageManager()) != null) open(search);
-            else open(new Intent(Intent.ACTION_VIEW, Uri.parse("https://hdrezka.ag/search/?do=search&subaction=search&q="
-                    + Uri.encode(item.title))).setPackage(pkg));
+        Intent search = titleSearch(pkg, item.title);
+        if (search != null) {
+            open(search);
             return;
         }
         launchApp(pkg);
@@ -3361,7 +3391,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 String tidy = ShelfText.clean(item.title);
                 shelfTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ShelfText.size(tidy));
                 shelfTitle.setText(tidy);
-                shelfOpen.setText(item == continueItem ? R.string.continue_row : R.string.watch_now);
+                shelfOpen.setText(shelfLabel(pkg, item));
+                // Netflix: whether the title can be opened is known once its Netflix id is looked up (once per title).
+                if (NETFLIX_PKG.equals(pkg) && item.id > 0 && item.open == null
+                        && shelfFeed.knownNetflixId(item.type, item.id) == null) {
+                    shelfFeed.netflixId(item.type, item.id, id -> {
+                        if (feedItems != null && !feedItems.isEmpty() && pkg.equals(feedPkg)
+                                && feedItems.get(feedIndex % feedItems.size()) == item) {
+                            shelfOpen.setText(shelfLabel(pkg, item));
+                        }
+                    });
+                }
                 shelfLive.setVisibility(item.live ? View.VISIBLE : View.GONE);
                 positionShelfTitle();
                 shelfLive.animate().cancel();

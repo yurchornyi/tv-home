@@ -294,6 +294,11 @@ final class ShelfFeed {
      * The Netflix title id of a TMDB film or series, through its Wikidata entry (Netflix ID, P1874): "" when it
      * has none there. Cached for good once known; the listener hears it on the main thread.
      */
+    /** The Netflix id already looked up for a TMDB title: "" when it has none, null when not looked up yet. */
+    String knownNetflixId(String type, long id) {
+        return prefs().getString("nf_" + type + "_" + id, null);
+    }
+
     void netflixId(String type, long id, IdListener listener) {
         String key = "nf_" + type + "_" + id;
         String known = prefs().getString(key, null);

@@ -176,4 +176,5 @@
     <string name="add_to_home_hint">Put an app from the library on Home.</string>
     <string name="reorder_settings_hint">Move the apps on Home into the order you like.</string>
     <string name="module_cards_hint">Cards that modules add to Home.</string>
+    <string name="shelf_open_app">Open</string>
 </resources>
