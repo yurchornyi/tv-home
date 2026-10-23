@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -49,6 +50,10 @@ final class Updater {
     private static final java.util.concurrent.atomic.AtomicBoolean BUSY = new java.util.concurrent.atomic.AtomicBoolean();
     /** Told on the main thread when a check finds nothing newer (Launcher settings shows "Up to date"). */
     private volatile Runnable upToDate;
+    /** When a check last failed (no network, say): the routine hourly look waits a while instead of trying on every
+     *  return to Home; a look asked for at once (the screen coming on, the Settings menu) still goes ahead. */
+    private static volatile long failedAt;
+    private static final long RETRY_MS = 5 * 60 * 1000L;
 
     void onUpToDate(Runnable r) {
         upToDate = r;
@@ -89,6 +94,7 @@ final class Updater {
             if (now && r != null) main.post(r);   // looked a moment ago and found nothing
             return;
         }
+        if (!now && SystemClock.elapsedRealtime() - failedAt < RETRY_MS) return;
         if (!BUSY.compareAndSet(false, true)) return;
         new Thread(this::fetch, "updater").start();
     }
@@ -97,6 +103,7 @@ final class Updater {
     void checkBlocking() {
         if (!enabled() || readyVersion() != null) return;
         if (System.currentTimeMillis() - prefs().getLong("checked_at", 0) < CHECK_MS) return;
+        if (SystemClock.elapsedRealtime() - failedAt < RETRY_MS) return;
         if (BUSY.compareAndSet(false, true)) fetch();
     }
 
@@ -121,6 +128,7 @@ final class Updater {
             main.post(() -> listener.onUpdateReady(name));
         } catch (Exception e) {
             Log.w(TAG, "update check failed: " + e);
+            failedAt = SystemClock.elapsedRealtime();
         } finally {
             BUSY.set(false);
         }
