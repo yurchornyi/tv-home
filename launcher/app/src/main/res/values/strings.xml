@@ -114,6 +114,8 @@
     <string name="search_film">Film · %s</string>
     <string name="search_series">Series · %s</string>
     <string name="search_video">Video · %s</string>
+    <string name="search_in_kik">Search in KIK</string>
+    <string name="search_in_kik_tile">«%s» in KIK</string>
     <!-- The top shelf's row of what was opened last (Recents). -->
     <string name="ai_thinking">Thinking</string>
     <string name="ai_picking">Picking for you</string>

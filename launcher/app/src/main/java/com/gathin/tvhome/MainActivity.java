@@ -1103,7 +1103,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (pendingSearch != null) {
             String q = pendingSearch;
             pendingSearch = null;
-            handler.post(() -> { if (hasWindowFocus() && !isFinishing()) openSearch(q); });
+            handler.post(() -> {
+                if (!hasWindowFocus() || isFinishing()) return;
+                openSearch(q);
+                if (!q.isEmpty() && SearchIndex.filter(searchAll, q).isEmpty()) openInKik(q);
+            });
         }
         nowPlaying.start();
         nowPlaying.stopPaused();   // a film or song left paused must not wake on the headphones' Play
@@ -2532,6 +2536,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Opens a shelf item (also from Search and the Continue row) and remembers it. */
     private static final String NETFLIX_PKG = "com.netflix.ninja";
+    private static final String KIK_PKG = "rezkatv.web.app.uk";
+
+    /**
+     * A film or series by the name said or typed, in KIK: it opens the title when its catalogue has a sure match,
+     * else its search with the name typed in. False without KIK (or an older one that cannot).
+     */
+    private boolean openInKik(String name) {
+        name = name == null ? "" : name.trim();
+        if (name.length() < 2) return false;
+        Intent kik = new Intent("kik.intent.action.OPEN_TITLE").setPackage(KIK_PKG).putExtra(android.app.SearchManager.QUERY, name);
+        if (kik.resolveActivity(getPackageManager()) == null) return false;
+        android.util.Log.i("TvHome", "kik: " + name);
+        closeSearch(false);
+        open(kik);
+        return true;
+    }
+
+    /** What was heard: the app, channel or shelf title it names, else straight to KIK when nothing here matches. */
+    private boolean openHeard(String words) {
+        boolean known = searchAll != null && !SearchIndex.filter(searchAll, words).isEmpty();
+        if (!known && openInKik(words)) return true;
+        return focusSearchResult();
+    }
 
     /**
      * The shelf button's word. Watch (or Continue) only where it opens that very title: a link of its own (SmartTube,
@@ -2751,6 +2778,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
                 n++;
             }
+        }
+        String name = query.trim();
+        if (name.length() >= 2 && installed(KIK_PKG)) {
+            // Any film or series, not only the ones on the shelves: KIK finds the name in its own catalogue.
+            Drawable banner = null, art;
+            try { banner = getPackageManager().getApplicationBanner(KIK_PKG); } catch (Exception ignored) { }
+            try { art = banner != null ? banner : getPackageManager().getApplicationIcon(KIK_PKG); } catch (Exception gone) { art = null; }
+            SearchIndex.Result r = new SearchIndex.Result(name, getString(R.string.search_in_kik), art, null, banner != null, 4,
+                    () -> openInKik(name));
+            if (shelfChannels.getChildCount() > 0 && !shelfChannels.getChildAt(0).isFocusable()) shelfChannels.removeAllViews();
+            View tile = searchTile(r);
+            if (art != null) {
+                // The banner says KIK; the name said or typed goes along its bottom.
+                TextView label = (TextView) ((android.widget.FrameLayout) tile).getChildAt(1);
+                label.setText(getString(R.string.search_in_kik_tile, name));
+                label.setVisibility(View.VISIBLE);
+                label.setGravity(Gravity.BOTTOM | Gravity.START);
+                label.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+                label.setPadding((int) (10 * density), 0, (int) (10 * density), (int) (7 * density));
+                label.setBackground(new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x00000000, 0xC0000000}));
+            }
+            shelfChannels.addView(tile);
         }
         channelsPkg = "\u0000search";
         shelfChannelsScroll.setVisibility(View.VISIBLE);
@@ -3052,7 +3102,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     android.util.Log.i("TvHome", "heard: " + words);
                     if (ai.enabled()) {
                         runAiCommand(words);   // what was meant, not only the names that match
-                    } else if (!focusSearchResult()) {
+                    } else if (!openHeard(words)) {
                         // Nothing matched what was heard: the keyboard, to put it right.
                         if (imm != null) imm.showSoftInput(searchField, 0);
                     }
@@ -3117,7 +3167,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (gen != aiGen || !searching) return;
             showSearchNote(null);
             if (a == null || !doAiAction(a)) {
-                if (!focusSearchResult()) {
+                if (!(a == null ? openHeard(words) : focusSearchResult())) {
                     android.view.inputmethod.InputMethodManager imm = getSystemService(android.view.inputmethod.InputMethodManager.class);
                     if (imm != null) imm.showSoftInput(searchField, 0);
                 }
@@ -3141,15 +3191,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return false;
             case "open_title": {
                 List<ShelfFeed.Item> items = shelfTitles(installedLabels()).get(app);
-                if (items == null) return false;
-                for (ShelfFeed.Item item : items) {
-                    if (item.title.equals(a.optString("title"))) {
-                        closeSearch(false);
-                        openItem(app, item);
-                        return true;
+                if (items != null) {
+                    for (ShelfFeed.Item item : items) {
+                        if (item.title.equals(a.optString("title"))) {
+                            closeSearch(false);
+                            openItem(app, item);
+                            return true;
+                        }
                     }
                 }
-                return false;
+                return KIK_PKG.equals(app) && openInKik(a.optString("title"));
             }
             case "youtube_search": {
                 String pkg = installed(app) ? app : installed("org.smarttube.stable") ? "org.smarttube.stable"
@@ -3180,7 +3231,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (query.isEmpty()) return false;
                 searchField.setText(query);
                 searchField.setSelection(query.length());
-                return focusSearchResult();
+                return openHeard(query);
             case "none":
                 showSearchNote(a.optString("say"));
                 return false;

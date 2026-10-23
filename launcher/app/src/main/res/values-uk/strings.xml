@@ -108,6 +108,8 @@
     <string name="search_film">Фільм · %s</string>
     <string name="search_series">Серіал · %s</string>
     <string name="search_video">Відео · %s</string>
+    <string name="search_in_kik">Пошук у KIK</string>
+    <string name="search_in_kik_tile">«%s» у KIK</string>
     <string name="ai_thinking">Думаю</string>
     <string name="ai_picking">Підбираю</string>
     <string name="ai_no_picks">Нічого не знайшлося, скажіть інакше</string>
