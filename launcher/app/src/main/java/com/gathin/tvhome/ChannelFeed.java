@@ -27,7 +27,7 @@ final class ChannelFeed {
     private static final long MAX_AGE_MS = 60 * 1000L;
     /** Its history channel has no "history" in its id: it is the one made last (see read). */
     private static final String SMARTTUBE = "org.smarttube.stable";
-    private static final String KIK = "rezkatv.web.app.uk";
+    private static final String KIK = "kik.app";
     /** internal_provider_id prefix of a channel made for this shelf (see read). */
     private static final String MARK = "tvhome:";
 

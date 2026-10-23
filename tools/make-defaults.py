@@ -21,8 +21,8 @@ out = {
     "prefs": {name: {k: v for k, v in values.items() if not k.startswith(("use_", "chosen_", "hidden_"))}
               for name, values in prefs.items()},
 }
-# KIK (the owner's film app) is third in a new TV's dock, in place of the older HDRezka build.
-KIK, KIK_ACTIVITY, OLD = "rezkatv.web.app.uk", "rezkatv.web.app.uk/kik.i18n.HomeActivity", "rezkatv.web.app"
+# KIK (the owner's film app, package kik.app) is third in a new TV's dock; entries of its earlier packages are dropped.
+KIK, KIK_ACTIVITY, OLD = "kik.app", "kik.app/kik.i18n.HomeActivity", ("rezkatv.web.app.uk", "rezkatv.web.app")
 # The order file's "dock" line must equal config.xml's dock_apps exactly, or the launcher ignores the saved order.
 import re
 config = open(os.path.join(root, "launcher", "app", "src", "main", "res", "values", "config.xml"), encoding="utf-8").read()
@@ -34,7 +34,7 @@ if order:
     for i, line in enumerate(lines):
         if line.startswith("dock "):
             lines[i] = "dock " + ",".join(DOCK_APPS)
-    comps = [l for l in lines if "/" in l and not l.startswith(KIK + "/") and not l.startswith(OLD + "/")]
+    comps = [l for l in lines if "/" in l and not l.startswith(KIK + "/") and not l.startswith(tuple(o + "/" for o in OLD))]
     head = [l for l in lines if "/" not in l and l]
     comps.insert(min(2, len(comps)), KIK_ACTIVITY)
     out["files"]["order.txt"] = "\n".join(head + comps) + "\n"

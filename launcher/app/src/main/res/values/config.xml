@@ -12,9 +12,8 @@
         <item>org.smarttube.stable</item>
         <item>com.kyivstar.tv.tvapp</item>
         <!-- KIK, the owner's own film app, third; Home offers to install it where it is missing (kik_update_url) -->
-        <item>rezkatv.web.app.uk</item>
+        <item>kik.app</item>
         <item>com.netflix.ninja</item>
-        <item>rezkatv.web.app</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
          the first grid apps, so the dock never shows a gap. false leaves them empty (#162); a theme can
@@ -78,9 +77,8 @@
          trending. A theme can set "shelf_feed_apps". -->
     <string-array name="shelf_feed_apps">
         <item>com.netflix.ninja</item>
-        <item>rezkatv.web.app</item>
-        <!-- KIK, the owner's film app (the newer HDRezka build) -->
-        <item>rezkatv.web.app.uk</item>
+        <!-- KIK, the owner's film app -->
+        <item>kik.app</item>
         <item>com.kyivstar.tv.tvapp</item>
     </string-array>
 
@@ -91,7 +89,7 @@
         <item>org.smarttube.stable</item>
         <!-- KIK: only its channels marked tvhome: (ChannelFeed), for the profile that played last; TMDB posters
              (shelf_feed_apps) while it publishes none -->
-        <item>rezkatv.web.app.uk</item>
+        <item>kik.app</item>
     </string-array>
 
     <!-- Light app banners (a white Netflix or HDRezka card) get a dark background, keeping their coloured logo, so

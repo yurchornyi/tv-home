@@ -1,5 +1,5 @@
 {
-  "dock_apps": ["org.smarttube.stable", "com.kyivstar.tv.androidtv", "com.netflix.ninja", "rezkatv.web.app"],
+  "dock_apps": ["org.smarttube.stable", "com.kyivstar.tv.androidtv", "com.netflix.ninja", "kik.app"],
   "hidden_apps": ["com.mediatek.wwtv.tvcenter", "com.mitv.gallery", "com.tcl.tv", "com.tcl.tv.tclhome_passive"],
   "live_tv_package": "com.tcl.tv"
 }

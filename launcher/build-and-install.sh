@@ -75,7 +75,7 @@ case "$OUT" in
 esac
 # KIK, the owner's film app, is part of every new TV (third in the dock): install it from its latest GitHub release
 # when the TV does not have it yet, checking the release's SHA-256. A failure here only warns.
-KIK_PKG=rezkatv.web.app.uk
+KIK_PKG=kik.app
 KIK_URL=$(sed -n 's:.*<string name="kik_update_url"[^>]*>\(.*\)</string>.*:\1:p' app/src/main/res/values/config.xml)
 if [ -n "$KIK_URL" ] && ! "$PY" -I ../tools/tv.py "pm path $KIK_PKG" 2>/dev/null | grep -q package:; then
   KIK_DIR=$(mktemp -d)
@@ -86,7 +86,7 @@ if [ -n "$KIK_URL" ] && ! "$PY" -I ../tools/tv.py "pm path $KIK_PKG" 2>/dev/null
      && { [ -z "$KIK_SHA" ] || [ "$(shasum -a 256 "$KIK_DIR/kik.apk" | cut -d' ' -f1)" = "$KIK_SHA" ]; }; then
     "$PY" -I ../tools/b64push.py "$KIK_DIR/kik.apk" /data/local/tmp/kik.apk
     # KIK updates itself too: it is made its own installer of record, as the launcher is below.
-    "$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/kik.apk && pm install -r -i rezkatv.web.app.uk /data/local/tmp/kik.apk; rm -f /data/local/tmp/kik.apk' || true
+    "$PY" -I ../tools/tv.py 'pm install -r /data/local/tmp/kik.apk && pm install -r -i kik.app /data/local/tmp/kik.apk; rm -f /data/local/tmp/kik.apk' || true
   else
     echo "WARNING: KIK could not be downloaded; the launcher will offer to install it." >&2
   fi
