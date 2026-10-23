@@ -10,7 +10,8 @@ so TV Home ignores them.
 
 ## What KIK should publish
 
-Three channels, all for the **profile chosen last** on this TV:
+Three channels, all for the **profile that last played a video** on this TV. Not the one chosen last: if Катя
+opens her profile and only looks around, the shelf stays on Юра's lists until Катя starts something.
 
 | `internal_provider_id` | Display name | Programs |
 |---|---|---|
@@ -32,11 +33,11 @@ For each program:
 
 ## When to republish
 
-- When a profile is chosen. Replace the programs of all three channels with that profile's lists, and remember
-  which profile was last (in SharedPreferences).
+- When playback starts in a profile other than the remembered one: remember it (SharedPreferences) and replace
+  the programs of all three channels with that profile's lists. Choosing a profile alone changes nothing.
 - When playback stops (Continue changes).
 - Periodically in the background, e.g. a WorkManager job every few hours. It refreshes For you and New episodes
-  for the remembered profile.
+  for the remembered profile (the one that played last).
 
 Replace a channel's programs by deleting its old ones and inserting the new ones. Keep the channel ids stable:
 update channels, don't recreate them. TV Home rereads at most once a minute.

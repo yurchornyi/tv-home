@@ -80,7 +80,7 @@ final class ChannelFeed {
             // The app's channels, in the order it made them. SmartTube publishes Subscriptions, Recommendations and
             // History; the one made last is history, which is not something to watch next.
             // An app can mark the channels meant for this shelf with an internal_provider_id starting "tvhome:"
-            // (KIK: tvhome:continue, tvhome:for_you, tvhome:new_episodes, for the profile chosen last). When it has
+            // (KIK: tvhome:continue, tvhome:for_you, tvhome:new_episodes, for the profile that played last). When it has
             // any, only those are read, in the order made. KIK's other channels are RezkaTV's generic catalogue rows,
             // so KIK shows only marked ones; with none the shelf falls back to TMDB posters.
             List<Long> marked = new ArrayList<>();
