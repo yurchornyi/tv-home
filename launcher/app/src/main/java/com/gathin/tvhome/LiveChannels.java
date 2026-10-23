@@ -164,23 +164,30 @@ final class LiveChannels {
     private static final int ROW_MAX = 12;
 
     /**
-     * What the shelf shows. Automatic: it both arranges and adds: the chosen channels together with every other
-     * channel opened from Home (the shelf, Search, a voice command), the most opened first, up to twelve; the ones
-     * taken off the shelf stay off. Not automatic: the chosen ones in the order they were chosen, nothing else.
-     * Empty until a choice or an opening.
+     * What the shelf shows. Automatic: it both arranges and adds. The chosen channels are always there, the most
+     * opened first (equal counts keep the order chosen); after them, in the places left up to twelve, every other
+     * channel opened from Home (the shelf, Search, a voice command), the most opened first; the ones taken off the
+     * shelf stay off. Only openings from Home count: what is switched inside the app itself is not seen from here.
+     * Not automatic: the chosen ones in the order they were chosen, nothing else. Empty until a choice or an opening.
      */
     List<Channel> row(String pkg) {
         List<Channel> chosen = chosen(pkg);
         if (!automatic(pkg)) return chosen;
         Map<String, Integer> use = uses(pkg);
-        Set<String> hidden = hiddenIds(pkg);
+        java.util.Comparator<Channel> byUse = (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0));
         List<Channel> out = new ArrayList<>(chosen);
+        Collections.sort(out, byUse);   // stable: equal counts keep the chosen order
+        Set<String> hidden = hiddenIds(pkg);
+        List<Channel> opened = new ArrayList<>();
         for (Channel c : all(pkg)) {
-            if (use.getOrDefault(c.id, 0) >= 1 && !hidden.contains(c.id) && !out.contains(c)) out.add(c);
+            if (use.getOrDefault(c.id, 0) >= 1 && !hidden.contains(c.id) && !out.contains(c)) opened.add(c);
         }
-        // Stable: equal counts keep the chosen order first, then the list's.
-        Collections.sort(out, (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0)));
-        return out.size() > ROW_MAX ? new ArrayList<>(out.subList(0, ROW_MAX)) : out;
+        Collections.sort(opened, byUse);   // stable: equal counts keep the list's order
+        for (Channel c : opened) {
+            if (out.size() >= ROW_MAX) break;
+            out.add(c);
+        }
+        return out;
     }
 
     private Map<String, Integer> uses(String pkg) {

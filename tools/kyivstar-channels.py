@@ -3,7 +3,7 @@
 
 Where the data comes from, all public, no login:
 - Kyivstar TV's own sitemap lists every live channel page as <id>-<slug>; the id is what the app's deep link
-  com.kyivstar.tv.tvapp://live?liveId=<id> opens, the Ukrainian and English slugs give a name.
+  com.kyivstar.tv.tvapp://live<id>?liveId=<id> opens, the Ukrainian and English slugs give a name.
 - iptv-org's open channel database gives proper names and logos for Ukrainian channels; matched by name.
 Kyivstar's own "KS TV ..." channels are not in that database and keep a name made from the English slug.
 
@@ -109,7 +109,9 @@ def main():
             name, logo = alias(en_slug) or cyrillic(hit), logos.get(hit["id"])
         else:
             name, logo = (None if own else alias(en_slug)) or pretty(base) + (" · Київстар" if own else ""), None
-        out.append({"id": cid, "name": name, "logo": logo, "open": "com.kyivstar.tv.tvapp://live?liveId=" + cid,
+        # Kyivstar TV 1.30 takes the id right after "live" (what follows "://live" up to "?" is the asset id); the
+        # liveId query is what older builds read. One link serves both.
+        out.append({"id": cid, "name": name, "logo": logo, "open": "com.kyivstar.tv.tvapp://live" + cid + "?liveId=" + cid,
                     "own": own})
     # Real broadcasters first, alphabetically; Kyivstar's own themed channels after them.
     out.sort(key=lambda c: (c["own"], c["name"].lower()))
