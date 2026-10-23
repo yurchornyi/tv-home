@@ -49,6 +49,23 @@ final class DarkBanner {
         return new BitmapDrawable(res, bmp);
     }
 
+    /**
+     * The banner as a picture of its own, at most 640 px wide, drawn the way of() draws one before darkening: what a
+     * calm banner is kept as in the tile cache, so the app's resources need not be opened for it next time. The
+     * banner itself when it has no size to draw at.
+     */
+    static Drawable raster(Resources res, Drawable banner) {
+        int w = banner.getIntrinsicWidth(), h = banner.getIntrinsicHeight();
+        if (w <= 0 || h <= 0) return banner;
+        float scale = Math.min(1f, 640f / w);
+        int bw = Math.max(1, Math.round(w * scale)), bh = Math.max(1, Math.round(h * scale));
+        Drawable copy = banner.getConstantState() != null ? banner.getConstantState().newDrawable(res).mutate() : banner;
+        Bitmap bmp = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888);
+        copy.setBounds(0, 0, bw, bh);
+        copy.draw(new Canvas(bmp));
+        return new BitmapDrawable(res, bmp);
+    }
+
     /** The banner's edge is mostly light (its background is white or pale grey). */
     static boolean lightBorder(int[] px, int w, int h) {
         int edge = Math.max(1, Math.min(w, h) / 16);

@@ -190,10 +190,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final List<String> tileColorsKept;
     private final List<String> iconTiles;
     private final java.util.Map<String, int[]> tileDeepColors = new HashMap<>();
-    /** Darkened banners by app version, so reload() (every install, every reorder) does not redo the pixel work. */
-    private final Map<String, Drawable.ConstantState> darkBanners = new HashMap<>();
-    /** Banners DarkBanner left as they are (their colours are calm already). */
-    private final Set<String> calmBanners = new HashSet<>();
+    /**
+     * Tile banners by app version (darkened, or the app's own rasterized), so reload() (every install, every reorder)
+     * does not redo the pixel work. Filled from several threads at once (see reload), hence synchronized.
+     */
+    private final Map<String, Drawable.ConstantState> tileBanners = Collections.synchronizedMap(new HashMap<>());
     /** Grid apps fill the dock slots dock_apps leaves free (config.xml, fill_dock). */
     private final boolean fillDock;
     /** Dock apps found at the last reload, and the empty slots after them. */
@@ -281,6 +282,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         Set<String> seen = new HashSet<>();
         Map<String, Memo> nextMemo = new HashMap<>();
         String locale = java.util.Locale.getDefault().toLanguageTag();
+        // What a tile shows is read from the app once per build of it (its APK path changes with every update) and
+        // kept: a rebuild after another app's update reads only that app, not every label and banner again. The labels
+        // are kept on disk too (TileCache), so a cold start opens no app's resources for its name; the banners come
+        // from the disk cache the same way. The apps still to be read are read together on a few threads: a cold
+        // start on a slow TV CPU spent a second reading them one after another on the main thread.
+        Map<String, String> savedLabels = labels == null ? (labels = TileCache.readLabels(ctx)) : labels;
+        List<Runnable> toLoad = new ArrayList<>();
+        List<Object[]> rows = new ArrayList<>();   // (ResolveInfo, Memo, Card) in order, once the loads are done
+        boolean labelsChanged = false;
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
@@ -289,25 +299,54 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
             Cards.Card card = cardByPkg.get(pkg);
             if (card != null && !card.component.equals(component)) continue;   // the card stands in for this tile
-            // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
-            // redraw the tile name as something else (#117).
-            // What a tile shows is read from the app once per build of it (its APK path changes with every update)
-            // and kept: a rebuild after another app's update reads only that app, not every label and banner again.
             String memoKey = component.flattenToShortString() + '@' + ri.activityInfo.applicationInfo.sourceDir + '#' + locale;
             Memo m = memo.get(memoKey);
             if (m == null) {
                 m = new Memo();
-                m.label = String.valueOf(ri.loadLabel(pm));
+                m.label = savedLabels.get(memoKey);
+                if (m.label == null) labelsChanged = true;
             }
             nextMemo.put(memoKey, m);
+            rows.add(new Object[]{ri, m, card});
+            if (!m.loaded) {
+                final Memo load = m;
+                toLoad.add(() -> {
+                    if (load.label == null) {
+                        try {
+                            load.label = String.valueOf(ri.loadLabel(pm));
+                        } catch (RuntimeException unreadable) {   // an app with broken resources: its package name, then
+                            load.label = pkg;
+                        }
+                    }
+                    try {
+                        load.banner = loadBanner(pm, ri);
+                        // The icon shows only on a tile without a banner: loading it for every app made each rebuild slower.
+                        load.icon = load.banner == null ? ri.loadIcon(pm) : null;
+                    } catch (RuntimeException unreadable) {
+                        load.banner = null;
+                        load.icon = null;
+                    }
+                    load.loaded = true;
+                });
+            }
+        }
+        loadTogether(toLoad);
+        if (labelsChanged || savedLabels.size() != nextMemo.size()) {
+            Map<String, String> fresh2 = new HashMap<>();
+            for (Map.Entry<String, Memo> e : nextMemo.entrySet()) fresh2.put(e.getKey(), e.getValue().label);
+            labels = fresh2;
+            TileCache.writeLabels(ctx, fresh2);
+        }
+        for (Object[] row : rows) {
+            ResolveInfo ri = (ResolveInfo) row[0];
+            Memo m = (Memo) row[1];
+            Cards.Card card = (Cards.Card) row[2];
+            String pkg = ri.activityInfo.packageName;
+            ComponentName component = new ComponentName(pkg, ri.activityInfo.name);
+            // Same cleaner as the card prompt: an app label with a bidi override or line separator must not
+            // redraw the tile name as something else (#117).
             String label = card != null ? card.label : Cards.cleanLabel(m.label, pkg);
             if (!seen.add(pkg + '\n' + label)) continue;
-            if (!m.loaded) {
-                m.banner = loadBanner(pm, ri);
-                // The icon shows only on a tile without a banner: loading it for every app made each rebuild slower.
-                m.icon = m.banner == null ? ri.loadIcon(pm) : null;
-                m.loaded = true;
-            }
             Drawable banner = copy(m.banner);
             Drawable icon = copy(m.icon);
             if (card != null) {
@@ -366,6 +405,32 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     private final Map<String, Memo> memo = new HashMap<>();
+    /** The labels kept on disk (TileCache), by memo key; read on the first reload. */
+    private Map<String, String> labels;
+
+    /**
+     * Runs the reads of the apps still to be read on a few threads and waits for them all: each opens the app's
+     * resources or decodes a cached banner, which take their time on a TV's CPU but not its one main thread.
+     */
+    private static void loadTogether(List<Runnable> tasks) {
+        if (tasks.isEmpty()) return;
+        if (tasks.size() == 1) {
+            tasks.get(0).run();
+            return;
+        }
+        int threads = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors()));
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        List<java.util.concurrent.Future<?>> waits = new ArrayList<>();
+        for (Runnable t : tasks) waits.add(pool.submit(t));
+        for (int i = 0; i < waits.size(); i++) {
+            try {
+                waits.get(i).get();
+            } catch (Exception e) {   // the task caught its own; an interrupt or a surprise runs it here instead
+                tasks.get(i).run();
+            }
+        }
+        pool.shutdown();
+    }
 
     /** A drawable of its own for each tile view: one instance shared by two views loses its bounds and callbacks. */
     private Drawable copy(Drawable d) {
@@ -379,16 +444,17 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (iconTiles.contains(ri.activityInfo.packageName)) return null;
         int id = ri.activityInfo.banner;
         if (id == 0) id = ri.activityInfo.applicationInfo.banner;
-        // A darkened banner made on an earlier start comes from the disk as it is: no decoding the app's artwork and
-        // no pass over its pixels, which on a TV just switched on took seconds for a home screen of apps.
+        // A banner made on an earlier start (darkened, or the app's own as a picture) comes from the disk as it is: no
+        // opening the app's resources, no decoding its artwork and no pass over its pixels, which on a TV just
+        // switched on took seconds for a home screen of apps.
         String cacheKey = darkTiles && !tileColorsKept.contains(ri.activityInfo.packageName) ? bannerKey(pm, ri, id) : null;
         if (cacheKey != null) {
-            Drawable.ConstantState known = darkBanners.get(cacheKey);
+            Drawable.ConstantState known = tileBanners.get(cacheKey);
             if (known != null) return known.newDrawable(ctx.getResources());
             Bitmap saved = TileCache.read(ctx, cacheKey);
             if (saved != null) {
                 Drawable d = new android.graphics.drawable.BitmapDrawable(ctx.getResources(), saved);
-                darkBanners.put(cacheKey, d.getConstantState());
+                tileBanners.put(cacheKey, d.getConstantState());
                 return d;
             }
         }
@@ -407,21 +473,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (banner == null || !isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight())) return null;
         String pkg = ri.activityInfo.packageName;
         if (cacheKey == null) return banner;
-        String key = cacheKey;
-        if (calmBanners.contains(key) || TileCache.isCalm(ctx, key)) {
-            calmBanners.add(key);
-            return banner;
-        }
         int[] deep = tileDeepColors.get(pkg);
         Drawable dark = DarkBanner.of(ctx.getResources(), banner, deep != null ? deep : new int[0]);
-        if (dark == banner) {
-            calmBanners.add(key);
-            TileCache.markCalm(ctx, key);
-        } else if (dark.getConstantState() != null) {
-            darkBanners.put(key, dark.getConstantState());
-            if (dark instanceof android.graphics.drawable.BitmapDrawable) {
-                TileCache.write(ctx, key, ((android.graphics.drawable.BitmapDrawable) dark).getBitmap());
-            }
+        // A banner whose colours are calm already is kept as it is, as a picture of its own: next time it comes from
+        // the disk like a darkened one, with no need to open the app's resources again.
+        if (dark == banner) dark = DarkBanner.raster(ctx.getResources(), banner);
+        if (dark == banner || dark.getConstantState() == null) return banner;   // a banner with no size of its own
+        tileBanners.put(cacheKey, dark.getConstantState());
+        if (dark instanceof android.graphics.drawable.BitmapDrawable) {
+            TileCache.write(ctx, cacheKey, ((android.graphics.drawable.BitmapDrawable) dark).getBitmap());
         }
         return dark;
     }
@@ -683,6 +743,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 Bitmap soft = Bitmap.createBitmap(128, 80, Bitmap.Config.ARGB_8888);
                 new Canvas(soft).drawBitmap(tiny, null, new Rect(0, 0, 128, 80), paint);
                 tiny.recycle();
+                // Painted over in full on black: opaque, which lets the shelf skip what lies under it (MainActivity).
+                soft.setHasAlpha(false);
                 BitmapDrawable art = new BitmapDrawable(ctx.getResources(), soft);
                 art.setFilterBitmap(true);
                 e.shelfArt = art;

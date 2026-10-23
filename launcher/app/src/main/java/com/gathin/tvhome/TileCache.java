@@ -13,8 +13,9 @@ import java.util.concurrent.Executors;
 /**
  * Darkened tile banners (DarkBanner) kept on disk between starts, so Home builds its tiles from finished pictures
  * instead of decoding and repainting every app's artwork, which right after the TV is switched on took seconds.
- * A "calm" marker records a banner that needs no darkening. Written in the background; the folder is emptied when
- * it grows past a few hundred files (apps come and go, each update gets a new key).
+ * A banner that needs no darkening is kept as a picture all the same, so no app's resources are opened for a tile that
+ * was built before. The tile labels are kept alongside (labels.json). Written in the background; the banners are
+ * emptied when they grow past a few hundred files (apps come and go, each update gets a new key).
  */
 final class TileCache {
 
@@ -49,17 +50,47 @@ final class TileCache {
         }
     }
 
-    static boolean isCalm(Context ctx, String key) {
-        return new File(dir(ctx), name(key) + ".calm").isFile();
+    /** The tile labels by the adapter's memo key, as last written; empty when there is no file or it is unreadable. */
+    static java.util.Map<String, String> readLabels(Context ctx) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        File f = new File(dir(ctx), "labels.json");
+        if (!f.isFile() || f.length() > 256 * 1024) return out;
+        try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+            byte[] buf = new byte[(int) f.length()];
+            int n = 0, r;
+            while (n < buf.length && (r = in.read(buf, n, buf.length - n)) > 0) n += r;
+            org.json.JSONObject o = new org.json.JSONObject(new String(buf, 0, n, java.nio.charset.StandardCharsets.UTF_8));
+            for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
+                String k = it.next();
+                out.put(k, o.getString(k));
+            }
+        } catch (Exception e) {
+            out.clear();
+        }
+        return out;
     }
 
-    static void markCalm(Context ctx, String key) {
-        File f = new File(dir(ctx), name(key) + ".calm");
-        writer.execute(() -> {
-            try {
-                f.createNewFile();
-            } catch (Exception ignored) {
+    /** Keeps these labels for the next start (readLabels); written in the background, whole or not at all. */
+    static void writeLabels(Context ctx, java.util.Map<String, String> labels) {
+        File f = new File(dir(ctx), "labels.json");
+        org.json.JSONObject o = new org.json.JSONObject();
+        try {
+            for (java.util.Map.Entry<String, String> e : labels.entrySet()) {
+                if (e.getValue() != null) o.put(e.getKey(), e.getValue());
             }
+        } catch (org.json.JSONException impossible) {
+            return;
+        }
+        byte[] bytes = o.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        writer.execute(() -> {
+            File tmp = new File(f.getPath() + ".tmp");
+            try (FileOutputStream out = new FileOutputStream(tmp)) {
+                out.write(bytes);
+            } catch (Exception e) {
+                tmp.delete();
+                return;
+            }
+            if (!tmp.renameTo(f)) tmp.delete();
         });
     }
 
@@ -69,7 +100,7 @@ final class TileCache {
         writer.execute(() -> {
             String[] all = d.list();
             if (all != null && all.length > 300) {
-                for (String n : all) new File(d, n).delete();
+                for (String n : all) if (n.endsWith(".png")) new File(d, n).delete();
             }
             File tmp = new File(f.getPath() + ".tmp");
             try (FileOutputStream out = new FileOutputStream(tmp)) {
