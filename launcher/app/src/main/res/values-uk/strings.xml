@@ -166,7 +166,7 @@
     <string name="sleep_warning_hint">Дивитеся далі? Продовжте таймер.</string>
     <string name="sleep_extend">+%d хв</string>
     <string name="sleep_extend_hours">+%d год</string>
-    <string name="made_by">Зроблено Чорним</string>
+    <string name="made_by">Створено Чорним</string>
     <string name="add_to_home_hint">Додайте програму з бібліотеки на головний екран.</string>
     <string name="reorder_settings_hint">Переставте програми на головному екрані в зручному порядку.</string>
     <string name="module_cards_hint">Картки, які модулі додають на головний екран.</string>
