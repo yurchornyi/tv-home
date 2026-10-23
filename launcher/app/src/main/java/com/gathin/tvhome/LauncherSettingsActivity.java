@@ -110,7 +110,7 @@ public final class LauncherSettingsActivity extends Activity {
     private final List<Row> rows = new ArrayList<>();
     private SharedPreferences choices;
     private int columns;
-    private boolean animations, advancedEffects, reducedMotion, moduleCards;
+    private boolean animations, advancedEffects, reducedMotion, moduleCards, showInputs;
     /** A setting changed: Home rebuilds when this screen closes. */
     private boolean changed;
     private Typeface medium, regular, light;
@@ -135,6 +135,7 @@ public final class LauncherSettingsActivity extends Activity {
         advancedEffects = config.animations && config.advancedEffects;
         reducedMotion = config.reducedMotion;
         moduleCards = config.moduleCards;
+        showInputs = config.showInputs;
         updater = new Updater(this, config.updateUrl, version -> {
             updateState = getString(R.string.update_to, version);
             refresh();
@@ -230,9 +231,14 @@ public final class LauncherSettingsActivity extends Activity {
         split.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.42f));
 
         // Right: the rows, in groups.
-        ScrollView scroll = new ScrollView(this);
+        // The fading edge stays on for its length only: ScrollView keeps the focused row that far from the top and
+        // bottom, as on Apple TV. The fade itself is not drawn: Realtek's GPU (TCL UnionTV) drew it as a black band
+        // across the rows, and over the white focused row it greyed the text out.
+        ScrollView scroll = new ScrollView(this) {
+            @Override protected float getTopFadingEdgeStrength() { return 0f; }
+            @Override protected float getBottomFadingEdgeStrength() { return 0f; }
+        };
         scroll.setVerticalScrollBarEnabled(false);
-        // A faded margin at the top and bottom: the focused row stops short of the screen edge, as on Apple TV.
         scroll.setVerticalFadingEdgeEnabled(true);
         scroll.setFadingEdgeLength(dp(36));
         scroll.setClipToPadding(false);
@@ -255,11 +261,12 @@ public final class LauncherSettingsActivity extends Activity {
         cols.shown = () -> String.valueOf(columns);
         Row theme = row(list, getString(R.string.follow_theme_short), getString(R.string.follow_theme_hint), () -> {
             if (!hasOnTvChoices()) return;
-            choices.edit().remove("columns").remove("animations").remove("advanced_effects").commit();
+            choices.edit().remove("columns").remove("animations").remove("advanced_effects").remove("show_inputs").commit();
             Config current = Config.load(this);
             columns = current.columns;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
+            showInputs = current.showInputs;
             markChanged();
         }, null);
         theme.shown = () -> getString(hasOnTvChoices() ? R.string.settings_reset : R.string.settings_in_use);
@@ -273,6 +280,13 @@ public final class LauncherSettingsActivity extends Activity {
             row(list, getString(R.string.module_cards), getString(R.string.module_cards_hint), () -> back(THEN_MODULES), null)
                     .shown = () -> "";
         }
+
+        Row inputs = row(list, getString(R.string.inputs_button), getString(R.string.inputs_button_hint), null, dir -> {
+            showInputs = !showInputs;
+            choices.edit().putBoolean("show_inputs", showInputs).apply();
+            markChanged();
+        });
+        inputs.shown = () -> getString(showInputs ? R.string.on : R.string.off);
 
         section(list, R.string.settings_section_motion, false);
         Row anim = row(list, getString(R.string.animations_label), getString(R.string.animations_hint), null, dir -> {
@@ -424,7 +438,7 @@ public final class LauncherSettingsActivity extends Activity {
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains("animations")
-                || choices.contains("advanced_effects");
+                || choices.contains("advanced_effects") || choices.contains("show_inputs");
     }
 
     private void open(Intent intent) {

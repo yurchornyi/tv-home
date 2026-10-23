@@ -157,6 +157,8 @@
     <string name="animations_label">Animations</string>
     <string name="animations_hint">Smooth movement of tiles, posters and menus. Turn it off on a slow TV.</string>
     <string name="settings_section_home">Home screen</string>
+    <string name="inputs_button">Inputs button</string>
+    <string name="inputs_button_hint">The Inputs button at the top of Home: HDMI, the antenna and the other sources. Turn it off if you never switch sources.</string>
     <string name="settings_section_motion">Motion</string>
     <string name="settings_section_tv">TV</string>
     <string name="settings_section_about">About</string>

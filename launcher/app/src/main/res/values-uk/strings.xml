@@ -149,6 +149,8 @@
     <string name="animations_label">Анімація</string>
     <string name="animations_hint">Плавний рух плиток, постерів і меню. На повільному телевізорі можна вимкнути.</string>
     <string name="settings_section_home">Головний екран</string>
+    <string name="inputs_button">Кнопка «Джерела»</string>
+    <string name="inputs_button_hint">Кнопка «Джерела» вгорі головного екрана: HDMI, антена та інші входи. Вимкніть, якщо не перемикаєте джерела.</string>
     <string name="settings_section_motion">Рух</string>
     <string name="settings_section_tv">Телевізор</string>
     <string name="settings_section_about">Про лаунчер</string>
