@@ -25,6 +25,11 @@ final class ChannelFeed {
 
     private static final String TAG = "TvHome.ChannelFeed";
     private static final long MAX_AGE_MS = 60 * 1000L;
+    /** Its history channel has no "history" in its id: it is the one made last (see read). */
+    private static final String SMARTTUBE = "org.smarttube.stable";
+    private static final String KIK = "rezkatv.web.app.uk";
+    /** internal_provider_id prefix of a channel made for this shelf (see read). */
+    private static final String MARK = "tvhome:";
 
     private final Context ctx;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -45,21 +50,25 @@ final class ChannelFeed {
         return known == null ? java.util.Collections.emptyList() : known;
     }
 
-    /** The app's programs, most current first; the cached list at once when it is fresh, else read on a worker thread. */
+    /**
+     * The app's programs, most current first; the cached list at once when it is fresh, else read on a worker thread.
+     * An empty list is passed on too, so the caller can fall back to the TMDB posters.
+     */
     void items(String pkg, ShelfFeed.ItemsListener listener) {
         if (!enabled()) return;
         Long at = readAt.get(pkg);
         List<ShelfFeed.Item> known = lists.get(pkg);
         if (known != null && at != null && System.currentTimeMillis() - at < MAX_AGE_MS) {
-            if (!known.isEmpty()) listener.onItems(known);
+            listener.onItems(known);
             return;
         }
         new Thread(() -> {
             List<ShelfFeed.Item> got = read(pkg);
+            Log.i(TAG, pkg + ": " + got.size() + " programs");
             main.post(() -> {
                 readAt.put(pkg, System.currentTimeMillis());
                 lists.put(pkg, got);
-                if (!got.isEmpty()) listener.onItems(got);
+                listener.onItems(got);
             });
         }, "channel-feed").start();
     }
@@ -70,6 +79,11 @@ final class ChannelFeed {
         try {
             // The app's channels, in the order it made them. SmartTube publishes Subscriptions, Recommendations and
             // History; the one made last is history, which is not something to watch next.
+            // An app can mark the channels meant for this shelf with an internal_provider_id starting "tvhome:"
+            // (KIK: tvhome:continue, tvhome:for_you, tvhome:new_episodes, for the profile chosen last). When it has
+            // any, only those are read, in the order made. KIK's other channels are RezkaTV's generic catalogue rows,
+            // so KIK shows only marked ones; with none the shelf falls back to TMDB posters.
+            List<Long> marked = new ArrayList<>();
             List<Long> channels = new ArrayList<>();
             Uri channelsUri = TvContract.Channels.CONTENT_URI.buildUpon()
                     .appendQueryParameter("package", pkg).build();
@@ -79,11 +93,13 @@ final class ChannelFeed {
                     TvContract.Channels._ID)) {
                 while (c != null && c.moveToNext()) {
                     String id = c.getString(2);
+                    if (id != null && id.startsWith(MARK)) marked.add(c.getLong(0));
                     if (id != null && id.toLowerCase(java.util.Locale.ROOT).contains("history")) continue;
                     channels.add(c.getLong(0));
                 }
             }
-            if (channels.size() >= 3) channels.remove(channels.size() - 1);
+            if (SMARTTUBE.equals(pkg) && channels.size() >= 3) channels.remove(channels.size() - 1);
+            if (!marked.isEmpty() || KIK.equals(pkg)) channels = marked;
             if (channels.isEmpty()) return out;
 
             Uri programsUri = TvContract.PreviewPrograms.CONTENT_URI.buildUpon()

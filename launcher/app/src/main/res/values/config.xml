@@ -89,6 +89,9 @@
          READ_TV_LISTINGS, which build-and-install grants. A theme can set "shelf_channel_apps". -->
     <string-array name="shelf_channel_apps">
         <item>org.smarttube.stable</item>
+        <!-- KIK: only its channels marked tvhome: (ChannelFeed), for the profile chosen last; TMDB posters
+             (shelf_feed_apps) while it publishes none -->
+        <item>rezkatv.web.app.uk</item>
     </string-array>
 
     <!-- Light app banners (a white Netflix or HDRezka card) get a dark background, keeping their coloured logo, so

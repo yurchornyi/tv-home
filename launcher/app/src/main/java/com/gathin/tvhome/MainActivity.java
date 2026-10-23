@@ -2029,7 +2029,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         };
         if (fromKick) kickFeed.items(onItems);
-        else if (fromChannels) channelFeed.items(pkg, onItems);
+        else if (fromChannels) {
+            // An app that also has TMDB posters (KIK) shows them while it publishes nothing to its channels.
+            boolean tmdbToo = shelfFeed.enabled() && feedApps.contains(pkg);
+            channelFeed.items(pkg, items -> {
+                if (!items.isEmpty()) onItems.onItems(items);
+                else if (tmdbToo && gen == feedGen && pkg.equals(feedPkg)) shelfFeed.items(pkg, onItems);
+            });
+        }
         else shelfFeed.items(pkg, onItems);
         return true;
     }
