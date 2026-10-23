@@ -2118,7 +2118,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /**
      * Bottom-left over the dock: the Watch pill just above the dock, the title above it; a long title wraps to a
-     * second line and grows upwards.
+     * second line and grows upwards. A poster with no pill (shelfLabel) has its title down in the pill's place.
      */
     private void positionShelfTitle() {
         int unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
@@ -2131,10 +2131,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfOpen.setY(openTop);
         int widthSpec = View.MeasureSpec.makeMeasureSpec(shelfTitle.getMaxWidth(), View.MeasureSpec.AT_MOST);
         shelfTitle.measure(widthSpec, unspecified);
-        float titleTop = openTop - 14 * density - shelfTitle.getMeasuredHeight();
-        shelfTitle.setY(titleTop);
+        float titleTop = channelsPkg == null && !shelfOpens()
+                ? openTop + shelfOpen.getMeasuredHeight() - shelfTitle.getMeasuredHeight()
+                : openTop - 14 * density - shelfTitle.getMeasuredHeight();
         shelfLive.measure(unspecified, unspecified);
-        shelfLive.setY(titleTop - 10 * density - shelfLive.getMeasuredHeight());
+        moveShelfText(shelfTitle, titleTop);
+        moveShelfText(shelfLive, titleTop - 10 * density - shelfLive.getMeasuredHeight());
+    }
+
+    /**
+     * A title already on screen glides to its new height (Netflix's pill turning up a moment after the poster);
+     * a hidden one is just placed. Its own animator, so the title's fade carries on.
+     */
+    private void moveShelfText(View v, float y) {
+        Object running = v.getTag(R.id.shelfTitle);
+        if (running instanceof android.animation.Animator) ((android.animation.Animator) running).cancel();
+        if (v.getAlpha() == 0f || !animations || reducedMotion || Math.abs(v.getY() - y) < 1f) {
+            v.setY(y);
+            return;
+        }
+        android.animation.ObjectAnimator a = android.animation.ObjectAnimator.ofFloat(v, View.Y, y);
+        a.setDuration(300);
+        a.setInterpolator(EASE);
+        v.setTag(R.id.shelfTitle, a);
+        a.start();
     }
 
     // ---- the ambient screen (full-screen Now Playing) ---------------------------------------------
@@ -3520,6 +3540,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                                 && feedItems.get(feedIndex % feedItems.size()) == item) {
                             int found = shelfLabel(pkg, item);
                             if (found != 0) shelfOpen.setText(found);
+                            positionShelfTitle();
                             showShelfOpen(found != 0, animations && !reducedMotion);
                         }
                     });
