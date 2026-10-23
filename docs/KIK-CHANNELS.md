@@ -53,5 +53,5 @@ On the TV, with TV Home 2.47 or later, focus the KIK tile and run:
 
     adb logcat -s TvHome.ChannelFeed
 
-It should print `rezkatv.web.app.uk: N programs` with N > 0, and the shelf above KIK should show that profile's titles.
+It should print `kik.app: N programs` with N > 0, and the shelf above KIK should show that profile's titles.
 The Watch / Continue button opens the program's `intent_uri`.

@@ -265,7 +265,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void offerKik() {
         String url = getString(R.string.kik_update_url);
         android.content.SharedPreferences st = getSharedPreferences("setup", MODE_PRIVATE);
-        if (url.isEmpty() || installed("rezkatv.web.app.uk") || st.getBoolean("asked_kik", false)) return;
+        if (url.isEmpty() || installed("kik.app") || st.getBoolean("asked_kik", false)) return;
         if (isFinishing() || !hasWindowFocus() || openPopup != null || searching || !missingPermissions().isEmpty()) {
             return;   // another time Home comes up
         }
@@ -2536,7 +2536,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Opens a shelf item (also from Search and the Continue row) and remembers it. */
     private static final String NETFLIX_PKG = "com.netflix.ninja";
-    private static final String KIK_PKG = "rezkatv.web.app.uk";
+    private static final String KIK_PKG = "kik.app";
 
     /**
      * A film or series by the name said or typed, in KIK: it opens the title when its catalogue has a sure match,
@@ -2581,7 +2581,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * its search, landing on the film when there is one match. Null where the app can do neither (older KIK builds).
      */
     private Intent titleSearch(String pkg, ShelfFeed.Item item) {
-        if (!pkg.startsWith("rezkatv.web.app")) return null;
+        if (!pkg.equals(KIK_PKG)) return null;
         // A Continue entry keeps only the name and TMDB id: the original title and year come from the poster list.
         if (item.original.isEmpty() && item.id > 0) {
             for (ShelfFeed.Item known : shelfFeed.cached(pkg)) {
@@ -3289,8 +3289,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void openPick(ShelfFeed.Item item) {
-        if (installed("rezkatv.web.app.uk")) openItem("rezkatv.web.app.uk", item);
-        else if (installed("rezkatv.web.app")) openItem("rezkatv.web.app", item);
+        if (installed(KIK_PKG)) openItem(KIK_PKG, item);
         else if (installed("com.netflix.ninja")) openItem("com.netflix.ninja", item);
         else if (installed("org.smarttube.stable")) openUri("https://www.youtube.com/results?search_query="
                 + Uri.encode(item.title + " trailer"), "org.smarttube.stable");
