@@ -605,9 +605,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // a fade renders it into a full-screen offscreen buffer first.
         ambient.forceHasOverlappingRendering(false);
         heroName = findViewById(R.id.heroName);
+        heroArt = findViewById(R.id.heroArt);
+        // The glow lies under the shelf art. While that art is up in full and opaque (a poster, a softened banner)
+        // it cannot be seen, yet drawing it still filled the whole screen once more on every frame, a quarter of
+        // the shelf's GPU work on a slow TV. Checked right before each frame, since the art fades in and out from
+        // many places; the glow is only skipped, its own alpha and fades carry on.
+        root.getViewTreeObserver().addOnPreDrawListener(() -> {
+            Drawable art = heroArt.getDrawable();
+            boolean covered = art != null && heroArt.getAlpha() >= 1f && heroArt.getVisibility() == View.VISIBLE
+                    && art.getOpacity() == android.graphics.PixelFormat.OPAQUE;
+            int want = covered ? View.INVISIBLE : View.VISIBLE;
+            if (ambient.getVisibility() != want) ambient.setVisibility(want);
+            return true;
+        });
         // dock_title false: the name above the dock never shows; the glow still follows the dock.
         if (!cfg.dockTitle) heroName.setVisibility(View.GONE);
-        heroArt = findViewById(R.id.heroArt);
         heroFade = findViewById(R.id.heroFade);
         topShelfArt = cfg.topShelfArt;
         shelfTitle = findViewById(R.id.shelfTitle);

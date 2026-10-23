@@ -391,6 +391,8 @@ final class NowPlaying {
         Bitmap out = Bitmap.createBitmap(128, 80, Bitmap.Config.ARGB_8888);
         new android.graphics.Canvas(out).drawBitmap(tiny, null, new android.graphics.Rect(0, 0, 128, 80), paint);
         tiny.recycle();
+        // Painted over in full from an opaque cover: opaque, so the shelf can skip what lies under it (MainActivity).
+        if (!cover.hasAlpha()) out.setHasAlpha(false);
         android.graphics.drawable.BitmapDrawable d = new android.graphics.drawable.BitmapDrawable(ctx.getResources(), out);
         d.setFilterBitmap(true);
         return d;

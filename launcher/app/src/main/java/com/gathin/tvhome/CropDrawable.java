@@ -46,7 +46,8 @@ final class CropDrawable extends Drawable {
         picture.setColorFilter(filter);
     }
 
+    /** The picture's own: it covers the whole of the bounds, so an opaque picture makes this opaque too. */
     @Override public int getOpacity() {
-        return PixelFormat.TRANSLUCENT;
+        return picture.getOpacity();
     }
 }
