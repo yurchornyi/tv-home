@@ -20,4 +20,4 @@ namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
 [vars]
-SENTRA_URL = "https://sentra.landing-1a0.workers.dev"
+SENTRA_URL = "https://sentra.sntr.workers.dev"
