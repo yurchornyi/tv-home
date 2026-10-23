@@ -7,8 +7,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,16 +45,21 @@ final class Aliases {
 
     /** The member of pkg's group installed on this TV; pkg itself when it is installed, outside a group, or none is. */
     static String installed(PackageManager pm, String pkg) {
+        return installed(pm, pkg, new HashMap<>());
+    }
+
+    private static String installed(PackageManager pm, String pkg, Map<String, Boolean> known) {
         String[] g = group(pkg);
-        if (g == null || isInstalled(pm, pkg)) return pkg;
-        for (String p : g) if (!p.equals(pkg) && isInstalled(pm, p)) return p;
+        if (g == null || isInstalled(pm, pkg, known)) return pkg;
+        for (String p : g) if (!p.equals(pkg) && isInstalled(pm, p, known)) return p;
         return pkg;
     }
 
     /** The list with every name read as its installed member, in the same order. */
     static List<String> localize(PackageManager pm, List<String> pkgs) {
+        Map<String, Boolean> known = new HashMap<>();
         List<String> out = new ArrayList<>(pkgs.size());
-        for (String p : pkgs) out.add(installed(pm, p));
+        for (String p : pkgs) out.add(installed(pm, p, known));
         return out;
     }
 
@@ -61,10 +68,15 @@ final class Aliases {
      * installed here. Unchanged when no member is installed or the text names none.
      */
     static String localize(PackageManager pm, String text) {
+        return localize(pm, text, new HashMap<>());
+    }
+
+    /** known: which packages were asked about already, so a file of many strings asks Android about each once. */
+    private static String localize(PackageManager pm, String text, Map<String, Boolean> known) {
         for (String[] g : GROUPS) {
             String here = null;
             for (String p : g) {
-                if (isInstalled(pm, p)) {
+                if (isInstalled(pm, p, known)) {
                     here = p;
                     break;
                 }
@@ -86,29 +98,39 @@ final class Aliases {
      * value, not the file's text, where an escaped newline would put an "n" right before a name in the order file.
      */
     static Object localizeJson(PackageManager pm, Object json) throws JSONException {
-        if (json instanceof String) return localize(pm, (String) json);
+        return localizeJson(pm, json, new HashMap<>());
+    }
+
+    private static Object localizeJson(PackageManager pm, Object json, Map<String, Boolean> known) throws JSONException {
+        if (json instanceof String) return localize(pm, (String) json, known);
         if (json instanceof JSONObject) {
             JSONObject in = (JSONObject) json, out = new JSONObject();
             for (Iterator<String> it = in.keys(); it.hasNext(); ) {
                 String k = it.next();
-                out.put(localize(pm, k), localizeJson(pm, in.get(k)));
+                out.put(localize(pm, k, known), localizeJson(pm, in.get(k), known));
             }
             return out;
         }
         if (json instanceof JSONArray) {
             JSONArray in = (JSONArray) json, out = new JSONArray();
-            for (int i = 0; i < in.length(); i++) out.put(localizeJson(pm, in.get(i)));
+            for (int i = 0; i < in.length(); i++) out.put(localizeJson(pm, in.get(i), known));
             return out;
         }
         return json;
     }
 
-    private static boolean isInstalled(PackageManager pm, String pkg) {
+    /** Asks Android once per package per call of the public methods: each ask is a call into the system. */
+    private static boolean isInstalled(PackageManager pm, String pkg, Map<String, Boolean> known) {
+        Boolean k = known.get(pkg);
+        if (k != null) return k;
+        boolean installed;
         try {
             pm.getPackageInfo(pkg, 0);
-            return true;
+            installed = true;
         } catch (PackageManager.NameNotFoundException e) {
-            return false;
+            installed = false;
         }
+        known.put(pkg, installed);
+        return installed;
     }
 }
