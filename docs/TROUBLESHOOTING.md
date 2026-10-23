@@ -105,8 +105,10 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   `launcher/install-channels-stub.sh` installs an empty app named `com.tv.leanback.launcher`, a name SmartTube
   accepts, and then removes Google's launcher for the user; the channels keep coming.
 - **Keeping every TV's launcher current** without ADB: the launcher checks `update_url` (config.xml; by
-  default this fork's GitHub releases) every six hours, or at once when the Settings menu opens, downloads a
-  newer build and offers "Update to X" in that menu; Android asks once to confirm. Publish with
+  default this fork's GitHub releases) hourly, when the screen turns on and twice a day in the background over
+  Wi-Fi, downloads a newer build and checks it as KIK does (SHA-256, package, version, signature). Where Android
+  allows it the launcher installs it unasked while nobody is at the remote; elsewhere Home offers "Update / Later"
+  and Android asks once to confirm; the Settings menu keeps "Update to X". Publish with
   `launcher/release.sh 2.7 "what changed"` from the machine that signs the builds (the debug key in
   `~/.android/debug.keystore`): a build signed elsewhere is refused as foreign. `tools/kyivstar-channels.py`
   refreshes the Kyivstar TV channel list before a release when needed.

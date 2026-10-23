@@ -116,7 +116,7 @@ final class AppInstaller {
         throw new java.io.IOException("too many redirects");
     }
 
-    private static String sha256(File f) throws Exception {
+    static String sha256(File f) throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         try (InputStream in = new FileInputStream(f)) {
             byte[] buf = new byte[65536];

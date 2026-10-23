@@ -4,7 +4,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -23,9 +26,11 @@ import java.nio.charset.StandardCharsets;
 /**
  * Keeps the launcher current on every TV it is on (config.xml update_url): now and then it reads a small JSON
  * ({"versionCode": 6, "versionName": "2.5", "apk": "https://..."}, which launcher/release.sh publishes with each
- * release), and when that names a newer build it downloads the APK in the background. Installing is one OK
- * away: the Settings menu (hold OK on the Settings pill) offers "Update to 2.5", and Android asks once to
- * confirm. An update must carry the same signature as the installed build, or Android refuses it.
+ * release), and when that names a newer build it downloads the APK in the background, the way KIK updates itself:
+ * the file must match the release's SHA-256, be this package at that version and carry this build's signature.
+ * Where Android installs it without asking (silent()) Home does so when nobody is watching; elsewhere Home offers
+ * "Update / Later" over the screen, and the Settings menu (hold OK on the Settings pill) keeps "Update to 2.5".
+ * UpdateJob looks twice a day over Wi-Fi even while another app is in front.
  */
 final class Updater {
 
@@ -40,7 +45,8 @@ final class Updater {
     private final String url;
     private final Listener listener;
     private final Handler main = new Handler(Looper.getMainLooper());
-    private volatile boolean busy;
+    /** One check at a time across Home, Launcher settings and UpdateJob: they share the same files. */
+    private static final java.util.concurrent.atomic.AtomicBoolean BUSY = new java.util.concurrent.atomic.AtomicBoolean();
     /** Told on the main thread when a check finds nothing newer (Launcher settings shows "Up to date"). */
     private volatile Runnable upToDate;
 
@@ -72,7 +78,7 @@ final class Updater {
 
     /** now: the launcher starting, the screen coming on or the Settings menu ask at once (at most every few minutes). */
     void check(boolean now) {
-        if (!enabled() || busy) return;
+        if (!enabled() || BUSY.get()) return;
         if (readyVersion() != null) {
             listener.onUpdateReady(readyVersion());
             return;
@@ -83,30 +89,73 @@ final class Updater {
             if (now && r != null) main.post(r);   // looked a moment ago and found nothing
             return;
         }
-        busy = true;
-        new Thread(() -> {
-            try {
-                JSONObject info = new JSONObject(new String(get(url, 64 * 1024), StandardCharsets.UTF_8));
-                int code = info.optInt("versionCode", 0);
-                String name = info.optString("versionName", String.valueOf(code));
-                String apk = info.optString("apk", "");
-                prefs().edit().putLong("checked_at", System.currentTimeMillis()).apply();
-                if (code <= BuildConfig.VERSION_CODE || apk.isEmpty()) {
-                    Runnable r = upToDate;
-                    if (r != null) main.post(r);
-                    return;
-                }
-                File tmp = new File(ctx.getCacheDir(), "update.part");
-                download(apk, tmp);
-                if (!tmp.renameTo(apkFile())) throw new IllegalStateException("rename failed");
-                prefs().edit().putInt("ready_code", code).putString("ready_name", name).apply();
-                main.post(() -> listener.onUpdateReady(name));
-            } catch (Exception e) {
-                Log.w(TAG, "update check failed: " + e);
-            } finally {
-                busy = false;
+        if (!BUSY.compareAndSet(false, true)) return;
+        new Thread(this::fetch, "updater").start();
+    }
+
+    /** The hourly check on the caller's thread (UpdateJob runs it on its own); quiet when one is already waiting. */
+    void checkBlocking() {
+        if (!enabled() || readyVersion() != null) return;
+        if (System.currentTimeMillis() - prefs().getLong("checked_at", 0) < CHECK_MS) return;
+        if (BUSY.compareAndSet(false, true)) fetch();
+    }
+
+    private void fetch() {
+        try {
+            JSONObject info = new JSONObject(new String(get(url, 64 * 1024), StandardCharsets.UTF_8));
+            int code = info.optInt("versionCode", 0);
+            String name = info.optString("versionName", String.valueOf(code));
+            String apk = info.optString("apk", "");
+            prefs().edit().putLong("checked_at", System.currentTimeMillis()).apply();
+            if (code <= BuildConfig.VERSION_CODE || apk.isEmpty()) {
+                Runnable r = upToDate;
+                if (r != null) main.post(r);
+                return;
             }
-        }, "updater").start();
+            File tmp = new File(ctx.getCacheDir(), "update.part");
+            download(apk, tmp);
+            verify(tmp, code, info.optString("sha256", ""));
+            if (!tmp.renameTo(apkFile())) throw new IllegalStateException("rename failed");
+            prefs().edit().putInt("ready_code", code).putString("ready_name", name).apply();
+            Log.i(TAG, "downloaded " + name);
+            main.post(() -> listener.onUpdateReady(name));
+        } catch (Exception e) {
+            Log.w(TAG, "update check failed: " + e);
+        } finally {
+            BUSY.set(false);
+        }
+    }
+
+    /**
+     * Android installs the update without asking: Android 12+ and this build was installed by the launcher itself
+     * (after its first self-update). An adb install, or Android 9 on the TCL, asks every time.
+     */
+    boolean silent() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return false;
+        try {
+            return ctx.getPackageName().equals(ctx.getPackageManager()
+                    .getInstallSourceInfo(ctx.getPackageName()).getInstallingPackageName());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** As KIK checks its own: the release's SHA-256 (when it gives one), this package, that version, this signature. */
+    @SuppressWarnings("deprecation")
+    private void verify(File apk, int code, String sha) throws Exception {
+        sha = sha.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!sha.isEmpty() && !sha.equals(AppInstaller.sha256(apk))) throw new SecurityException("checksum mismatch");
+        PackageManager pm = ctx.getPackageManager();
+        PackageInfo got = pm.getPackageArchiveInfo(apk.getPath(), PackageManager.GET_SIGNATURES);
+        if (got == null || !ctx.getPackageName().equals(got.packageName) || got.versionCode != code) {
+            throw new SecurityException("not this launcher at " + code);
+        }
+        // Some older TVs read no signatures from an archive; Android itself still refuses a foreign one then.
+        Signature[] mine = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES).signatures;
+        if (got.signatures != null && got.signatures.length > 0 && mine != null && mine.length > 0
+                && !java.util.Arrays.equals(got.signatures, mine)) {
+            throw new SecurityException("signed by someone else");
+        }
     }
 
     /**

@@ -205,6 +205,11 @@
         <receiver
             android:name=".UpdateReceiver"
             android:exported="false" />
+        <!-- Twice a day over Wi-Fi: downloads a newer launcher while another app is in front (UpdateJob). -->
+        <service
+            android:name=".UpdateJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
         <!-- The new build after a self-update: brings Home back (UpdateReceiver.Replaced). -->
         <receiver
             android:name=".UpdateReceiver$Replaced"

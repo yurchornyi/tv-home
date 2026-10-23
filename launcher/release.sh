@@ -3,7 +3,7 @@
 #   launcher/release.sh 2.5 "What changed"
 # Bumps versionName to 2.5 and versionCode by one in app/build.gradle, commits and tags v2.5, builds the release
 # APK, and creates a GitHub release on $RELEASE_REPO (default yurchornyi/tv-launcher) with tv-launcher.apk and
-# update.json; .../releases/latest/download/update.json is what the TVs read. The APK is signed with this
+# update.json (with the APK's SHA-256, which the TVs check); .../releases/latest/download/update.json is what the TVs read. The APK is signed with this
 # machine's debug key (app/build.gradle): release from the same machine, or copy ~/.android/debug.keystore, or
 # the TVs refuse the update as foreign.
 set -e
@@ -29,7 +29,7 @@ APK=app/build/outputs/apk/release/app-release.apk
 OUT=$(mktemp -d)
 cp "$APK" "$OUT/tv-launcher.apk"
 cat > "$OUT/update.json" <<JSON
-{"versionCode": $CODE, "versionName": "$VERSION", "apk": "https://github.com/$REPO/releases/download/v$VERSION/tv-launcher.apk", "notes": $(printf '%s' "$NOTES" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}
+{"versionCode": $CODE, "versionName": "$VERSION", "apk": "https://github.com/$REPO/releases/download/v$VERSION/tv-launcher.apk", "sha256": "$(shasum -a 256 "$OUT/tv-launcher.apk" | cut -d' ' -f1)", "notes": $(printf '%s' "$NOTES" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}
 JSON
 git add app/build.gradle
 git commit -q -m "launcher $VERSION (versionCode $CODE)"

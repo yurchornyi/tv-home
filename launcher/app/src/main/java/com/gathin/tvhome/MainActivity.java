@@ -304,14 +304,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private long lastKeyAt;
 
     /**
-     * The screen went off (the TV going to sleep): the best moment for a waiting update, nobody is watching; with none
-     * waiting yet, it looks for one to install next time. The screen coming on looks too, so a TV that is on for days
+     * The screen went off (the TV going to sleep): the best moment for a waiting update that installs without asking,
+     * nobody is watching; with none waiting yet, it looks for one to install next time. The screen coming on looks too, so a TV that is on for days
      * with an app in front still hears of a new build.
      */
     private final BroadcastReceiver screenOffReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             if (updater == null) return;
-            if (Intent.ACTION_SCREEN_ON.equals(intent.getAction()) || updater.readyVersion() == null) {
+            // Where Android asks first, its question would come up on a dark screen: Home offers it instead.
+            if (Intent.ACTION_SCREEN_ON.equals(intent.getAction()) || updater.readyVersion() == null
+                    || !updater.silent()) {
                 updater.check(true);
             } else {
                 android.util.Log.i("TvHome", "screen off: installing " + updater.readyVersion());
@@ -338,10 +340,48 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     };
 
-    private void scheduleAutoUpdate() {
+    /**
+     * A build is downloaded: where Android installs it without asking, Home does so once nobody is at the remote
+     * (autoUpdate); elsewhere it offers it over Home, as KIK does (offerUpdate).
+     */
+    private void onUpdateReady() {
         if (isDestroyed()) return;   // a download that finished after a recreate() reports to the old instance
         handler.removeCallbacks(autoUpdate);
-        handler.postDelayed(autoUpdate, 30_000);
+        handler.removeCallbacks(updateOffer);
+        if (updater.silent()) handler.postDelayed(autoUpdate, 30_000);
+        else handler.postDelayed(updateOffer, 6000);
+    }
+
+    /** When Home last offered an update: "Later" holds the next offer off for half an hour. */
+    private long updateOfferedAt;
+    private final Runnable updateOffer = this::offerUpdate;
+
+    private void offerUpdate() {
+        String version = updater == null ? null : updater.readyVersion();
+        if (version == null || isFinishing() || isDestroyed() || !homeInFront) return;
+        if (updateOfferedAt != 0 && SystemClock.elapsedRealtime() - updateOfferedAt < 30 * 60_000L) return;
+        if (!hasWindowFocus() || openPopup != null || searching || ambientScreen.getVisibility() == View.VISIBLE) {
+            handler.postDelayed(updateOffer, 30_000);   // after the menu or the player
+            return;
+        }
+        updateOfferedAt = SystemClock.elapsedRealtime();
+        android.util.Log.i("TvHome", "offering update " + version);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        TextView title = new TextView(this);
+        title.setText(getString(R.string.update_offer, version));
+        title.setTextColor(0xF2FFFFFF);
+        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTypeface(getResources().getFont(R.font.outfit_medium));
+        title.setPadding((int) (14 * density), (int) (10 * density), (int) (14 * density), (int) (10 * density));
+        rows.addView(title);
+        PopupWindow popup = glassPopup(panel, (int) (380 * density));
+        addSettingsMenuRow(rows, popup, R.string.update_now, updater::install);
+        addSettingsMenuRow(rows, popup, R.string.update_later, () -> { });   // the Settings menu keeps "Update to"
+        panel.setAlpha(0f);
+        popup.showAtLocation(root, Gravity.CENTER, 0, 0);
+        panel.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
+        rows.getChildAt(1).requestFocus();
     }
 
     /** m:ss, or h:mm:ss past an hour. */
@@ -618,8 +658,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambientCover.setClipToOutline(true);
         ambientCover.setCameraDistance(9000 * density);
         findViewById(R.id.npExpand).setOnClickListener(v -> showAmbient());
-        // A downloaded build installs itself (autoUpdate): when the screen goes off, or over an idle Home.
-        updater = new Updater(this, cfg.updateUrl, version -> scheduleAutoUpdate());
+        // A downloaded build installs itself or is offered over Home (onUpdateReady); UpdateJob looks in the background.
+        updater = new Updater(this, cfg.updateUrl, version -> onUpdateReady());
+        UpdateJob.schedule(this, cfg.updateUrl);
         IntentFilter screenOff = new IntentFilter(Intent.ACTION_SCREEN_OFF);
         screenOff.addAction(Intent.ACTION_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(screenOffReceiver, screenOff, Context.RECEIVER_NOT_EXPORTED);
@@ -1096,7 +1137,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         promptsPaused = false;
         updater.check();
-        if (updater.readyVersion() != null) scheduleAutoUpdate();
+        if (updater.readyVersion() != null) onUpdateReady();
         askForTvListings();
         handler.removeCallbacks(kikOffer);
         handler.postDelayed(kikOffer, 4000);
@@ -2561,18 +2602,24 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /**
-     * The shelf button's word. Watch (or Continue) only where it opens that very title: a link of its own (SmartTube,
-     * Kick, a Continue entry), KIK finding it by name (or HDRezka's search), Netflix with the title's
-     * Netflix id. Elsewhere it can only open the app (Kyivstar takes no title by name), and says Open.
+     * The shelf button's word, or 0 for no button. There is a button only where it opens that very title: a link of
+     * its own (SmartTube, KIK's channels, Kick, a Continue entry) or Netflix with the title's Netflix id. A poster
+     * that could only open the app (Kyivstar) or a search by its name (TMDB posters over KIK) has none.
      */
     private int shelfLabel(String pkg, ShelfFeed.Item item) {
-        boolean title = item.open != null || titleSearch(pkg, item) != null;
+        boolean title = item.open != null;
         if (!title && NETFLIX_PKG.equals(pkg) && item.id > 0) {
             String id = shelfFeed.knownNetflixId(item.type, item.id);
             title = id != null && !id.isEmpty();
         }
-        if (!title) return R.string.shelf_open_app;
+        if (!title) return 0;
         return item == continueItem ? R.string.continue_row : R.string.watch_now;
+    }
+
+    /** Whether the poster on the shelf now has a button (see shelfLabel). */
+    private boolean shelfOpens() {
+        if (feedPkg == null || feedItems == null || feedItems.isEmpty()) return false;
+        return shelfLabel(feedPkg, feedItems.get(feedIndex % feedItems.size())) != 0;
     }
 
     /**
@@ -3410,7 +3457,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The Watch pill in or out with the shelf's title. */
     private void showShelfOpen(boolean show, boolean animate) {
-        if (show && channelsPkg != null) show = false;
+        if (show && (channelsPkg != null || !shelfOpens())) show = false;
         if (show) {
             if (shelfOpen.getVisibility() != View.VISIBLE) {
                 shelfOpen.setVisibility(View.VISIBLE);
@@ -3463,14 +3510,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 String tidy = ShelfText.clean(item.title);
                 shelfTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ShelfText.size(tidy));
                 shelfTitle.setText(tidy);
-                shelfOpen.setText(shelfLabel(pkg, item));
+                int label = shelfLabel(pkg, item);
+                if (label != 0) shelfOpen.setText(label);
                 // Netflix: whether the title can be opened is known once its Netflix id is looked up (once per title).
                 if (NETFLIX_PKG.equals(pkg) && item.id > 0 && item.open == null
                         && shelfFeed.knownNetflixId(item.type, item.id) == null) {
                     shelfFeed.netflixId(item.type, item.id, id -> {
                         if (feedItems != null && !feedItems.isEmpty() && pkg.equals(feedPkg)
                                 && feedItems.get(feedIndex % feedItems.size()) == item) {
-                            shelfOpen.setText(shelfLabel(pkg, item));
+                            int found = shelfLabel(pkg, item);
+                            if (found != 0) shelfOpen.setText(found);
+                            showShelfOpen(found != 0, animations && !reducedMotion);
                         }
                     });
                 }
