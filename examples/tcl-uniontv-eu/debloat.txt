@@ -40,3 +40,15 @@ com.tcl.tvweishi                        # "TV Guard" cleaner with its own instal
 # Preloaded apps
 com.google.android.play.games
 com.google.android.videos               # Play Movies & TV
+
+# Second pass (2026-10-23): processes found running in the background with nothing using them.
+com.tcl.waterfall.overseas              # TCL content "waterfall" feed for the stock home
+com.google.android.leanbacklauncher.partnercustomizer  # stock-launcher customisation, the stock launcher is not Home
+com.google.android.leanbacklauncher.partnerwidget
+com.android.gallery3d                   # USB pictures open in com.tcl.imageplayer
+com.android.settings.intelligence       # Settings search suggestions
+com.google.android.syncadapters.calendar
+com.google.android.syncadapters.contacts
+com.android.printspooler
+com.android.wallpaper.livepicker
+com.google.android.onetimeinitializer

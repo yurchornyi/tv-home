@@ -205,6 +205,14 @@
         <receiver
             android:name=".UpdateReceiver"
             android:exported="false" />
+        <!-- The new build after a self-update: brings Home back (UpdateReceiver.Replaced). -->
+        <receiver
+            android:name=".UpdateReceiver$Replaced"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".BluetoothReceiver"

@@ -33,6 +33,8 @@ final class Updater {
 
     private static final String TAG = "TvHome.Updater";
     private static final long CHECK_MS = 60 * 60 * 1000L;
+    /** When install() handed a build to Android (prefs "updater"): the replaced build then starts Home again. */
+    static final String INSTALLING_AT = "installing_at";
 
     private final Context ctx;
     private final String url;
@@ -134,6 +136,10 @@ final class Updater {
                     while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
                     session.fsync(out);
                 }
+                // Android kills this process to replace it, and some TVs (TCL UnionTV) then bring up the task
+                // behind Home, Netflix as a rule, instead of the new Home: UpdateReceiver.Replaced starts it.
+                // commit(), not apply(): the process may be gone before an apply reaches the disk.
+                prefs().edit().putLong(INSTALLING_AT, System.currentTimeMillis()).commit();
                 Intent done = new Intent(ctx, UpdateReceiver.class).setAction(UpdateReceiver.ACTION);
                 PendingIntent pi = PendingIntent.getBroadcast(ctx, id, done,
                         PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
