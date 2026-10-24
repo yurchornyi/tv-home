@@ -237,7 +237,7 @@ class HomeGuardTest(unittest.TestCase):
         self.tv()
         result, sent = self.disable("sh")
         self.assertEqual(result.returncode, 0, self.output(result))
-        record = next((self.home / ".cleanyourtv").glob("recovery-*.json"))
+        record = next((self.home / ".tv-launcher").glob("recovery-*.json"))
         self.assertEqual(json.loads(record.read_text())["packages"][STOCK], "enabled")
 
 

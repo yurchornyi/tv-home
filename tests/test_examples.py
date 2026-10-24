@@ -76,7 +76,7 @@ class ExampleListsTest(unittest.TestCase):
         example_tvs = sorted(r.split("|")[2].strip() for r in example_rows)
         self.assertEqual(readme_tvs, example_tvs, "the TV column differs between the two tables")
 
-    @unittest.skipUnless(os.environ.get("CLEANYOURTV_STRICT"), "counts are fixed up on merge; strict on main only")
+    @unittest.skipUnless(os.environ.get("TV_LAUNCHER_STRICT"), "counts are fixed up on merge; strict on main only")
     def test_readme_counts(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         n = len(folders())

@@ -55,13 +55,11 @@ you find a cleaner workaround, open an issue first.
 ## 4. Show what you built
 
 Built your own launcher, a port to another platform, or an add-on that is too big or too personal
-for the shared launcher? Put it in its own repository and add one row to
-[`SHOWCASE.md`](SHOWCASE.md). That page is the place for alternative launchers, forks with a
-different look, and tools around the launcher; this repo keeps one small reference launcher and
-points at everything else. The rules for a row are on that page.
+for the shared launcher? Put it in its own repository; this repo keeps one small reference
+launcher.
 
 Things that stay in this repo: debloat lists, fixes and small, opt-in features for the reference
-launcher, prompt and tool improvements. Things that go in the showcase: a second launcher, a
+launcher, prompt and tool improvements. Things that belong in a repo of their own: a second launcher, a
 restyle, a platform port, anything with its own background services or network access.
 
 ## Pull requests

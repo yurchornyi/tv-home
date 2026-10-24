@@ -11,7 +11,7 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
 - **No "wireless debugging" toggle** on some TVs, Xiaomi among them. USB debugging alone opens
   network ADB on port 5555.
 - **USB debugging is greyed out and there is no Wireless debugging entry either**, seen on a carrier
-  box ([Airtel Xstream, Android 11](https://github.com/Gathin23/cleanyourtv/issues/227)). Some ISP
+  box (Airtel Xstream, Android 11). Some ISP
   firmware removes both switches, and then no shell can be reached: `tools/tv.py` fails,
   `adb connect <ip>:5555` times out, and so does a port check. That timeout is the firmware, not
   Wi-Fi, the router or the cable, so don't go rebuilding the network for it. Greyed-out rather than
@@ -53,7 +53,7 @@ Things that bit us or contributors, so they don't bite you. Commands use `tools/
   and `pm install` hung, then failed with `INSTALL_FAILED_VERIFICATION_FAILURE`, while it targeted
   SDK 29. It targets 34 now; if you built an old checkout, rebuild.
 - **Screenshots come out empty** while Live TV, an HDMI input or Netflix is on screen, seen on TCL
-  and a [Sony KDL-49W800G](https://github.com/Gathin23/cleanyourtv/issues/92). Press Home before
+  and a Sony KDL-49W800G. Press Home before
   `screencap`. An empty capture means nothing about the ADB connection or playback; check those
   separately.
 - **Disable the stock launcher only after the new one is installed**, or the Home button lands on

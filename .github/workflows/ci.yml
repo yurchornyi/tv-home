@@ -23,7 +23,7 @@ jobs:
           tools/venv/bin/pip install -q -r tools/requirements.txt
       - name: Example lists, README tables, shell helpers
         env:
-          CLEANYOURTV_STRICT: ${{ github.event_name == 'push' && '1' || '' }}
+          TV_LAUNCHER_STRICT: ${{ github.event_name == 'push' && '1' || '' }}
         run: python3 -m unittest discover -s tests -v
 
   launcher:

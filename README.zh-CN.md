@@ -1,25 +1,19 @@
 <p align="center">
-  <a href="https://cleanyour.tv"><img src="docs/banner.png" alt="CleanYourTV：让电视桌面回归简洁" width="800"></a>
-</p>
-
-<p align="center">
   <a href="README.md">English</a> · 简体中文
 </p>
 
 <p align="center">
-  <a href="https://cleanyour.tv">项目网站</a> ·
   <a href="PROMPT.md">操作提示词</a> ·
-  <a href="examples/README.md">机型清单</a> ·
-  <a href="SHOWCASE.md">社区作品</a>
+  <a href="examples/README.md">机型清单</a>
 </p>
 
-# CleanYourTV 中文使用指南
+# TV Launcher 中文使用指南
 
 通过局域网连接 Android TV 或 Google TV，停用不需要的预装应用、广告和遥测服务，并在兼容设备上安装简洁的原生桌面。无需 root、刷机或 USB 数据线；清理工具采用停用方式，不卸载系统应用，并提供恢复脚本。
 
 本文介绍通用功能和使用方法。不同机型、地区和固件的应用包及限制可能不同，请先核对自己的设备。功能变化以[英文 README](README.md)为准，具体机型记录见[机型清单](examples/README.md)。
 
-![原生 Google TV 桌面与 CleanYourTV 桌面对比](docs/stock-vs-new-side.jpg)
+![原生 Google TV 桌面与 TV Launcher 桌面对比](docs/stock-vs-new-side.jpg)
 
 ## 工作原理
 
@@ -67,7 +61,7 @@
 | 动态效果 | 开启或关闭桌面动画。 |
 | 高级动态效果 | 增加卡片上浮、图标缩放和背景颜色平滑过渡。可能增加内存占用，实际影响取决于电视。 |
 | 跟随主题（重置电视端设置） | 清除电视端的布局与动效选择，恢复当前主题或内置配置。推送或重置主题也会清除这些选择。 |
-| 默认桌面入口 | 打开 Android 的默认桌面选择页，切换到原始桌面或 CleanYourTV。 |
+| 默认桌面入口 | 打开 Android 的默认桌面选择页，切换到原始桌面或 TV Launcher。 |
 
 默认桌面入口不负责重新启用已停用的原始桌面。如果原始桌面已被安装脚本停用，需要先按下文恢复。部分电视不提供系统桌面选择页。还可以通过 `show_home_settings_shortcut` 配置单独显示该入口。
 
@@ -87,7 +81,7 @@
 
 清理清单面向 **Android TV / Google TV**；当前桌面 APK 要求 **Android 8.0（API 26）或更高版本**。社区提供了多种电视与电视盒子的配置；其中一些设备运行的 Android 版本低于桌面的最低要求，清理清单不代表桌面可安装。请在[机型清单](examples/README.md)中核对型号、地区和固件，阅读对应目录的说明，再使用停用列表。
 
-- Samsung Tizen 和 LG webOS 不能直接运行本项目的 Android 桌面；社区移植项目可参考[社区作品](SHOWCASE.md)。
+- Samsung Tizen 和 LG webOS 不能直接运行本项目的 Android 桌面。
 - Fire TV 的清理记录可供手动适配；[操作提示词](PROMPT.md)不适用于 Fire TV，Fire OS 也限制替换默认桌面。
 - 部分中国大陆版电视会拒绝侧载 APK 或安装第三方 HOME 桌面，已记录的 TCL 机型只是其中的例子。不能仅凭品牌判断兼容性。
 - 没有现成清单时，可以让助手检查实际设备，并按[贡献指南](CONTRIBUTING.md)提交经过验证的机型记录。
@@ -145,7 +139,7 @@ TV_HOST=192.168.1.50 launcher/build-and-install.sh
 TV_HOST=192.168.1.50 STOCK_LAUNCHER=none launcher/build-and-install.sh
 ```
 
-`none` 只表示不停用原始桌面，**仍会将 CleanYourTV 设为默认 HOME**。
+`none` 只表示不停用原始桌面，**仍会将 TV Launcher 设为默认 HOME**。
 
 ### Windows
 
@@ -209,7 +203,7 @@ TV_HOST=192.168.1.50 tools/theme.sh --reset
 
 ## 恢复原始桌面和应用
 
-`tools/disable.sh` 在停用前记录列表内各应用的状态（启用、已停用或未安装）、当时的默认 HOME 和三项系统动画缩放设置。它还会记录当时拥有 HOME 的包，但不会保存完整应用列表或全部系统设置。记录位于电脑的 `~/.cleanyourtv/`，按电视和列表分别保存。重复运行同一列表不会覆盖最初记录；新增列表项会补充记录。
+`tools/disable.sh` 在停用前记录列表内各应用的状态（启用、已停用或未安装）、当时的默认 HOME 和三项系统动画缩放设置。它还会记录当时拥有 HOME 的包，但不会保存完整应用列表或全部系统设置。记录位于电脑的 `~/.tv-launcher/`，按电视和列表分别保存。重复运行同一列表不会覆盖最初记录；新增列表项会补充记录。
 
 将以下路径替换为**实际使用过的列表**后恢复：
 
@@ -223,10 +217,10 @@ TV_HOST=192.168.1.50 tools/restore.sh examples/xiaomi-mi-tv-4a/debloat.txt
 TV_HOST=192.168.1.50 tools/restore.sh "examples/你的机型/debloat.txt" com.google.android.apps.tv.launcherx
 ```
 
-- 有记录时，优先恢复当时实际拥有 HOME 的组件；当时没有解析到 HOME 或 HOME 已属于 CleanYourTV 时，使用指定的备用包名，未指定则默认尝试 `com.google.android.tvlauncher`。
+- 有记录时，优先恢复当时实际拥有 HOME 的组件；当时没有解析到 HOME 或 HOME 已属于 TV Launcher 时，使用指定的备用包名，未指定则默认尝试 `com.google.android.tvlauncher`。
 - 记录中操作前已经停用的包会保持停用。恢复脚本还会尝试启用备用桌面包；如果它不在记录中，脚本无法判断其操作前状态。请先核对备用包名。
 - 缺少记录时，脚本会提示并回退为启用列表内应用、将动画缩放恢复为 `1.0`；这不等同于精确恢复操作前状态。
-- 恢复脚本不会卸载 CleanYourTV，也无法恢复列表之外的手动修改。若要卸载，可在电视「设置 → 应用」中操作。
+- 恢复脚本不会卸载 TV Launcher，也无法恢复列表之外的手动修改。若要卸载，可在电视「设置 → 应用」中操作。
 - 无法连接 ADB 时，也可以尝试从电视系统设置中重新启用相关应用。
 
 ## 故障排查
@@ -265,13 +259,13 @@ TV_HOST=192.168.1.50 tools/restore.sh "examples/你的机型/debloat.txt" com.go
 
 ## 参与贡献
 
-欢迎提交经过实际设备验证的机型清单、桌面改进、文档修正和主题。提交前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)，每个 PR 保持一个主题，并说明验证范围。衍生项目和不同风格的桌面可登记在 [`SHOWCASE.md`](SHOWCASE.md)。
+欢迎提交经过实际设备验证的机型清单、桌面改进、文档修正和主题。提交前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)，每个 PR 保持一个主题，并说明验证范围。
 
 如果英文说明发生变化，也欢迎同步修订本文。机型数量、支持列表和主题列表直接参考对应目录，以减少重复维护。
 
 ## 联系与安全报告
 
-电视使用问题可在 [GitHub Discussions](https://github.com/Gathin23/cleanyourtv/discussions) 讨论。媒体与合作联系方式见[英文联系说明](README.md#contact)。安全漏洞请通过仓库 [Security 页面](https://github.com/Gathin23/cleanyourtv/security) 私下报告，详见 [`SECURITY.md`](SECURITY.md)。
+问题和缺陷请在 [GitHub Issues](https://github.com/yurchornyi/tv-launcher/issues) 提交。安全漏洞见 [`SECURITY.md`](SECURITY.md)。
 
 ## 许可证
 
