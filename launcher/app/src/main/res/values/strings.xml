@@ -96,7 +96,20 @@
     <string name="kik_not_now">Not now</string>
     <string name="kik_downloading">Downloading KIK</string>
     <string name="channels_section_shelf">On the shelf</string>
-    <string name="channels_section_all">All channels</string>
+    <!-- The channel picker's categories, in LiveChannels' order (POPULAR to ADULT_ONLY). -->
+    <string-array name="channel_categories">
+        <item>Popular</item>
+        <item>News</item>
+        <item>Sport</item>
+        <item>Movies and series</item>
+        <item>Kids</item>
+        <item>Documentaries and travel</item>
+        <item>Music</item>
+        <item>Radio</item>
+        <item>Regional</item>
+        <item>Other</item>
+        <item>Adults only</item>
+    </string-array>
     <string name="channels_section_never">Never show</string>
     <string name="choose_channels">Choose channels</string>
     <string name="channels_auto_on">Automatic order: on</string>

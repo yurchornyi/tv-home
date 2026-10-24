@@ -190,6 +190,107 @@ final class LiveChannels {
         return out;
     }
 
+    /**
+     * The channels Ukraine watches most, most watched first (TV ratings of the big channel groups, then the news
+     * channels people turn on). The joint news marathon is news, not one of these.
+     */
+    private static final List<String> FIRST = java.util.Arrays.asList(
+            "1+1 hd", "ictv hd", "стб hd", "новий канал", "ictv 2 hd", "тет hd", "2+2 hd", "інтер hd", "нтн",
+            "к1 hd", "мега hd", "перший", "еспресо", "прямий", "5 канал", "24 канал");
+    private static final Set<String> ADULT = new java.util.HashSet<>(java.util.Arrays.asList(
+            "barely legal tv", "blue hustler", "erox", "playboy", "tiny teen", "secret 18 · київстар",
+            "erotica · київстар", "lesbian love · київстар"));
+
+    /**
+     * The picker's categories, in the order shown (R.array.channel_categories names them). The list has no genres,
+     * so a channel's category comes from words in its name; one that says nothing goes to Other.
+     */
+    static final int POPULAR = 0, NEWS = 1, SPORT = 2, MOVIES = 3, KIDS = 4, KNOWLEDGE = 5, MUSIC = 6, RADIO = 7,
+            REGIONAL = 8, OTHER = 9, ADULT_ONLY = 10;
+
+    private static final java.util.regex.Pattern RADIO_WORDS = words("fm|фм|radio|радіо|радио|авторадіо|djfm|radiotochka|nrj");
+    private static final java.util.regex.Pattern REGIONAL_WORDS = words("суспільне (?!kultura|sport)\\S+|київ|галичина"
+            + "|дніпро tv|перший західний|правдатут|konkurent volyn|конкурент tv|misto nad buhom|pershyi miskyi"
+            + "|рудана|нта|аверс|атр|holos donbasu");
+    private static final java.util.regex.Pattern KIDS_WORDS = words("kids?|дит\\S*|junior|multo\\S*|мульт\\S*"
+            + "|cartoon|disney|nick\\S*|niki|duck tv|peppa|paw patrol|sponge bob|lego|ninja turtles|oggy|bubble guppies"
+            + "|penguins|kinokazka|kiddisvit|lingotoons|піксель|плюсплюс|кус-кус|ляле|малятко");
+    private static final java.util.regex.Pattern SPORT_WORDS = words("sports?|спорт\\S*|setanta|football|futsal"
+            + "|basketball|hockey|volleyball|boxing|motorsport|eurosport|maincast|upl\\S*|mediafootball|динамо"
+            + "|sporting|socca|divisport|kibersport|equalympic|warrior");
+    private static final java.util.regex.Pattern NEWS_WORDS = words("news|новин\\S*|euronews|bloomberg|dw|france 24"
+            + "|obozrevatel|апостроф tv|nastoyashcheye vremya|zakon tv|itv media group|united news|еспресо|прямий"
+            + "|рада|24 канал|freeдom|ми — україна|1\\+1 marafon|tv5monde|київ 24|front|армія тб");
+    private static final java.util.regex.Pattern MUSIC_WORDS = words("music|музик\\S*|музвар|hits?|rock|trace"
+            + "|m1|m2|k pop 24|jazz|chillout|electro|hiphop|наше music|наше ретро|4ever music|eu music|world charts"
+            + "|retro|relax|chill|lounge|classical harmony|bikini|musicbox|viva latino");
+    private static final java.util.regex.Pattern KNOWLEDGE_WORDS = words("суспільне kultura|discovery|documentary|national geographic|animal"
+            + "\\S*|history\\S*|viasat (explore|history|nature|true crime)|travel|food|nature|wildlife|explore|наука"
+            + "|фауна|zoosvit|top gear|36\\.6|tlc|u travel|one planet|da vinci|trophy|трофей|рибалка|дача|6 соток"
+            + "|eco tv|lost world|world inside out|lives of famous people|english club|lang lab|be helsi|телевсесвіт"
+            + "|cars stars|перший автомобільний|бігуді|fashion|woman|reality\\S*|wife swap|надія|світло");
+    private static final java.util.regex.Pattern MOVIE_WORDS = words("kino\\S*|кіно\\S*|film\\S*|фільм\\S*|cine"
+            + "|movies?|serials?|серіал\\S*|series|drama\\S*|dorama|дорама|comedy\\S*|hollywood|star cinema|cinema"
+            + "|fx\\S*|amc|megahit|horror|thriller|crime|detective|melodram\\S*|action|prokino|bolt|milady|наталі"
+            + "|enter-фільм|мега|epic|mystic\\S*|fantasy|романс|romance|love|turkish|medical|doctors|hot films|humor"
+            + "|perets|black|now series|sol tv|super hd|flix snip|kinosweet|kinogrande|kinowood|kinoliving|vitatv"
+            + "|trailer|good cinema|free movies|thrillers?|dexter|charmed|csi|father brown|death in paradise|marple"
+            + "|murdoch|elementary|kara sevda|leyla|forbidden|golden boy|aldatmak|wild heart|sweet revenge"
+            + "|her yerde sen|jennets tears|feriha|blind wedding|blood flowers|brilliant|bride from istanbul"
+            + "|a part of me|yellowstone|cop on call|the family|lady and the peasant|recipe of love|red buds"
+            + "|shopping goddess|stosuetsa|veshdok|heads tails|real story|whole country|kremlin|costume drama"
+            + "|our series|made in ukraine|audio stories|team|my z ukrainy|українська|terra|терра|тет|2\\+2|нтн|к1|к2|ictv 2"
+            + "|сонцe|світ|дім|ets|zoom|d1|ляле|cappuccino|inrating|lux tv|pv|raz \\d|lux|dramatic");
+
+    private static java.util.regex.Pattern words(String any) {
+        return java.util.regex.Pattern.compile("(^|[^\\p{L}\\d])(" + any + ")([^\\p{L}\\d]|$)");
+    }
+
+    /** The category a channel is listed under in the picker (POPULAR to ADULT_ONLY). */
+    static int category(Channel c) {
+        String k = key(c);
+        if (ADULT.contains(k)) return ADULT_ONLY;
+        if (FIRST.contains(k)) return POPULAR;
+        if (RADIO_WORDS.matcher(k).find()) return RADIO;
+        if (REGIONAL_WORDS.matcher(k).find()) return REGIONAL;
+        if (KIDS_WORDS.matcher(k).find()) return KIDS;
+        if (SPORT_WORDS.matcher(k).find()) return SPORT;
+        if (NEWS_WORDS.matcher(k).find()) return NEWS;
+        if (MOVIE_WORDS.matcher(k).find()) return MOVIES;
+        if (MUSIC_WORDS.matcher(k).find()) return MUSIC;
+        if (KNOWLEDGE_WORDS.matcher(k).find()) return KNOWLEDGE;
+        return OTHER;
+    }
+
+    /**
+     * The picker's "All channels": by category; the popular ones most watched first, inside every other
+     * category Ukrainian names first, then A to Z.
+     */
+    static List<Channel> byCategory(List<Channel> channels) {
+        java.text.Collator abc = java.text.Collator.getInstance(new java.util.Locale("uk", "UA"));
+        abc.setStrength(java.text.Collator.SECONDARY);
+        List<Channel> out = new ArrayList<>(channels);
+        Collections.sort(out, (a, b) -> {
+            int ca = category(a), cb = category(b);
+            if (ca != cb) return Integer.compare(ca, cb);
+            if (ca == POPULAR) return Integer.compare(FIRST.indexOf(key(a)), FIRST.indexOf(key(b)));
+            boolean ua = ukrainian(a), ub = ukrainian(b);
+            if (ua != ub) return ua ? -1 : 1;
+            return abc.compare(a.name.trim(), b.name.trim());
+        });
+        return out;
+    }
+
+    private static boolean ukrainian(Channel c) {
+        String k = key(c);
+        char first = k.isEmpty() ? 'a' : k.charAt(0);
+        return Character.UnicodeBlock.of(first) == Character.UnicodeBlock.CYRILLIC || Character.isDigit(first);
+    }
+
+    private static String key(Channel c) {
+        return c.name.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
     private Map<String, Integer> uses(String pkg) {
         Map<String, Integer> out = new HashMap<>();
         try {

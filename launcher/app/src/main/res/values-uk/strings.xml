@@ -91,7 +91,19 @@
     <string name="kik_not_now">Не зараз</string>
     <string name="kik_downloading">Завантажую KIK</string>
     <string name="channels_section_shelf">На полиці</string>
-    <string name="channels_section_all">Усі канали</string>
+    <string-array name="channel_categories">
+        <item>Популярні</item>
+        <item>Новини</item>
+        <item>Спорт</item>
+        <item>Кіно і серіали</item>
+        <item>Дитячі</item>
+        <item>Пізнавальні</item>
+        <item>Музика</item>
+        <item>Радіо</item>
+        <item>Регіональні</item>
+        <item>Інше</item>
+        <item>Для дорослих</item>
+    </string-array>
     <string name="channels_section_never">Ніколи не показувати</string>
     <string name="choose_channels">Вибрати канали</string>
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>

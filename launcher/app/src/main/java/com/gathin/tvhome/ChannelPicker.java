@@ -31,7 +31,7 @@ import java.util.Set;
 
 /**
  * Which of an app's channels go on its shelf (LiveChannels), as a glass list in three parts: "On the shelf" (the
- * chosen ones, in their order), "All channels", and "Never show" at the bottom. Each row has the channel's logo,
+ * chosen ones, in their order), "All channels" by category (LiveChannels.byCategory), and "Never show" at the bottom. Each row has the channel's logo,
  * name and a tick; OK ticks or unticks, holding OK sends a channel to "Never show" (the automatic order never brings
  * it back), OK on one there brings it back. Back closes and keeps the choice. Channels listed twice under one name
  * show once.
@@ -76,8 +76,9 @@ final class ChannelPicker {
                 byName.put(key, c);
             }
         }
-        channels = new ArrayList<>();
-        for (String key : order) channels.add(byName.get(key));
+        List<LiveChannels.Channel> unique = new ArrayList<>();
+        for (String key : order) unique.add(byName.get(key));
+        channels = LiveChannels.byCategory(unique);
         rebuild();
     }
 
@@ -148,9 +149,17 @@ final class ChannelPicker {
             rows.add(activity.getString(R.string.channels_section_shelf));
             rows.addAll(onShelf);
         }
-        rows.add(activity.getString(R.string.channels_section_all));
+        // "All channels" as its categories, each under its own title (channels is sorted by category).
+        String[] categories = activity.getResources().getStringArray(R.array.channel_categories);
+        int shown = -1;
         for (LiveChannels.Channel c : channels) {
-            if (!onShelf.contains(c) && !hidden.contains(c.id)) rows.add(c);
+            if (onShelf.contains(c) || hidden.contains(c.id)) continue;
+            int category = LiveChannels.category(c);
+            if (category != shown) {
+                rows.add(categories[category]);
+                shown = category;
+            }
+            rows.add(c);
         }
         List<LiveChannels.Channel> never = new ArrayList<>();
         for (LiveChannels.Channel c : channels) if (hidden.contains(c.id)) never.add(c);
