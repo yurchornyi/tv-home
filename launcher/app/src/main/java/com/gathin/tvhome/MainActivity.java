@@ -1033,7 +1033,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         // Keep focus on the top bar at its ends and at the top: Android's focus finder would otherwise
         // jump to a tile far below when there is nothing in that direction.
-        boolean rtlMenuBar = getResources().getBoolean(R.bool.rtl_menu_bar);
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
@@ -1042,16 +1041,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = firstPill().getId();
-            int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
-            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
-            // The profile photo, when shown, is the last control of the bar.
-            if (btnProfile.getVisibility() == View.VISIBLE) {
-                if (rtlMenuBar) leftButton = R.id.btnProfile;
-                else rightButton = R.id.btnProfile;
+            // Left and Right go to the next button of the bar on screen, by hand: the focus finder can pick a
+            // channel tile below instead (it is nearer than the next pill), and at the bar's ends it would jump down.
+            if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+            List<View> bar = new ArrayList<>();
+            for (View b : new View[]{btnSearch, btnInputs, btnAudio, btnWifi, btnReorder, btnSettings, btnProfile}) {
+                if (b.getVisibility() == View.VISIBLE && b.isFocusable() && b.isShown()) bar.add(b);
             }
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
-            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
+            int[] at = new int[2];
+            Map<View, Integer> left = new HashMap<>();
+            for (View b : bar) {
+                b.getLocationOnScreen(at);
+                left.put(b, at[0]);
+            }
+            Collections.sort(bar, (a, b) -> Integer.compare(left.get(a), left.get(b)));
+            int next = bar.indexOf(v) + (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : 1);
+            if (next >= 0 && next < bar.size()) bar.get(next).requestFocus();
+            return true;
         };
         btnSearch.setOnKeyListener(pillKeys);
         btnInputs.setOnKeyListener(pillKeys);

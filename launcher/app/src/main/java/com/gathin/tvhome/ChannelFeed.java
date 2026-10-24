@@ -114,6 +114,7 @@ final class ChannelFeed {
                     String title = c.getString(1);
                     String poster = c.getString(2);
                     if (title == null || title.isEmpty() || poster == null || !poster.startsWith("http")) continue;
+                    if (ShelfFeed.never(title)) continue;
                     ShelfFeed.Item item = new ShelfFeed.Item(title, poster, c.getString(3), "", 0, c.getInt(4) != 0);
                     List<Object[]> row = byChannel.get(c.getLong(0));
                     if (row == null) byChannel.put(c.getLong(0), row = new ArrayList<>());

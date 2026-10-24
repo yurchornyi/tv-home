@@ -79,6 +79,14 @@ final class ShelfFeed {
     private static final long MAX_AGE_MS = 6 * 60 * 60 * 1000L;
     private static final String NETFLIX = "com.netflix.ninja";
     private static final String KYIVSTAR = "com.kyivstar.tv.tvapp";
+    /** Titles the owner never wants on the shelf, whichever app or list offers them (any spelling, any season). */
+    private static final java.util.regex.Pattern NEVER = java.util.regex.Pattern.compile(
+            "(^|[^\\p{L}])(свати|сваты|svaty)([^\\p{L}]|$)",
+            java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+
+    static boolean never(String title) {
+        return title != null && NEVER.matcher(title).find();
+    }
 
     private final Context ctx;
     private final String key;
@@ -253,7 +261,7 @@ final class ShelfFeed {
         for (int i = 0; i < results.length() && into.size() - start < 12; i++) {
             JSONObject r = results.getJSONObject(i);
             String title = r.optString("title", r.optString("name", ""));
-            if (title.isEmpty()) continue;
+            if (title.isEmpty() || never(title) || never(r.optString("original_title", r.optString("original_name", "")))) continue;
             // The list's backdrop often has the title painted on in English; ask for one without any text, so the
             // shelf shows the localized title only once.
             String type = r.optString("media_type", path.startsWith("discover/tv") ? "tv" : "movie");
@@ -292,6 +300,7 @@ final class ShelfFeed {
                 Item item = new Item(o.getString("t"), o.getString("b"), null, o.optString("ty", ""), o.optLong("id"));
                 item.original = o.optString("o", "");
                 item.year = o.optString("y", "");
+                if (never(item.title) || never(item.original)) continue;
                 out.add(item);
             }
             Collections.shuffle(out);
