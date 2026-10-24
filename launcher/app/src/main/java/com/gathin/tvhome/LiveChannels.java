@@ -26,12 +26,20 @@ final class LiveChannels {
 
     static final class Channel {
         final String id, name, logo, open;
+        /** The picker's category (NEWS to ADULT_ONLY), and the place among the popular ones (1 first), 0 if not one. */
+        final int category, popular;
 
         Channel(String id, String name, String logo, String open) {
+            this(id, name, logo, open, OTHER, 0);
+        }
+
+        Channel(String id, String name, String logo, String open, int category, int popular) {
             this.id = id;
             this.name = name;
             this.logo = logo;
             this.open = open;
+            this.category = category;
+            this.popular = popular;
         }
     }
 
@@ -64,7 +72,8 @@ final class LiveChannels {
                 String logo = o.isNull("logo") ? null : o.optString("logo", null);
                 String open = o.getString("open");
                 if (!listed.equals(pkg) && open.startsWith(listed + ":")) open = pkg + open.substring(listed.length());
-                out.add(new Channel(o.getString("id"), o.getString("name"), logo, open));
+                out.add(new Channel(o.getString("id"), o.getString("name"), logo, open,
+                        category(o.optString("category", "")), o.optInt("popular", 0)));
             }
         } catch (Exception ignored) {
             // no list for this app
@@ -161,22 +170,23 @@ final class LiveChannels {
     }
 
     /** The most channels the shelf's row holds. */
-    private static final int ROW_MAX = 12;
+    static final int ROW_MAX = 20;
 
     /**
      * What the shelf shows. Automatic: it both arranges and adds. The chosen channels are always there, the most
-     * opened first (equal counts keep the order chosen); after them, in the places left up to twelve, every other
+     * opened first (equal counts keep the order chosen); after them, in the places left up to twenty, every other
      * channel opened from Home (the shelf, Search, a voice command), the most opened first; the ones taken off the
      * shelf stay off. Only openings from Home count: what is switched inside the app itself is not seen from here.
      * Not automatic: the chosen ones in the order they were chosen, nothing else. Empty until a choice or an opening.
      */
     List<Channel> row(String pkg) {
         List<Channel> chosen = chosen(pkg);
-        if (!automatic(pkg)) return chosen;
+        if (!automatic(pkg)) return chosen.size() > ROW_MAX ? chosen.subList(0, ROW_MAX) : chosen;
         Map<String, Integer> use = uses(pkg);
         java.util.Comparator<Channel> byUse = (a, b) -> Integer.compare(use.getOrDefault(b.id, 0), use.getOrDefault(a.id, 0));
         List<Channel> out = new ArrayList<>(chosen);
         Collections.sort(out, byUse);   // stable: equal counts keep the chosen order
+        if (out.size() > ROW_MAX) out = new ArrayList<>(out.subList(0, ROW_MAX));
         Set<String> hidden = hiddenIds(pkg);
         List<Channel> opened = new ArrayList<>();
         for (Channel c : all(pkg)) {
@@ -191,104 +201,58 @@ final class LiveChannels {
     }
 
     /**
-     * The channels Ukraine watches most, most watched first (TV ratings of the big channel groups, then the news
-     * channels people turn on). The joint news marathon is news, not one of these.
+     * The picker's categories, in the order its tabs show them (R.array.channel_categories names them). A channel's
+     * category comes from the list (tools/kyivstar-channels.py takes it from Kyivstar's own genre groups); POPULAR is
+     * not one of them but the tab of the channels the list ranks as most watched.
      */
-    private static final List<String> FIRST = java.util.Arrays.asList(
-            "1+1 hd", "ictv hd", "стб hd", "новий канал", "ictv 2 hd", "тет hd", "2+2 hd", "інтер hd", "нтн",
-            "к1 hd", "мега hd", "перший", "еспресо", "прямий", "5 канал", "24 канал");
-    private static final Set<String> ADULT = new java.util.HashSet<>(java.util.Arrays.asList(
-            "barely legal tv", "blue hustler", "erox", "playboy", "tiny teen", "secret 18 · київстар",
-            "erotica · київстар", "lesbian love · київстар"));
+    static final int POPULAR = 0, NEWS = 1, SPORT = 2, MOVIES = 3, ENTERTAINMENT = 4, KIDS = 5, KNOWLEDGE = 6, MUSIC = 7,
+            RADIO = 8, REGIONAL = 9, OTHER = 10, ADULT_ONLY = 11;
 
-    /**
-     * The picker's categories, in the order shown (R.array.channel_categories names them). The list has no genres,
-     * so a channel's category comes from words in its name; one that says nothing goes to Other.
-     */
-    static final int POPULAR = 0, NEWS = 1, SPORT = 2, MOVIES = 3, KIDS = 4, KNOWLEDGE = 5, MUSIC = 6, RADIO = 7,
-            REGIONAL = 8, OTHER = 9, ADULT_ONLY = 10;
+    private static final List<String> CATEGORY_KEYS = java.util.Arrays.asList("popular", "news", "sport", "movies",
+            "entertainment", "kids", "knowledge", "music", "radio", "regional", "other", "adult");
 
-    private static final java.util.regex.Pattern RADIO_WORDS = words("fm|фм|radio|радіо|радио|авторадіо|djfm|radiotochka|nrj");
-    private static final java.util.regex.Pattern REGIONAL_WORDS = words("суспільне (?!kultura|sport)\\S+|київ|галичина"
-            + "|дніпро tv|перший західний|правдатут|konkurent volyn|конкурент tv|misto nad buhom|pershyi miskyi"
-            + "|рудана|нта|аверс|атр|holos donbasu");
-    private static final java.util.regex.Pattern KIDS_WORDS = words("kids?|дит\\S*|junior|multo\\S*|мульт\\S*"
-            + "|cartoon|disney|nick\\S*|niki|duck tv|peppa|paw patrol|sponge bob|lego|ninja turtles|oggy|bubble guppies"
-            + "|penguins|kinokazka|kiddisvit|lingotoons|піксель|плюсплюс|кус-кус|ляле|малятко");
-    private static final java.util.regex.Pattern SPORT_WORDS = words("sports?|спорт\\S*|setanta|football|futsal"
-            + "|basketball|hockey|volleyball|boxing|motorsport|eurosport|maincast|upl\\S*|mediafootball|динамо"
-            + "|sporting|socca|divisport|kibersport|equalympic|warrior");
-    private static final java.util.regex.Pattern NEWS_WORDS = words("news|новин\\S*|euronews|bloomberg|dw|france 24"
-            + "|obozrevatel|апостроф tv|nastoyashcheye vremya|zakon tv|itv media group|united news|еспресо|прямий"
-            + "|рада|24 канал|freeдom|ми — україна|1\\+1 marafon|tv5monde|київ 24|front|армія тб");
-    private static final java.util.regex.Pattern MUSIC_WORDS = words("music|музик\\S*|музвар|hits?|rock|trace"
-            + "|m1|m2|k pop 24|jazz|chillout|electro|hiphop|наше music|наше ретро|4ever music|eu music|world charts"
-            + "|retro|relax|chill|lounge|classical harmony|bikini|musicbox|viva latino");
-    private static final java.util.regex.Pattern KNOWLEDGE_WORDS = words("суспільне kultura|discovery|documentary|national geographic|animal"
-            + "\\S*|history\\S*|viasat (explore|history|nature|true crime)|travel|food|nature|wildlife|explore|наука"
-            + "|фауна|zoosvit|top gear|36\\.6|tlc|u travel|one planet|da vinci|trophy|трофей|рибалка|дача|6 соток"
-            + "|eco tv|lost world|world inside out|lives of famous people|english club|lang lab|be helsi|телевсесвіт"
-            + "|cars stars|перший автомобільний|бігуді|fashion|woman|reality\\S*|wife swap|надія|світло");
-    private static final java.util.regex.Pattern MOVIE_WORDS = words("kino\\S*|кіно\\S*|film\\S*|фільм\\S*|cine"
-            + "|movies?|serials?|серіал\\S*|series|drama\\S*|dorama|дорама|comedy\\S*|hollywood|star cinema|cinema"
-            + "|fx\\S*|amc|megahit|horror|thriller|crime|detective|melodram\\S*|action|prokino|bolt|milady|наталі"
-            + "|enter-фільм|мега|epic|mystic\\S*|fantasy|романс|romance|love|turkish|medical|doctors|hot films|humor"
-            + "|perets|black|now series|sol tv|super hd|flix snip|kinosweet|kinogrande|kinowood|kinoliving|vitatv"
-            + "|trailer|good cinema|free movies|thrillers?|dexter|charmed|csi|father brown|death in paradise|marple"
-            + "|murdoch|elementary|kara sevda|leyla|forbidden|golden boy|aldatmak|wild heart|sweet revenge"
-            + "|her yerde sen|jennets tears|feriha|blind wedding|blood flowers|brilliant|bride from istanbul"
-            + "|a part of me|yellowstone|cop on call|the family|lady and the peasant|recipe of love|red buds"
-            + "|shopping goddess|stosuetsa|veshdok|heads tails|real story|whole country|kremlin|costume drama"
-            + "|our series|made in ukraine|audio stories|team|my z ukrainy|українська|terra|терра|тет|2\\+2|нтн|к1|к2|ictv 2"
-            + "|сонцe|світ|дім|ets|zoom|d1|ляле|cappuccino|inrating|lux tv|pv|raz \\d|lux|dramatic");
-
-    private static java.util.regex.Pattern words(String any) {
-        return java.util.regex.Pattern.compile("(^|[^\\p{L}\\d])(" + any + ")([^\\p{L}\\d]|$)");
+    private static int category(String key) {
+        int i = CATEGORY_KEYS.indexOf(key);
+        return i > POPULAR ? i : OTHER;
     }
 
-    /** The category a channel is listed under in the picker (POPULAR to ADULT_ONLY). */
-    static int category(Channel c) {
-        String k = key(c);
-        if (ADULT.contains(k)) return ADULT_ONLY;
-        if (FIRST.contains(k)) return POPULAR;
-        if (RADIO_WORDS.matcher(k).find()) return RADIO;
-        if (REGIONAL_WORDS.matcher(k).find()) return REGIONAL;
-        if (KIDS_WORDS.matcher(k).find()) return KIDS;
-        if (SPORT_WORDS.matcher(k).find()) return SPORT;
-        if (NEWS_WORDS.matcher(k).find()) return NEWS;
-        if (MOVIE_WORDS.matcher(k).find()) return MOVIES;
-        if (MUSIC_WORDS.matcher(k).find()) return MUSIC;
-        if (KNOWLEDGE_WORDS.matcher(k).find()) return KNOWLEDGE;
-        return OTHER;
-    }
-
-    /**
-     * The picker's "All channels": by category; the popular ones most watched first, inside every other
-     * category Ukrainian names first, then A to Z.
-     */
-    static List<Channel> byCategory(List<Channel> channels) {
-        java.text.Collator abc = java.text.Collator.getInstance(new java.util.Locale("uk", "UA"));
-        abc.setStrength(java.text.Collator.SECONDARY);
-        List<Channel> out = new ArrayList<>(channels);
-        Collections.sort(out, (a, b) -> {
-            int ca = category(a), cb = category(b);
-            if (ca != cb) return Integer.compare(ca, cb);
-            if (ca == POPULAR) return Integer.compare(FIRST.indexOf(key(a)), FIRST.indexOf(key(b)));
-            boolean ua = ukrainian(a), ub = ukrainian(b);
-            if (ua != ub) return ua ? -1 : 1;
-            return abc.compare(a.name.trim(), b.name.trim());
-        });
+    /** The channels of one category: the popular ones most watched first, in every other the list's order. */
+    static List<Channel> inCategory(List<Channel> channels, int category) {
+        List<Channel> out = new ArrayList<>();
+        for (Channel c : channels) {
+            if (category == POPULAR ? c.popular > 0 : c.category == category) out.add(c);
+        }
+        if (category == POPULAR) Collections.sort(out, (a, b) -> Integer.compare(a.popular, b.popular));
         return out;
     }
 
-    private static boolean ukrainian(Channel c) {
-        String k = key(c);
-        char first = k.isEmpty() ? 'a' : k.charAt(0);
-        return Character.UnicodeBlock.of(first) == Character.UnicodeBlock.CYRILLIC || Character.isDigit(first);
-    }
+    private static final Map<android.graphics.Bitmap, android.graphics.Bitmap> TRIMMED = new java.util.WeakHashMap<>();
 
-    private static String key(Channel c) {
-        return c.name.trim().toLowerCase(java.util.Locale.ROOT);
+    /**
+     * A logo without the clear margins round it: many come with more empty room on one side, and fitted as they are
+     * they sit off the tile's centre. A logo with nothing to trim (or no alpha) comes back as it is.
+     */
+    static android.graphics.Bitmap trim(android.graphics.Bitmap b) {
+        if (b == null || !b.hasAlpha()) return b;
+        android.graphics.Bitmap known = TRIMMED.get(b);
+        if (known != null) return known;
+        int w = b.getWidth(), h = b.getHeight();
+        int[] px = new int[w * h];
+        b.getPixels(px, 0, w, 0, 0, w, h);
+        int left = w, top = h, right = -1, bottom = -1;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if ((px[y * w + x] >>> 24) < 16) continue;
+                if (x < left) left = x;
+                if (x > right) right = x;
+                if (y < top) top = y;
+                if (y > bottom) bottom = y;
+            }
+        }
+        android.graphics.Bitmap out = right < 0 || (left == 0 && top == 0 && right == w - 1 && bottom == h - 1) ? b
+                : android.graphics.Bitmap.createBitmap(b, left, top, right - left + 1, bottom - top + 1);
+        TRIMMED.put(b, out);
+        return out;
     }
 
     private Map<String, Integer> uses(String pkg) {

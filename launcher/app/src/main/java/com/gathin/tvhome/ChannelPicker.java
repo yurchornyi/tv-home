@@ -30,11 +30,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Which of an app's channels go on its shelf (LiveChannels), as a glass list in three parts: "On the shelf" (the
- * chosen ones, in their order), "All channels" by category (LiveChannels.byCategory), and "Never show" at the bottom. Each row has the channel's logo,
- * name and a tick; OK ticks or unticks, holding OK sends a channel to "Never show" (the automatic order never brings
- * it back), OK on one there brings it back. Back closes and keeps the choice. Channels listed twice under one name
- * show once.
+ * Which of an app's channels go on its shelf (LiveChannels), as a glass list with a tab per part: "On the shelf" (the
+ * chosen ones, in their order), "Popular", then each category (LiveChannels.inCategory), and "Never show" last; Left and
+ * Right move between the tabs. Each row has the channel's logo, name and a tick; OK ticks or unticks, holding OK sends
+ * a channel to "Never show" (the automatic order never brings it back), OK on one there brings it back. Back closes
+ * and keeps the choice. Channels listed twice under one name show once.
  */
 @SuppressLint("ResourceType")   // pill_text is a colour selector kept in drawable/
 final class ChannelPicker {
@@ -43,7 +43,8 @@ final class ChannelPicker {
 
     interface Images { void load(String url, ShelfFeed.ImageListener listener); }
 
-    private static final int HEADER = 0, ROW = 1;
+    /** Tab ids besides the categories (LiveChannels.POPULAR to ADULT_ONLY). */
+    private static final int SHELF = -1, NEVER = 100;
 
     private final Activity activity;
     private final float d;
@@ -51,10 +52,16 @@ final class ChannelPicker {
     private final Set<String> chosen;
     private final Set<String> hidden;
     private final Images images;
-    /** Rows as shown: a String is a section title, a Channel a row. Rebuilt when a channel changes section. */
-    private final List<Object> rows = new ArrayList<>();
+    /** The tabs as shown (SHELF, a category, NEVER), each with its channels; rebuilt when a channel changes part. */
+    private final List<Integer> tabs = new ArrayList<>();
+    private final List<List<LiveChannels.Channel>> tabRows = new ArrayList<>();
+    private int tab = SHELF;
+    /** The rows of the tab shown. */
+    private List<LiveChannels.Channel> rows = new ArrayList<>();
     private final Adapter adapter = new Adapter();
     private RecyclerView list;
+    private LinearLayout strip;
+    private android.widget.HorizontalScrollView stripScroll;
 
     private ChannelPicker(Activity activity, List<LiveChannels.Channel> all, Set<String> chosen, Set<String> hidden,
                           Images images) {
@@ -78,8 +85,9 @@ final class ChannelPicker {
         }
         List<LiveChannels.Channel> unique = new ArrayList<>();
         for (String key : order) unique.add(byName.get(key));
-        channels = LiveChannels.byCategory(unique);
+        channels = unique;
         rebuild();
+        tab = tabs.contains(SHELF) ? SHELF : LiveChannels.POPULAR;
     }
 
     static PopupWindow show(Activity activity, String appName, List<LiveChannels.Channel> all, Set<String> chosenNow,
@@ -109,6 +117,23 @@ final class ChannelPicker {
         hint.setPadding((int) (12 * d), 0, (int) (12 * d), (int) (10 * d));
         panel.addView(hint);
 
+        // The tabs, Left and Right move along them; the arrows say so.
+        LinearLayout tabBar = new LinearLayout(activity);
+        tabBar.setGravity(Gravity.CENTER_VERTICAL);
+        tabBar.addView(arrow(activity, "\u2039"));
+        android.widget.HorizontalScrollView stripScroll = new android.widget.HorizontalScrollView(activity);
+        stripScroll.setHorizontalScrollBarEnabled(false);
+        stripScroll.setFocusable(false);
+        LinearLayout strip = new LinearLayout(activity);
+        stripScroll.addView(strip);
+        tabBar.addView(stripScroll, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        tabBar.addView(arrow(activity, "\u203A"));
+        tabBar.setPadding(0, 0, 0, (int) (8 * d));
+        panel.addView(tabBar);
+        picker.strip = strip;
+        picker.stripScroll = stripScroll;
+        picker.showTab();
+
         RecyclerView list = new RecyclerView(activity);
         picker.list = list;
         list.setLayoutManager(new LinearLayoutManager(activity));
@@ -117,7 +142,7 @@ final class ChannelPicker {
         list.setVerticalScrollBarEnabled(false);
         list.setClipToPadding(false);
         list.setPadding(0, 0, 0, (int) (8 * d));
-        panel.addView(list, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (430 * d)));
+        panel.addView(list, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (int) (390 * d)));
 
         PopupWindow popup = new PopupWindow(panel, (int) (460 * d), ViewGroup.LayoutParams.WRAP_CONTENT, true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -135,9 +160,10 @@ final class ChannelPicker {
         return popup;
     }
 
-    /** The three parts from the current choice; the chosen ones in their order first. */
+    /** The tabs from the current choice: the shelf's in their order, the categories with a channel, "Never show". */
     private void rebuild() {
-        rows.clear();
+        tabs.clear();
+        tabRows.clear();
         Map<String, LiveChannels.Channel> byId = new HashMap<>();
         for (LiveChannels.Channel c : channels) byId.put(c.id, c);
         List<LiveChannels.Channel> onShelf = new ArrayList<>();
@@ -145,49 +171,96 @@ final class ChannelPicker {
             LiveChannels.Channel c = byId.get(id);
             if (c != null && !hidden.contains(id)) onShelf.add(c);
         }
-        if (!onShelf.isEmpty()) {
-            rows.add(activity.getString(R.string.channels_section_shelf));
-            rows.addAll(onShelf);
-        }
-        // "All channels" as its categories, each under its own title (channels is sorted by category).
-        String[] categories = activity.getResources().getStringArray(R.array.channel_categories);
-        int shown = -1;
-        for (LiveChannels.Channel c : channels) {
-            if (onShelf.contains(c) || hidden.contains(c.id)) continue;
-            int category = LiveChannels.category(c);
-            if (category != shown) {
-                rows.add(categories[category]);
-                shown = category;
-            }
-            rows.add(c);
+        add(SHELF, onShelf);
+        List<LiveChannels.Channel> shown = new ArrayList<>();
+        for (LiveChannels.Channel c : channels) if (!hidden.contains(c.id)) shown.add(c);
+        for (int category = LiveChannels.POPULAR; category <= LiveChannels.ADULT_ONLY; category++) {
+            add(category, LiveChannels.inCategory(shown, category));
         }
         List<LiveChannels.Channel> never = new ArrayList<>();
         for (LiveChannels.Channel c : channels) if (hidden.contains(c.id)) never.add(c);
-        if (!never.isEmpty()) {
-            rows.add(activity.getString(R.string.channels_section_never));
-            rows.addAll(never);
-        }
+        add(NEVER, never);
     }
 
-    /** Focus on the first channel row at or after `from`. */
-    private void focusRow(int from) {
-        for (int i = Math.max(0, from); i < rows.size(); i++) {
-            if (!(rows.get(i) instanceof LiveChannels.Channel)) continue;
-            int target = i;
-            list.scrollToPosition(target);
-            list.post(() -> {
-                RecyclerView.ViewHolder h = list.findViewHolderForAdapterPosition(target);
-                if (h != null) h.itemView.requestFocus();
-            });
-            return;
-        }
+    private void add(int id, List<LiveChannels.Channel> in) {
+        if (in.isEmpty()) return;
+        tabs.add(id);
+        tabRows.add(in);
     }
 
-    /** A channel changed part (to or from "Never show"): the list is rebuilt and focus stays near where it was. */
+    /** The tab `tab` (or the nearest one left) in the strip and the list. */
+    private void showTab() {
+        int at = tabs.indexOf(tab);
+        if (at < 0) {
+            at = 0;
+            while (at < tabs.size() - 1 && tabs.get(at) < tab) at++;
+            tab = tabs.get(at);
+        }
+        rows = tabRows.get(at);
+        adapter.notifyDataSetChanged();
+        String[] categories = activity.getResources().getStringArray(R.array.channel_categories);
+        strip.removeAllViews();
+        for (int i = 0; i < tabs.size(); i++) {
+            int id = tabs.get(i);
+            TextView t = new TextView(activity);
+            t.setText(id == SHELF ? activity.getString(R.string.channels_section_shelf)
+                    : id == NEVER ? activity.getString(R.string.channels_section_never) : categories[id]);
+            t.setTextColor(i == at ? 0xFFFFFFFF : 0x99FFFFFF);
+            t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            t.setTypeface(activity.getResources().getFont(i == at ? R.font.outfit_medium : R.font.outfit_regular));
+            t.setSingleLine(true);
+            t.setPadding(dp(12), dp(5), dp(12), dp(6));
+            if (i == at) {
+                t.setBackgroundResource(R.drawable.pill_bg);
+                t.setActivated(true);
+            }
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMarginEnd(dp(4));
+            strip.addView(t, lp);
+        }
+        int selected = at;
+        stripScroll.post(() -> {
+            View t = strip.getChildAt(selected);
+            if (t != null) stripScroll.smoothScrollTo(Math.max(0, t.getLeft() - (stripScroll.getWidth() - t.getWidth()) / 2), 0);
+        });
+    }
+
+    /** Left or Right: the tab next to this one, its first row focused. */
+    private void step(int by) {
+        int at = tabs.indexOf(tab) + by;
+        if (at < 0 || at >= tabs.size()) return;
+        tab = tabs.get(at);
+        showTab();
+        focusRow(0);
+    }
+
+    /** Focus on row `at` (or the last one). */
+    private void focusRow(int at) {
+        if (rows.isEmpty()) return;
+        int target = Math.max(0, Math.min(at, rows.size() - 1));
+        list.scrollToPosition(target);
+        list.post(() -> {
+            RecyclerView.ViewHolder h = list.findViewHolderForAdapterPosition(target);
+            if (h != null) h.itemView.requestFocus();
+        });
+    }
+
+    /** A channel changed part (to or from "Never show"): the tabs are rebuilt and focus stays near where it was. */
     private void moved(int at) {
         rebuild();
-        adapter.notifyDataSetChanged();
-        focusRow(Math.min(at, rows.size() - 1));
+        showTab();
+        focusRow(at);
+    }
+
+    private static TextView arrow(Activity activity, String glyph) {
+        TextView a = new TextView(activity);
+        a.setText(glyph);
+        a.setTextColor(0x8CFFFFFF);
+        a.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        float d = activity.getResources().getDisplayMetrics().density;
+        a.setPadding((int) (6 * d), 0, (int) (6 * d), (int) (2 * d));
+        return a;
     }
 
     private int dp(int v) {
@@ -195,27 +268,12 @@ final class ChannelPicker {
     }
 
     private final class Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
-        @Override public int getItemViewType(int position) {
-            return rows.get(position) instanceof String ? HEADER : ROW;
-        }
-
         @Override public int getItemCount() {
             return rows.size();
         }
 
         @NonNull @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int type) {
-            if (type == HEADER) {
-                TextView t = new TextView(activity);
-                t.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                t.setTextColor(0x99FFFFFF);
-                t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-                t.setAllCaps(true);
-                t.setLetterSpacing(0.14f);
-                t.setTypeface(activity.getResources().getFont(R.font.outfit_medium));
-                t.setPadding(dp(14), dp(14), dp(14), dp(6));
-                return new RecyclerView.ViewHolder(t) { };
-            }
             LinearLayout row = new LinearLayout(activity);
             RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
             lp.bottomMargin = dp(4);
@@ -256,12 +314,7 @@ final class ChannelPicker {
 
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int position) {
-            Object item = rows.get(position);
-            if (item instanceof String) {
-                ((TextView) h.itemView).setText((String) item);
-                return;
-            }
-            LiveChannels.Channel c = (LiveChannels.Channel) item;
+            LiveChannels.Channel c = rows.get(position);
             View row = h.itemView;
             TextView name = row.findViewById(R.id.title);
             ImageView logo = row.findViewById(R.id.icon);
@@ -273,7 +326,7 @@ final class ChannelPicker {
             logo.setImageDrawable(null);
             logo.setTag(c.logo);
             if (c.logo != null) images.load(c.logo, (url, bmp) -> {
-                if (bmp != null && url.equals(logo.getTag())) logo.setImageBitmap(bmp);
+                if (bmp != null && url.equals(logo.getTag())) logo.setImageBitmap(LiveChannels.trim(bmp));
             });
             row.setOnClickListener(v -> {
                 int at = h.getBindingAdapterPosition();
@@ -281,7 +334,8 @@ final class ChannelPicker {
                 if (hidden.remove(c.id)) {
                     moved(at);   // back from "Never show"
                 } else {
-                    if (!chosen.remove(c.id)) chosen.add(c.id);
+                    // The shelf's row holds twenty: one more is not ticked.
+                    if (!chosen.remove(c.id) && chosen.size() < LiveChannels.ROW_MAX) chosen.add(c.id);
                     bindTick(tick, c);
                 }
             });
@@ -296,6 +350,10 @@ final class ChannelPicker {
             // The OK-up that opened the picker must not tick the first row.
             final boolean[] pressed = {false};
             row.setOnKeyListener((v, code, event) -> {
+                if (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) step(code == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : 1);
+                    return true;
+                }
                 if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
                 if (event.getAction() == KeyEvent.ACTION_DOWN) pressed[0] = true;
                 else if (!pressed[0]) return true;

@@ -2468,8 +2468,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** One channel tile: its logo on a dark card, or its name; null makes the "choose channels" tile. */
     private View channelTile(LiveChannels.Channel c, String pkg) {
         android.widget.FrameLayout tile = new android.widget.FrameLayout(this);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (150 * density), (int) (84 * density));
-        lp.setMarginEnd((int) (12 * density));
+        // Five fill the row edge to edge (156 + 10 each, in the row's 830dp between its paddings); fewer sit centred.
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams((int) (156 * density), (int) (92 * density));
+        lp.setMarginStart((int) (5 * density));
+        lp.setMarginEnd((int) (5 * density));
         tile.setLayoutParams(lp);
         tile.setBackgroundResource(R.drawable.tile_bg);
         tile.setFocusable(true);
@@ -2487,13 +2489,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (c != null && c.logo != null) {
             ImageView logo = new ImageView(this);
             logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            int pad = (int) (14 * density);
-            logo.setPadding(pad, pad, pad, pad);
+            logo.setPadding((int) (16 * density), (int) (10 * density), (int) (16 * density), (int) (10 * density));
             tile.addView(logo, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             shelfFeed.image(c.logo, (url, bmp) -> {
                 if (bmp == null || logo.getParent() == null) return;
-                logo.setImageBitmap(bmp);
+                logo.setImageBitmap(LiveChannels.trim(bmp));
                 name.setVisibility(View.GONE);
             });
         }
@@ -2521,10 +2522,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 firstPill().requestFocus();
                 return true;
             }
-            int i = shelfChannels.indexOfChild(v);
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return i == 0;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
-            return false;
+            // Along the row by hand: the focus finder, from a tile scaled up and a row partly scrolled, can pick the
+            // pills above (Search) instead of the next tile.
+            if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+            View next = shelfChannels.getChildAt(shelfChannels.indexOfChild(v) + (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : 1));
+            if (next != null) next.requestFocus();
+            return true;
         });
         if (c != null) tile.setOnClickListener(v -> openChannel(pkg, c));
         // Hold OK on a channel of an app's channel row: take it off the shelf, or choose the channels.
@@ -2932,10 +2935,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (keyCode == KeyEvent.KEYCODE_BACK) { closeSearch(true); return true; }
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) { searchField.requestFocus(); return true; }
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) return true;
-            int i = shelfChannels.indexOfChild(v);
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return i == 0;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) return i == shelfChannels.getChildCount() - 1;
-            return false;
+            // Along the row by hand: the focus finder, from a tile scaled up and a row partly scrolled, can pick the
+            // pills above (Search) instead of the next tile.
+            if (keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
+            View next = shelfChannels.getChildAt(shelfChannels.indexOfChild(v) + (keyCode == KeyEvent.KEYCODE_DPAD_LEFT ? -1 : 1));
+            if (next != null) next.requestFocus();
+            return true;
         });
         return tile;
     }

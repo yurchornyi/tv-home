@@ -1,123 +1,120 @@
 #!/usr/bin/env python3
 """Builds the launcher's channel list for Kyivstar TV (launcher/app/src/main/assets/channels/com.kyivstar.tv.tvapp.json).
 
-Where the data comes from, all public, no login:
-- Kyivstar TV's own sitemap lists every live channel page as <id>-<slug>; the id is what the app's deep link
-  com.kyivstar.tv.tvapp://live<id>?liveId=<id> opens, the Ukrainian and English slugs give a name.
-- iptv-org's open channel database gives proper names and logos for Ukrainian channels; matched by name.
-Kyivstar's own "KS TV ..." channels are not in that database and keep a name made from the English slug.
+Where the data comes from: the public catalog behind tv.kyivstar.ua (Vidmind's clients API), the same calls the site
+makes for a visitor who is not signed in. It gives every live channel's id (what the app's deep link
+com.kyivstar.tv.tvapp://live<id>?liveId=<id> opens), its name and number as Kyivstar shows them, its logo, and the
+site's genre groups, which become the picker's categories.
 
-Run it now and then to refresh the list, then rebuild the launcher:  python3 tools/kyivstar-channels.py
+The API wants the site's session: open https://tv.kyivstar.ua/ua/live-channels in a browser, then in its console
+  JSON.parse(localStorage.vmd_user).sessionUuid
+and run:  python3 tools/kyivstar-channels.py <that session id>
+Then rebuild the launcher.
 """
 import json
-import re
 import sys
 import urllib.request
 from pathlib import Path
 
-SITEMAP = "https://tv.kyivstar.ua/sitemap_{lang}_live-channels.xml"
-IPTV_CHANNELS = "https://iptv-org.github.io/api/channels.json"
-IPTV_LOGOS = "https://iptv-org.github.io/api/logos.json"
+API = "https://clients.production.vidmind.com/vidmind-stb-ws"
 OUT = Path(__file__).resolve().parent.parent / "launcher/app/src/main/assets/channels/com.kyivstar.tv.tvapp.json"
 
+# The site's groups, the first that holds a channel names its category (LiveChannels reads these keys). "КС ТБ" and
+# "Безкоштовне ТБ" are packages, not genres; "Національні" are the big channels, which the popular list covers.
+GROUPS = [
+    ("Дорослі", "adult"), ("Радіо", "radio"), ("Дитячі", "kids"), ("Спорт", "sport"), ("Новини", "news"),
+    ("Регіональні", "regional"), ("Музика", "music"), ("Пізнавальні", "knowledge"), ("Кіно та серіали", "movies"),
+    ("Розважальні", "entertainment"), ("Національні", "entertainment"), ("Інші", "other"),
+]
 
-def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+# What people here watch most, most watched first. Kyivstar publishes no viewing numbers, so this is chosen by hand:
+# the big channel groups by TV ratings and the joint news marathon, mixed with the pay channels that lead their genre
+# (sport, documentaries, films, kids), then the news channels.
+POPULAR = [
+    "63a1cdb84c3452c24a804dfd",  # 1+1 Україна HD
+    "55efdb73e4b0781039bc055f",  # СТБ HD
+    "63a1cebb4c3452c24a84352f",  # ICTV 2 HD
+    "55efdb73e4b0781039bc0544",  # Новий канал HD
+    "55efdb73e4b0781039bc0487",  # ТЕТ HD
+    "55efdb73e4b0781039bc046c",  # 2+2 HD
+    "55f2bcefe4b0781039beb055",  # 1+1 МАРАФОН HD
+    "5f7482451774d4de8a615dd5",  # Setanta Sports HD
+    "676d3b72b7140a1feeaf0efb",  # Setanta Sports Premium HD
+    "55efdb77e4b0781039bc0e59",  # Discovery Channel
+    "5c9fe402e4b0b702df2a2e37",  # National Geographic
+    "55efdb73e4b0781039bc057a",  # ICTV HD
+    "55efdb73e4b0781039bc03e5",  # НТН HD
+    "5646025ee4b030cb88f2ca9e",  # Viasat History HD
+    "5b4c567960b25704b6b0639c",  # Animal Planet
+    "58a15a5430d48b494bcc67c2",  # Еспресо
+    "55efdb73e4b0781039bc0601",  # Прямий
+    "55efdb73e4b0781039bc04a2",  # ПЛЮСПЛЮС HD
+    "55efdb73e4b0781039bc0400",  # Піксель HD
+    "5f0452a7f0f4201b22763474",  # Bolt HD
+    "5c01323de4b0f16ffce5824a",  # FILMUADRAMA HD
+    "5fc4dcf31d544ddbce8c2d0c",  # Cine + HIT HD
+    "55efdb77e4b0781039bc0ec5",  # Eurosport HD
+    "55efdb73e4b0781039bc03ca",  # Мега HD
+    "5ab9e7e760b20c61c1efec00",  # Інтер HD
+]
+
+
+def get(session, path):
+    req = urllib.request.Request(API + path.replace("{s}", ";jsessionid=" + session),
+                                 headers={"x-vidmind-device-type": "WEB", "User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read()
+        return json.load(r)
 
 
-def slugs(lang):
-    xml = fetch(SITEMAP.format(lang=lang)).decode("utf-8", "replace")
-    found = {}
-    for cid, slug in re.findall(r"live-channels/([0-9a-f]{24})-([a-z0-9-]+)", xml):
-        found.setdefault(cid, slug)
-    return found
+def pages(session, group, everything):
+    """Every channel of one of the site's groups, in the site's order."""
+    seen = []
+    for offset in range(0, 5000, 100):
+        if everything:
+            items = get(session, f"/api/v1/content-groups/{group}{{s}}?limit=100&offset={offset}")["assets"]["assets"]
+        else:
+            items = get(session, f"/api/v1/gallery/contentgroups/{group}{{s}}?limit=100&offset={offset}")
+        new = [a for a in items if a["assetId"] not in {s["assetId"] for s in seen}]
+        seen += new
+        if len(items) < 100 or not new:
+            return seen
+    return seen
 
 
-def norm(s):
-    s = s.lower()
-    s = s.replace("+", "plus").replace("&", "and")
-    s = re.sub(r"\b(hd|uhd|4k|tv|tb|channel|kanal|ukraine|ukraina|ua)\b", " ", s.replace("-", " "))
-    return re.sub(r"[^a-z0-9]", "", s)
-
-
-# Names a slug cannot say: the well-known broadcasters, in Ukrainian, keyed by the English slug's start.
-ALIASES = {
-    "1-1": "1+1", "2-2": "2+2", "36-6": "36.6", "stb": "СТБ", "ictv": "ICTV", "inter": "Інтер",
-    "novyj-kanal": "Новий канал", "novyi-kanal": "Новий канал", "ukraina": "Україна", "5-kanal": "5 канал",
-    "24-kanal": "24 Канал", "channel-24": "24 Канал", "channel-5": "5 канал", "espreso": "Еспресо",
-    "pryamyj": "Прямий", "pryamyi": "Прямий", "kyiv": "Київ", "ua-pershyj": "UA:Перший", "pershyj": "Перший",
-    "suspilne": "Суспільне", "megogo": "MEGOGO", "mega": "Мега", "tet": "ТЕТ", "k1": "К1", "k2": "К2",
-    "nlo-tv": "НЛО TV", "pixel": "Піксель", "plus-plus": "ПлюсПлюс", "plusplus": "ПлюсПлюс", "indigo": "Індиго",
-    "eko-tv": "Еко TV", "dim": "Дім", "svit": "Світ", "rada": "Рада", "apostrof": "Апостроф", "apostrophe": "Апостроф",
-}
-
-
-def alias(slug):
-    """A Ukrainian name for a known broadcaster's slug, with its HD/4K suffix kept; None for the rest."""
-    for key in sorted(ALIASES, key=len, reverse=True):
-        if slug == key or slug.startswith(key + "-"):
-            rest = [w for w in slug[len(key):].strip("-").split("-") if w and w not in ("ukraina", "ukraine", "ua")]
-            return ALIASES[key] + (" " + pretty("-".join(rest)) if rest else "")
+def logo(asset):
+    for source in asset.get("imagesSource") or []:
+        for f in source.get("imgFiles") or []:
+            if f.get("type") == "STBCHLOGO":
+                return source["url"].rstrip("/") + "/" + f["fileName"]
     return None
 
 
-def cyrillic(c):
-    """iptv-org's Ukrainian alternative name when it has one, else its name."""
-    for n in c.get("alt_names") or []:
-        if re.search("[\u0400-\u04FF]", n):
-            return n
-    return c["name"]
-
-
-def pretty(slug):
-    words = slug.split("-")
-    small = {"and", "of", "the", "fm"}
-    out = []
-    for w in words:
-        if w in ("hd", "uhd", "4k", "tv", "fm"):
-            out.append(w.upper())
-        elif w in small:
-            out.append(w)
-        else:
-            out.append(w.capitalize())
-    return " ".join(out)
-
-
 def main():
-    ua, en = slugs("ua"), slugs("en")
-    channels = json.loads(fetch(IPTV_CHANNELS))
-    logos = {}
-    for l in json.loads(fetch(IPTV_LOGOS)):
-        logos.setdefault(l["channel"], l["url"])
-    by_name = {}
-    for c in channels:
-        if c.get("country") != "UA":
-            continue
-        for n in [c["name"]] + list(c.get("alt_names") or []):
-            by_name.setdefault(norm(n), c)
+    if len(sys.argv) != 2:
+        print(__doc__)
+        return 2
+    session = sys.argv[1]
+    areas = get(session, "/api/v2/contentareas/LIVE_CHANNELS{s}?includeRestricted=true&limit=100")
+    every = next(a for a in areas if a["type"] == "ALL_CHANNELS")
+    channels = pages(session, every["assetId"], True)
+    groups = {a["name"]: {c["assetId"] for c in pages(session, a["assetId"], False)} for a in areas if a is not every}
     out = []
-    matched = 0
-    for cid, slug in ua.items():
-        en_slug = en.get(cid, slug)
-        own = en_slug.startswith("ks-tv-") or slug.startswith("ks-tb-")
-        base = re.sub(r"^ks-(tv|tb)-", "", en_slug)
-        hit = None if own else (by_name.get(norm(en_slug)) or by_name.get(norm(slug)))
-        if hit:
-            matched += 1
-            name, logo = alias(en_slug) or cyrillic(hit), logos.get(hit["id"])
-        else:
-            name, logo = (None if own else alias(en_slug)) or pretty(base) + (" · Київстар" if own else ""), None
-        # Kyivstar TV 1.30 takes the id right after "live" (what follows "://live" up to "?" is the asset id); the
-        # liveId query is what older builds read. One link serves both.
-        out.append({"id": cid, "name": name, "logo": logo, "open": "com.kyivstar.tv.tvapp://live" + cid + "?liveId=" + cid,
-                    "own": own})
-    # Real broadcasters first, alphabetically; Kyivstar's own themed channels after them.
-    out.sort(key=lambda c: (c["own"], c["name"].lower()))
+    for c in channels:
+        cid = c["assetId"]
+        category = next((key for name, key in GROUPS if cid in groups.get(name, ())), "other")
+        entry = {"id": cid, "name": c["name"].strip(), "number": c.get("number"), "logo": logo(c),
+                 "category": category,
+                 # Kyivstar TV 1.30 takes the id right after "live"; the liveId query is what older builds read.
+                 "open": "com.kyivstar.tv.tvapp://live" + cid + "?liveId=" + cid}
+        if cid in POPULAR:
+            entry["popular"] = POPULAR.index(cid) + 1
+        out.append(entry)
+    missing = [p for p in POPULAR if p not in {c["id"] for c in out}]
+    if missing:
+        print("popular channels no longer listed:", missing)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(out, ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
-    print(f"{len(out)} channels, {matched} with a name and logo from iptv-org, written to {OUT}")
+    print(f"{len(out)} channels, {sum(1 for c in out if c['logo'])} with a logo, written to {OUT}")
 
 
 if __name__ == "__main__":

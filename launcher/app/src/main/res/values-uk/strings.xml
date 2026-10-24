@@ -96,6 +96,7 @@
         <item>Новини</item>
         <item>Спорт</item>
         <item>Кіно і серіали</item>
+        <item>Розважальні</item>
         <item>Дитячі</item>
         <item>Пізнавальні</item>
         <item>Музика</item>
@@ -109,7 +110,7 @@
     <string name="channels_auto_on">Автоматичний порядок: увімк.</string>
     <string name="channels_auto_off">Автоматичний порядок: вимк.</string>
     <string name="channels_on_shelf">Канали на полиці: %s</string>
-    <string name="channels_hint">OK додає або прибирає, утримання OK — ніколи не показувати, Назад зберігає</string>
+    <string name="channels_hint">Вліво/вправо — категорії, OK додає або прибирає, утримання OK — ніколи не показувати, Назад зберігає</string>
     <string name="channels_empty">Утримуйте OK на плитці, щоб вибрати канали</string>
     <string name="search">Пошук</string>
     <string name="search_hint">Програма, канал чи фільм</string>
