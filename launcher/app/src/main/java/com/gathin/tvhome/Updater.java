@@ -76,6 +76,11 @@ final class Updater {
         return p.getString("ready_name", "");
     }
 
+    /** What the downloaded version brings (the release's notes), "" when it says nothing. */
+    String readyNotes() {
+        return readyVersion() == null ? "" : prefs().getString("ready_notes", "").trim();
+    }
+
     /** Looks for a newer build at most once an hour; tells the listener once one is downloaded. */
     void check() {
         check(false);
@@ -123,7 +128,8 @@ final class Updater {
             download(apk, tmp);
             verify(tmp, code, info.optString("sha256", ""));
             if (!tmp.renameTo(apkFile())) throw new IllegalStateException("rename failed");
-            prefs().edit().putInt("ready_code", code).putString("ready_name", name).apply();
+            prefs().edit().putInt("ready_code", code).putString("ready_name", name)
+                    .putString("ready_notes", info.optString("notes", "")).apply();
             Log.i(TAG, "downloaded " + name);
             main.post(() -> listener.onUpdateReady(name));
         } catch (Exception e) {

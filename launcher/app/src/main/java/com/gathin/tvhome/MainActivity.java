@@ -368,22 +368,202 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         updateOfferedAt = SystemClock.elapsedRealtime();
         android.util.Log.i("TvHome", "offering update " + version);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
-        LinearLayout rows = panel.findViewById(R.id.rows);
+        showUpdateCard(version, updater.readyNotes());
+    }
+
+    /**
+     * The update offer as tvOS puts one: the screen dims, and in its middle an opaque dark card (no glass: over a
+     * bright poster the Realtek GPU of the TCL washed a translucent panel out) with the launcher's icon, the version,
+     * what it brings, and two large buttons side by side, Update focused. A focused button turns white with black
+     * text, the other stays dark with white text, so the choice reads at a glance from the sofa.
+     */
+    private void showUpdateCard(String version, String notes) {
+        android.widget.FrameLayout scrim = new android.widget.FrameLayout(this);
+        scrim.setBackgroundColor(0xB3000000);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        int pad = (int) (40 * density);
+        card.setPadding(pad, (int) (36 * density), pad, (int) (32 * density));
+        // Soft and round: a deep graphite that lightens a touch at the top, a hairline edge barely there.
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF2B2D35, 0xFF1B1C21, 0xFF17181C});
+        bg.setCornerRadius(34 * density);
+        bg.setStroke(Math.max(1, (int) density), 0x14FFFFFF);
+        card.setBackground(bg);
+        card.setElevation(24 * density);
+
+        // An arrow rising in a blue-to-violet disc inside a faint halo of the same colour, as an app store marks an
+        // update; not the launcher's own icon, which reads as a dark smudge at this size.
+        android.widget.FrameLayout badge = new android.widget.FrameLayout(this);
+        android.graphics.drawable.GradientDrawable halo = new android.graphics.drawable.GradientDrawable();
+        halo.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        halo.setColor(0x267B7CFF);
+        badge.setBackground(halo);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.ic_update);
+        int ip0 = (int) (15 * density);
+        icon.setPadding(ip0, ip0, ip0, ip0);
+        android.graphics.drawable.GradientDrawable disc = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR, new int[]{0xFF5B9BFF, 0xFF8A5CFF});
+        disc.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        icon.setBackground(disc);
+        badge.addView(icon, new android.widget.FrameLayout.LayoutParams((int) (68 * density), (int) (68 * density), Gravity.CENTER));
+        card.addView(badge, new LinearLayout.LayoutParams((int) (92 * density), (int) (92 * density)));
         TextView title = new TextView(this);
-        title.setText(getString(R.string.update_offer, version));
-        title.setTextColor(0xF2FFFFFF);
-        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setText(getString(R.string.update_title, version));
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 26);
         title.setTypeface(getResources().getFont(R.font.outfit_medium));
-        title.setPadding((int) (14 * density), (int) (10 * density), (int) (14 * density), (int) (10 * density));
-        rows.addView(title);
-        PopupWindow popup = glassPopup(panel, (int) (380 * density));
-        addSettingsMenuRow(rows, popup, R.string.update_now, updater::install);
-        addSettingsMenuRow(rows, popup, R.string.update_later, () -> { });   // the Settings menu keeps "Update to"
-        panel.setAlpha(0f);
+        weight(title, 600);
+        title.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        tlp.topMargin = (int) (14 * density);
+        card.addView(title, tlp);
+        TextView keep = new TextView(this);
+        keep.setText(R.string.update_keeps);
+        keep.setTextColor(0x99FFFFFF);
+        keep.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
+        keep.setTypeface(getResources().getFont(R.font.outfit_regular));
+        weight(keep, 450);
+        keep.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams klp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        klp.topMargin = (int) (6 * density);
+        card.addView(keep, klp);
+        if (!notes.isEmpty()) {
+            // What is new, as the release says it, on a slightly lighter panel; long notes are cut at five lines.
+            TextView what = new TextView(this);
+            what.setText(notes);
+            what.setTextColor(0xD9FFFFFF);
+            what.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+            what.setTypeface(getResources().getFont(R.font.outfit_regular));
+            weight(what, 400);
+            what.setLineSpacing(0, 1.2f);
+            what.setMaxLines(5);
+            what.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            int ip = (int) (18 * density);
+            what.setPadding(ip, (int) (14 * density), ip, (int) (14 * density));
+            android.graphics.drawable.GradientDrawable box = new android.graphics.drawable.GradientDrawable();
+            box.setCornerRadius(16 * density);
+            box.setColor(0x14FFFFFF);
+            what.setBackground(box);
+            LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            wlp.topMargin = (int) (20 * density);
+            card.addView(what, wlp);
+        }
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setClipChildren(false);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = (int) (26 * density);
+        card.addView(buttons, blp);
+        card.setClipChildren(false);
+        card.setClipToPadding(false);   // a focused button grows a little past the card's padding
+
+        android.widget.FrameLayout.LayoutParams clp = new android.widget.FrameLayout.LayoutParams(
+                (int) (520 * density), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        scrim.addView(card, clp);
+        PopupWindow popup = new PopupWindow(scrim, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, true);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));   // needed for Back to dismiss
+        popup.setAnimationStyle(0);
+        popup.setOnDismissListener(() -> {
+            if (openPopup == popup) openPopup = null;
+        });
+        openPopup = popup;
+        TextView now = updateButton(getString(R.string.update_now), () -> {
+            popup.dismiss();
+            updater.install();
+        });
+        TextView later = updateButton(getString(R.string.update_later), popup::dismiss);   // the Settings menu keeps "Update to"
+        LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, (int) (52 * density), 1f);
+        left.setMarginEnd((int) (6 * density));
+        LinearLayout.LayoutParams right = new LinearLayout.LayoutParams(0, (int) (52 * density), 1f);
+        right.setMarginStart((int) (6 * density));
+        buttons.addView(now, left);
+        buttons.addView(later, right);
+
+        scrim.setAlpha(0f);
+        card.setScaleX(0.94f);
+        card.setScaleY(0.94f);
         popup.showAtLocation(root, Gravity.CENTER, 0, 0);
-        panel.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
-        rows.getChildAt(1).requestFocus();
+        scrim.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
+        card.animate().scaleX(1f).scaleY(1f).setDuration(320).setInterpolator(EASE).start();
+        now.requestFocus();
+    }
+
+    private static final Map<Integer, android.graphics.Typeface> WEIGHTS = new HashMap<>();
+
+    /**
+     * Outfit at this weight, made from the font file itself: Android 9 (the TCL) ignores the variation in the font
+     * resource and on the view, and draws Outfit's thinnest instance, pale grey at 720p. A Typeface.Builder over the
+     * file honours it. Built once per weight; the file is copied out of the resources once.
+     */
+    private void weight(TextView t, int wght) {
+        android.graphics.Typeface face = WEIGHTS.get(wght);
+        if (face == null) {
+            try {
+                java.io.File file = new java.io.File(getCacheDir(), "outfit.ttf");
+                if (!file.isFile()) {
+                    try (java.io.InputStream in = getResources().openRawResource(R.font.outfit);
+                         java.io.FileOutputStream out = new java.io.FileOutputStream(file)) {
+                        byte[] buf = new byte[65536];
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    }
+                }
+                face = new android.graphics.Typeface.Builder(file).setFontVariationSettings("'wght' " + wght).build();
+            } catch (Exception e) {
+                face = null;
+            }
+            if (face == null) return;   // the resource's own weight, as before
+            WEIGHTS.put(wght, face);
+        }
+        t.setTypeface(face);
+    }
+
+    /** One of the update card's two buttons: white with black text under focus, dark with white text otherwise. */
+    private TextView updateButton(String label, Runnable action) {
+        TextView b = new TextView(this);
+        b.setText(label);
+        b.setGravity(Gravity.CENTER);
+        b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18);
+        b.setTypeface(getResources().getFont(R.font.outfit_medium));
+        weight(b, 600);
+        b.setFocusable(true);
+        b.setClickable(true);
+        // Pills, fully round at the ends, as tvOS draws an alert's buttons.
+        android.graphics.drawable.GradientDrawable on = new android.graphics.drawable.GradientDrawable();
+        on.setCornerRadius(26 * density);
+        on.setColor(0xFFFFFFFF);
+        android.graphics.drawable.GradientDrawable off = new android.graphics.drawable.GradientDrawable();
+        off.setCornerRadius(26 * density);
+        off.setColor(0x24FFFFFF);
+        android.graphics.drawable.StateListDrawable states = new android.graphics.drawable.StateListDrawable();
+        states.addState(new int[]{android.R.attr.state_focused}, on);
+        states.addState(new int[]{}, off);
+        b.setBackground(states);
+        b.setTextColor(new android.content.res.ColorStateList(
+                new int[][]{{android.R.attr.state_focused}, {}}, new int[]{0xFF0A0A0A, 0xFFFFFFFF}));
+        b.setOnFocusChangeListener((v, focus) -> v.animate().scaleX(focus ? 1.04f : 1f).scaleY(focus ? 1.04f : 1f)
+                .setDuration(180).setInterpolator(EASE).start());
+        // Acts on OK's release, and only for a press that began here: the press that woke the TV never answers.
+        final boolean[] pressed = {false};
+        b.setOnKeyListener((v, code, event) -> {
+            if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (event.getRepeatCount() == 0) pressed[0] = true;
+                return true;
+            }
+            if (pressed[0]) action.run();
+            pressed[0] = false;
+            return true;
+        });
+        b.setOnClickListener(v -> action.run());
+        return b;
     }
 
     /** m:ss, or h:mm:ss past an hour. */
