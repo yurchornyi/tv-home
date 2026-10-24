@@ -383,32 +383,69 @@ final class ShelfFeed {
     }
 
     /**
-     * A 1280x720 field of the cover's own colours: the cover shrunk to 3x3 pixels, more saturated and lighter, and stretched
-     * back up with filtering into a few large soft patches; darker on the left, where the shelf's text sits. Behind
-     * the player it stands alone, since the player card shows the cover itself.
+     * A 1280x720 field of the cover's own colours, as Apple Music lights its player: the cover's few most vivid
+     * colours (distinct hues, made a little brighter and richer) as large soft glows over a deep shade of its average
+     * colour, darker on the left, where the shelf's text sits. Behind the player it stands alone, since the player card
+     * shows the cover itself.
      */
     static Bitmap glow(Bitmap cover) {
         cover = software(cover);
         int w = 1280, h = 720;
-        // Full colour: in RGB_565 the soft patches fall into visible bands.
+        // Full colour: in RGB_565 the soft glows fall into visible bands.
         Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         android.graphics.Canvas c = new android.graphics.Canvas(out);
-        Bitmap tiny = Bitmap.createScaledBitmap(cover, 3, 3, true);
-        android.graphics.ColorMatrix vivid = new android.graphics.ColorMatrix();
-        vivid.setSaturation(1.7f);
-        android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix();
-        dim.setScale(1.15f, 1.15f, 1.15f, 1f);   // a dark cover still gives colour
-        vivid.postConcat(dim);
-        android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
-        paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(vivid));
-        // Drawn a third larger than the picture on each side: the edge pixels' colours fade in from outside.
-        c.drawBitmap(tiny, null, new android.graphics.Rect(-w / 3, -h / 3, w + w / 3, h + h / 3), paint);
-        tiny.recycle();
-        android.graphics.Paint shade = new android.graphics.Paint();
-        shade.setShader(new android.graphics.LinearGradient(0, 0, w, 0, new int[]{0x8C000000, 0x33000000, 0x14000000},
+        Bitmap small = Bitmap.createScaledBitmap(cover, 8, 8, true);
+        int[] px = new int[64];
+        small.getPixels(px, 0, 8, 0, 0, 8, 8);
+        small.recycle();
+        float[] avg = new float[3];
+        Integer[] order = new Integer[64];
+        float[][] hsv = new float[64][3];
+        for (int i = 0; i < 64; i++) {
+            android.graphics.Color.colorToHSV(px[i], hsv[i]);
+            avg[0] += android.graphics.Color.red(px[i]) / 64f;
+            avg[1] += android.graphics.Color.green(px[i]) / 64f;
+            avg[2] += android.graphics.Color.blue(px[i]) / 64f;
+            order[i] = i;
+        }
+        java.util.Arrays.sort(order, (a, b) -> Float.compare(score(hsv[b]), score(hsv[a])));
+        List<Integer> picked = new ArrayList<>();
+        for (int i : order) {
+            if (picked.size() == 3) break;
+            boolean distinct = true;
+            for (int j : picked) {
+                float d = Math.abs(hsv[i][0] - hsv[j][0]);
+                if (Math.min(d, 360 - d) < 28 && Math.abs(hsv[i][2] - hsv[j][2]) < 0.3f) distinct = false;
+            }
+            if (distinct) picked.add(i);
+        }
+        float[] base = new float[3];
+        android.graphics.Color.RGBToHSV((int) avg[0], (int) avg[1], (int) avg[2], base);
+        base[2] = Math.min(base[2], 0.22f);
+        c.drawColor(android.graphics.Color.HSVToColor(base));
+        float[][] spots = {{0.82f, 0.32f, 0.72f}, {0.38f, 0.05f, 0.62f}, {0.58f, 1.0f, 0.6f}};
+        for (int k = 0; k < picked.size(); k++) {
+            float[] col = hsv[picked.get(k)].clone();
+            col[1] = Math.min(1f, col[1] * 1.25f + 0.08f);
+            col[2] = Math.max(col[2], 0.72f);
+            int rgb = android.graphics.Color.HSVToColor(col);
+            android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.DITHER_FLAG);
+            float r = spots[k][2] * w;
+            p.setShader(new android.graphics.RadialGradient(spots[k][0] * w, spots[k][1] * h, r,
+                    new int[]{rgb | 0xFF000000, (rgb & 0xFFFFFF) | 0x80000000, rgb & 0xFFFFFF},
+                    new float[]{0f, 0.5f, 1f}, android.graphics.Shader.TileMode.CLAMP));
+            c.drawRect(0, 0, w, h, p);
+        }
+        android.graphics.Paint shade = new android.graphics.Paint(android.graphics.Paint.DITHER_FLAG);
+        shade.setShader(new android.graphics.LinearGradient(0, 0, w, 0, new int[]{0x80000000, 0x26000000, 0x00000000},
                 null, android.graphics.Shader.TileMode.CLAMP));
         c.drawRect(0, 0, w, h, shade);
         return out;
+    }
+
+    /** How much a colour lights the field: vivid and bright counts, grey and dark does not. */
+    private static float score(float[] hsv) {
+        return hsv[1] * 0.65f + hsv[2] * 0.35f;
     }
 
     /** A media session's cover can be a hardware bitmap, which a software canvas cannot draw. */
