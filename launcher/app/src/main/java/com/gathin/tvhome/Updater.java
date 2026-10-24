@@ -152,16 +152,20 @@ final class Updater {
     @SuppressWarnings("deprecation")
     private void verify(File apk, int code, String sha) throws Exception {
         sha = sha.trim().toLowerCase(java.util.Locale.ROOT);
-        if (!sha.isEmpty() && !sha.equals(AppInstaller.sha256(apk))) throw new SecurityException("checksum mismatch");
+        // release.sh always writes one: a release without it is not one of ours.
+        if (sha.isEmpty()) throw new SecurityException("no checksum");
+        if (!sha.equals(AppInstaller.sha256(apk))) throw new SecurityException("checksum mismatch");
         PackageManager pm = ctx.getPackageManager();
         PackageInfo got = pm.getPackageArchiveInfo(apk.getPath(), PackageManager.GET_SIGNATURES);
         if (got == null || !ctx.getPackageName().equals(got.packageName) || got.versionCode != code) {
             throw new SecurityException("not this launcher at " + code);
         }
-        // Some older TVs read no signatures from an archive; Android itself still refuses a foreign one then.
+        // The new build must carry the key this one was signed with. Some older TVs read no signatures from an
+        // archive; Android itself still refuses a foreign one then.
+        String theirs = AppInstaller.signer(pm, apk);
         Signature[] mine = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES).signatures;
-        if (got.signatures != null && got.signatures.length > 0 && mine != null && mine.length > 0
-                && !java.util.Arrays.equals(got.signatures, mine)) {
+        if (theirs != null && mine != null && mine.length > 0 && !theirs.equals(
+                AppInstaller.sha256(mine[0].toByteArray()))) {
             throw new SecurityException("signed by someone else");
         }
     }

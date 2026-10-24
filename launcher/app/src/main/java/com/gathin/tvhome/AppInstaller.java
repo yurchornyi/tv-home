@@ -22,14 +22,19 @@ import java.security.MessageDigest;
 
 /**
  * Installs one of the owner's own apps from its public GitHub release (KIK: config.xml kik_update_url), the way the
- * launcher updates itself (Updater): reads the release's update.json, downloads the APK, checks its SHA-256, and
- * hands it to Android's installer, which asks the owner to confirm (UpdateReceiver shows that screen).
+ * launcher updates itself (Updater): reads the release's update.json, downloads the APK, checks its SHA-256, that it
+ * is KIK and that KIK's own key signed it, and hands it to Android's installer, which asks the owner to confirm
+ * (UpdateReceiver shows that screen). The package and the key are fixed here, not taken from update.json: whoever
+ * could change that file could name anything there.
  */
 final class AppInstaller {
 
     interface Done { void onDone(boolean started); }
 
     private static final String TAG = "TvHome.Install";
+    static final String KIK_PACKAGE = "kik.app";
+    /** SHA-256 of the certificate KIK's releases are signed with. */
+    static final String KIK_SIGNER = "d8708680a4ebfee138bdb6a40bac6108e9200cb701f67026977147c3353add0a";
 
     private AppInstaller() { }
 
@@ -40,12 +45,19 @@ final class AppInstaller {
             boolean started = false;
             try {
                 JSONObject info = new JSONObject(new String(get(updateUrl, 64 * 1024), "UTF-8"));
-                String pkg = info.getString("application_id");
+                String pkg = KIK_PACKAGE;
+                if (!pkg.equals(info.optString("application_id"))) throw new SecurityException("not KIK");
                 String apkUrl = info.getString("apk_url");
-                String sha = info.optString("sha256", "").toLowerCase(java.util.Locale.ROOT);
+                if (!apkUrl.startsWith("https://")) throw new SecurityException("not https");
+                String sha = info.optString("sha256", "").trim().toLowerCase(java.util.Locale.ROOT);
+                if (sha.isEmpty()) throw new SecurityException("no checksum");
                 File apk = new File(ctx.getCacheDir(), "install-" + pkg + ".apk");
                 download(apkUrl, apk);
-                if (!sha.isEmpty() && !sha.equals(sha256(apk))) throw new SecurityException("checksum mismatch");
+                if (!sha.equals(sha256(apk))) throw new SecurityException("checksum mismatch");
+                android.content.pm.PackageInfo got = ctx.getPackageManager().getPackageArchiveInfo(apk.getPath(), 0);
+                if (got == null || !pkg.equals(got.packageName)) throw new SecurityException("not KIK");
+                String signer = signer(ctx.getPackageManager(), apk);
+                if (signer != null && !KIK_SIGNER.equals(signer)) throw new SecurityException("signed by someone else");
                 PackageInstaller installer = ctx.getPackageManager().getPackageInstaller();
                 PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
                         PackageInstaller.SessionParams.MODE_FULL_INSTALL);
@@ -114,6 +126,38 @@ final class AppInstaller {
             return c;
         }
         throw new java.io.IOException("too many redirects");
+    }
+
+    /** SHA-256 of the certificate that signed an APK file, or null where this Android cannot read it from a file. */
+    @SuppressWarnings("deprecation")
+    static String signer(android.content.pm.PackageManager pm, File apk) {
+        try {
+            android.content.pm.Signature[] sigs = null;
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                android.content.pm.PackageInfo pi = pm.getPackageArchiveInfo(apk.getPath(),
+                        android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+                if (pi != null && pi.signingInfo != null) sigs = pi.signingInfo.getApkContentsSigners();
+            }
+            if (sigs == null || sigs.length == 0) {
+                android.content.pm.PackageInfo pi = pm.getPackageArchiveInfo(apk.getPath(),
+                        android.content.pm.PackageManager.GET_SIGNATURES);
+                if (pi != null) sigs = pi.signatures;
+            }
+            if (sigs == null || sigs.length == 0) return null;
+            return hex(MessageDigest.getInstance("SHA-256").digest(sigs[0].toByteArray()));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) sb.append(String.format("%02x", b));
+        return sb.toString();
+    }
+
+    static String sha256(byte[] bytes) throws Exception {
+        return hex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 
     static String sha256(File f) throws Exception {

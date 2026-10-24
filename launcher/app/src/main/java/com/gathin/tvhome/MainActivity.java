@@ -2893,12 +2893,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
     }
 
-    /** An intent: or plain URI into its app; the app itself when the URI is broken. */
+    /**
+     * An intent: or plain URI into its app; the app itself when the URI is broken. The URI comes from outside (another
+     * app's home-screen programs, the Worker's shelf), so it may only open that app: never another one, never the
+     * launcher's own screens, and it hands no file access on.
+     */
     private void openUri(String uri, String pkg) {
         try {
             Intent i = uri.startsWith("intent:") ? Intent.parseUri(uri, Intent.URI_INTENT_SCHEME)
                     : new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-            if (i.getPackage() == null && i.getComponent() == null) i.setPackage(pkg);
+            i.setSelector(null);
+            if (i.getComponent() != null && !pkg.equals(i.getComponent().getPackageName())) i.setComponent(null);
+            i.setPackage(pkg);
+            i.setFlags(i.getFlags() & ~(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION));
             open(i);
         } catch (java.net.URISyntaxException e) {
             launchApp(pkg);

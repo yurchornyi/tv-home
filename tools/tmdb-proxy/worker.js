@@ -4,6 +4,8 @@ import { popular as kyivstarPopular, channel as kyivstarChannel } from './kyivst
 import { account, isAccountRoute } from './account.js';
 import { popular as spotifyPopular } from './spotify.js';
 
+export { Guard } from './guard.js';
+
 // The launcher's TMDB requests go through here (ShelfFeed, config.xml tmdb_proxy), so the TMDB key lives only in
 // this Worker's secret (TMDB_KEY) and never in the APK or on GitHub. Only the few read-only paths the top shelf
 // uses are passed on; answers are cached at Cloudflare's edge for six hours, so every TV asking the same list
@@ -31,6 +33,11 @@ async function ai(request, env, path) {
   if (env.AI_LIMIT) {
     const { success } = await env.AI_LIMIT.limit({ key: who });
     if (!success) return json({ error: 'slow down' }, 429);
+  }
+  // And a ceiling for everyone together, so many addresses at once cannot run up the bill either.
+  if (env.AI_GLOBAL) {
+    const { success } = await env.AI_GLOBAL.limit({ key: 'all' });
+    if (!success) return json({ error: 'busy' }, 429);
   }
   let body;
   try {
@@ -85,8 +92,11 @@ export default {
     // no-store: Cloudflare must not keep TMDB's own answer by URL. A v4 token travels in a header the URL does not
     // show, so a 401 cached under an old token kept coming back, now and then, after the token changed.
     const answer = await fetch(upstream.toString(), { headers, cache: 'no-store' });
-    response = new Response(answer.body, answer);
-    response.headers.delete('set-cookie');
+    // Only the type travels on: TMDB's own headers (its CDN's ids, cookies) stay behind.
+    response = new Response(answer.body, {
+      status: answer.status,
+      headers: { 'Content-Type': answer.headers.get('Content-Type') || 'application/json; charset=utf-8' },
+    });
     if (answer.ok) {
       response.headers.set('Cache-Control', 'public, max-age=' + TTL);
       ctx.waitUntil(cache.put(cacheKey, response.clone()));

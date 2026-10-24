@@ -19,11 +19,26 @@ name = "TMDB_LIMIT"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
-# Account sign-in (account.js): per-address limit on PIN tries.
+# Writes to an account (its Home, its apps' settings): per account.
 [[ratelimits]]
-name = "ACCOUNT_LIMIT"
-namespace_id = "1003"
-simple = { limit = 10, period = 60 }
+name = "WRITE_LIMIT"
+namespace_id = "1006"
+simple = { limit = 20, period = 60 }
+
+# The AI routes for all TVs together (on top of AI_LIMIT per address).
+[[ratelimits]]
+name = "AI_GLOBAL"
+namespace_id = "1007"
+simple = { limit = 60, period = 60 }
+
+# Exact counters for PIN tries, sign-in tries and new accounts (guard.js, account.js).
+[[durable_objects.bindings]]
+name = "GUARD"
+class_name = "Guard"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Guard"]
 
 # Accounts and their synced Home (account.js).
 [[kv_namespaces]]
@@ -31,6 +46,6 @@ binding = "ACCOUNTS"
 id = "6e74394e0755459494f2678a18b530d9"
 
 [vars]
-# The account that sees and deletes the others (account.js /account/admin).
-ADMIN_EMAIL = "yurchornyi@gmail.com"
+# The account that sees and deletes the others (account.js /account/admin) is the ADMIN_EMAIL secret, not a var:
+# `npx wrangler secret put ADMIN_EMAIL`, then tools/tmdb-proxy/make-admin.sh sets its PIN.
 SENTRA_URL = "https://sentra.sntr.workers.dev"

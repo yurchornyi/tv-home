@@ -3,17 +3,23 @@
 // choices, the apps installed) whenever it changes, and takes the newest from here; a new TV signed in to the same
 // account gets that Home and the list of apps to install. Kept in the ACCOUNTS KV namespace:
 //   u:<email>  { salt, hash, created }   the PIN only as PBKDF2-SHA256, never itself
-//   t:<token>  <email>                   a TV's sign-in, until it signs out
+//   t:<sha256 of token>  <email>         a TV's sign-in, until it signs out or a year passes (only the hash is kept)
+//   x:<email>:<sha256 of token>          the same sign-in, listed by account, so deleting one finds its TVs
 //   s:<email>  { state, updated, device } the newest state
-//   f:<email>  failed PIN tries in the last 15 minutes; ten lock the account until they expire
 //   b:<email>  blocked by the owner: no sign-in, no sync, until unblocked
 //   a:<email>:<package>  an app's own settings backup (SmartTube's), encrypted on the TV with a key from the PIN,
 //              so this Worker only ever holds bytes it cannot read; metadata { updated, size }
-// Each address also gets few tries a minute (ACCOUNT_LIMIT), so six digits cannot be guessed from one place.
-// The owner's own account (ADMIN_EMAIL in wrangler.toml) also sees every account and can delete one (/account/admin).
+// Guessing a PIN (guard.js, counted exactly from anywhere): ten wrong ones lock that e-mail for 15 minutes, and each
+// address gets ten sign-in tries a minute, so a PIN cannot be guessed from one place or from many. New accounts: five
+// an hour per address. Writes: a few a minute per account (WRITE_LIMIT).
+// The owner's own account (the ADMIN_EMAIL secret) also sees every account and can delete one (/account/admin). It is
+// never made by signing in: tools/tmdb-proxy/make-admin.sh writes it, so nobody can claim that e-mail first.
 
 const enc = new TextEncoder();
 const MAX_STATE = 512 * 1024;
+const TOKEN_TTL = 365 * 24 * 60 * 60;
+/** The apps whose own settings the account may keep (AppSettings): SmartTube only. */
+const APPS = new Set(['org.smarttube.stable']);
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -54,20 +60,39 @@ function pin(v) {
   return p;
 }
 
+const sha256 = async (text) => hex(await crypto.subtle.digest('SHA-256', enc.encode(text)));
+
 async function newToken(env, who) {
   const token = hex(crypto.getRandomValues(new Uint8Array(24)));
-  await env.ACCOUNTS.put('t:' + token, who);
+  const h = await sha256(token);
+  await Promise.all([env.ACCOUNTS.put('t:' + h, who, { expirationTtl: TOKEN_TTL }),
+    env.ACCOUNTS.put(`x:${who}:${h}`, '1', { expirationTtl: TOKEN_TTL })]);
   return token;
+}
+
+const MINUTE = 60 * 1000;
+const LOCK_TRIES = 10;
+const LOCK_MS = 15 * MINUTE;
+
+/** The exact counter for one key (guard.js); null where the binding is missing (local tests). */
+const guard = (env, key) => (env.GUARD ? env.GUARD.get(env.GUARD.idFromName(key)) : null);
+
+/** A per-key limit (a Cloudflare rate-limit binding); true when the request may go on. */
+async function allowed(limit, key) {
+  if (!limit) return true;
+  const { success } = await limit.limit({ key });
+  return success;
 }
 
 async function signedIn(request, env) {
   const auth = request.headers.get('Authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
   if (!/^[0-9a-f]{48}$/.test(token)) throw new HttpError(401, 'signed out');
-  const who = await env.ACCOUNTS.get('t:' + token);
+  const hash = await sha256(token);
+  const who = await env.ACCOUNTS.get('t:' + hash);
   if (!who) throw new HttpError(401, 'signed out');
   if (await env.ACCOUNTS.get('b:' + who)) throw new HttpError(403, 'blocked');
-  return { who, token };
+  return { who, hash };
 }
 
 /** POST /account/signin {email, pin}: signs in, or makes the account when there is none for that e-mail yet. */
@@ -78,17 +103,21 @@ async function signin(request, env) {
   if (await env.ACCOUNTS.get('b:' + who)) throw new HttpError(403, 'blocked');
   const user = await env.ACCOUNTS.get('u:' + who, 'json');
   if (!user) {
+    // The owner's account is made only by make-admin.sh: signing in first must not make anyone the owner.
+    if (isOwner(env, who)) throw new HttpError(403, 'wrong pin');
+    const made = guard(env, 'new:' + (request.headers.get('cf-connecting-ip') || 'unknown'));
+    if (made && !(await made.hit(5, 60 * MINUTE))) throw new HttpError(429, 'slow down');
     const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
     await env.ACCOUNTS.put('u:' + who, JSON.stringify({ salt, hash: await pinHash(p, salt), created: Date.now() }));
     return json({ token: await newToken(env, who), created: true, email: who, admin: isOwner(env, who) });
   }
-  const failed = Number.parseInt((await env.ACCOUNTS.get('f:' + who)) || '0', 10);
-  if (failed >= 10) throw new HttpError(429, 'locked');
+  const tries = guard(env, 'pin:' + who);
+  if (tries && (await tries.reached(LOCK_TRIES, LOCK_MS))) throw new HttpError(429, 'locked');
   if (!same(await pinHash(p, user.salt), user.hash)) {
-    await env.ACCOUNTS.put('f:' + who, String(failed + 1), { expirationTtl: 15 * 60 });
+    if (tries) await tries.hit(LOCK_TRIES, LOCK_MS);
     throw new HttpError(403, 'wrong pin');
   }
-  if (failed) await env.ACCOUNTS.delete('f:' + who);
+  if (tries) await tries.clear();
   const state = await env.ACCOUNTS.get('s:' + who, 'json');
   return json({ token: await newToken(env, who), created: false, email: who, updated: state ? state.updated : 0,
     admin: isOwner(env, who) });
@@ -104,6 +133,7 @@ async function getState(request, env) {
 /** PUT /account/state {state, device}: keeps it as the newest; answers its time. */
 async function putState(request, env) {
   const { who } = await signedIn(request, env);
+  if (!(await allowed(env.WRITE_LIMIT, 'w:' + who))) throw new HttpError(429, 'slow down');
   const text = await request.text();
   if (text.length > MAX_STATE) throw new HttpError(413, 'too large');
   let body;
@@ -121,8 +151,8 @@ async function putState(request, env) {
 
 /** POST /account/signout: this TV's sign-in ends; the account and its state stay. */
 async function signout(request, env) {
-  const { token } = await signedIn(request, env);
-  await env.ACCOUNTS.delete('t:' + token);
+  const { who, hash } = await signedIn(request, env);
+  await Promise.all([env.ACCOUNTS.delete('t:' + hash), env.ACCOUNTS.delete(`x:${who}:${hash}`)]);
   return json({ ok: true });
 }
 
@@ -175,11 +205,11 @@ async function adminDelete(request, env) {
   const body = await request.json().catch(() => ({}));
   const who = email(body.email);
   if (who === owner) throw new HttpError(400, 'own account');
-  const tokens = await keys(env, 't:');
-  const theirs = (await Promise.all(tokens.map(async (t) => ((await env.ACCOUNTS.get(t)) === who ? t : null))))
-    .filter(Boolean);
+  const index = await keys(env, `x:${who}:`);
+  const theirs = index.map((k) => 't:' + k.slice(`x:${who}:`.length));
   const apps = await keys(env, `a:${who}:`);
-  await Promise.all([...theirs, ...apps, 'u:' + who, 's:' + who, 'f:' + who, 'b:' + who].map((k) => env.ACCOUNTS.delete(k)));
+  await Promise.all([...theirs, ...index, ...apps, 'u:' + who, 's:' + who, 'f:' + who, 'b:' + who]
+    .map((k) => env.ACCOUNTS.delete(k)));
   return json({ ok: true, signedOut: theirs.length });
 }
 
@@ -200,6 +230,7 @@ const APP_PATH = /^\/account\/app\/([A-Za-z0-9_.]{3,100})$/;
 /** GET /account/app/<package>: that app's encrypted backup as it was sent, its time in X-Updated; 404 when none. */
 async function getApp(request, env, pkg) {
   const { who } = await signedIn(request, env);
+  if (!APPS.has(pkg)) throw new HttpError(404, 'none');
   const { value, metadata } = await env.ACCOUNTS.getWithMetadata(`a:${who}:${pkg}`, 'arrayBuffer');
   if (!value) throw new HttpError(404, 'none');
   return new Response(value, {
@@ -210,6 +241,8 @@ async function getApp(request, env, pkg) {
 /** PUT /account/app/<package>: keeps the bytes as that app's backup; answers its time. */
 async function putApp(request, env, pkg) {
   const { who } = await signedIn(request, env);
+  if (!APPS.has(pkg)) throw new HttpError(403, 'not kept');
+  if (!(await allowed(env.WRITE_LIMIT, 'w:' + who))) throw new HttpError(429, 'slow down');
   const body = await request.arrayBuffer();
   if (!body.byteLength) throw new HttpError(400, 'empty');
   if (body.byteLength > MAX_APP_BACKUP) throw new HttpError(413, 'too large');
@@ -235,9 +268,9 @@ export function isAccountRoute(request, url) {
 
 export async function account(request, env, url) {
   if (!env.ACCOUNTS) return json({ error: 'not configured' }, 503);
-  if (env.ACCOUNT_LIMIT && url.pathname === '/account/signin') {
-    const { success } = await env.ACCOUNT_LIMIT.limit({ key: request.headers.get('cf-connecting-ip') || 'unknown' });
-    if (!success) return json({ error: 'slow down' }, 429);
+  if (url.pathname === '/account/signin') {
+    const ip = guard(env, 'ip:' + (request.headers.get('cf-connecting-ip') || 'unknown'));
+    if (ip && !(await ip.hit(10, MINUTE))) return json({ error: 'slow down' }, 429);
   }
   try {
     const app = APP_PATH.exec(url.pathname);
