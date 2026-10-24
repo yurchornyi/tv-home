@@ -21,6 +21,12 @@ const PASSED = ['language', 'region', 'with_networks', 'with_watch_providers', '
   'sort_by', 'include_image_language', 'page'];
 const TTL = 6 * 60 * 60;
 
+const ABOUT_PAGE = `TV-Launcher: the backend of an Android TV home screen for a Ukrainian household.
+- TMDB posters for the top shelf (/3/...), Kyivstar TV, Kick and Spotify shelves.
+- AI through Sentra: a spoken command turned into one TV action, film picks for a mood, two lines on a film.
+- Accounts that carry one TV's Home to the others.
+`;
+
 const AI_ROUTES = { '/ai/command': command, '/ai/picks': picks, '/ai/about': about };
 
 /** POST /ai/*: JSON in, JSON out; each TV (by address) gets a few a minute, so a stranger cannot run up the bill. */
@@ -60,6 +66,8 @@ export default {
     if (request.method === 'POST' && AI_ROUTES[url.pathname]) return ai(request, env, url.pathname);
     if (isAccountRoute(request, url)) return account(request, env, url);
     if (request.method !== 'GET') return new Response('GET only', { status: 405 });
+    // The address Sentra watches and reads (its «site» of this project): what this Worker is, in a few lines.
+    if (url.pathname === '/') return new Response(ABOUT_PAGE, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     if (url.pathname === '/kick/featured') return kickFeatured(url, ctx);
     if (url.pathname === '/kick/play') return kickPlay(url);
     if (url.pathname === '/kyivstar/popular') return kyivstarPopular(request, ctx);

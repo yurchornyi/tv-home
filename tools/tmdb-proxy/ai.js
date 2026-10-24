@@ -1,36 +1,55 @@
-// The launcher's AI features, answered by Claude through Sentra (the owner's AI centre: its key, limits and spend
-// tracking; SENTRA_URL in vars, SENTRA_TOKEN secret, which Sentra writes itself): a spoken command turned into one action on the TV (/ai/command), a few films for a mood or
-// company with a line on why (/ai/picks), and two sentences on a film from the shelf (/ai/about). Each answer is
-// JSON in a fixed shape (structured outputs), so the TV never parses prose.
-import Anthropic from '@anthropic-ai/sdk';
+// The launcher's AI features, answered through Sentra, the owner's AI centre (SENTRA_URL in vars, SENTRA_TOKEN secret,
+// which Sentra writes itself): a spoken command turned into one action on the TV (/ai/command), a few films for a mood
+// or company with a line on why (/ai/picks), and two sentences on a film from the shelf (/ai/about). Each goes to
+// Sentra's chat route with a role, not a model: Sentra picks the model, keeps limits and spend, caches, and learns
+// each feature apart (x-sentra-skill). Each answer is a JSON object checked against a fixed shape, so the TV never
+// parses prose.
 
-const MODEL = 'claude-opus-5-5';
-const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
-
-/** One request to Claude for a JSON object in `schema`; null when it declines or the answer is unusable. */
-async function ask(env, system, user, schema, maxTokens) {
-  const client = new Anthropic({ apiKey: env.SENTRA_TOKEN.trim(), baseURL: env.SENTRA_URL.replace(/\/+$/, '') + '/anthropic' });
-  let response;
-  try {
-    response = await client.beta.messages.create({
-      model: MODEL,
-      max_tokens: maxTokens,
-      betas: [FALLBACK_BETA],
-      fallbacks: 'default',
-      // A remote waits on this: the lowest effort answers fastest, and these are short, well-defined choices.
-      output_config: { effort: 'low', format: { type: 'json_schema', schema } },
-      system: system + '\nLatency-sensitive; begin your visible answer immediately.',
-      messages: [{ role: 'user', content: user }],
-    });
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) throw new HttpError(429, 'busy');
-    if (e instanceof Anthropic.APIError) throw new HttpError(502, 'ai error ' + (e.status || ''));
-    throw e;
+/** The schema as a check: true when `value` has the shape (types, enums, required keys) the TV relies on. */
+function fits(schema, value) {
+  if (schema.type === 'object') {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+    return (schema.required || []).every((k) => k in value && fits(schema.properties[k], value[k]));
   }
-  if (response.stop_reason === 'refusal' || response.stop_reason === 'max_tokens') return null;
-  const text = response.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+  if (schema.type === 'array') return Array.isArray(value) && value.every((v) => fits(schema.items, v));
+  if (schema.type === 'integer') return Number.isInteger(value);
+  if (schema.type === 'string') return typeof value === 'string' && (!schema.enum || schema.enum.includes(value));
+  return true;
+}
+
+/**
+ * One request to Sentra for a JSON object in `schema`; null when the answer is unusable. `skill` names the feature
+ * for Sentra's learning and stats, `role` is fast (a remote waits) or quality, `cache` is how many seconds Sentra may
+ * answer the same request from its cache.
+ */
+async function ask(env, { skill, role, system, user, schema, maxTokens, cache = 0, deadlineMs = 15000 }) {
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + env.SENTRA_TOKEN.trim(),
+    'x-sentra-skill': skill,
+    'x-sentra-deadline-ms': String(deadlineMs),
+  };
+  if (cache > 0) headers['x-sentra-cache'] = String(cache);
+  const response = await fetch(env.SENTRA_URL.replace(/\/+$/, '') + '/v1/chat/completions', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: 'role:' + role,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: `${system}\nAnswer with one JSON object only, matching this JSON Schema:\n${JSON.stringify(schema)}` },
+        { role: 'user', content: user },
+      ],
+    }),
+  });
+  if (response.status === 429) throw new HttpError(429, 'busy');
+  if (!response.ok) throw new HttpError(502, 'ai error ' + response.status);
+  const data = await response.json();
+  const text = String(data.choices?.[0]?.message?.content ?? '').replace(/^```(?:json)?\s*|\s*```$/g, '');
   try {
-    return JSON.parse(text);
+    const out = JSON.parse(text);
+    return fits(schema, out) ? out : null;
   } catch {
     return null;
   }
@@ -90,7 +109,7 @@ export async function command(env, body) {
   const titles = list(body.titles, 80)
     .map((t) => `${str(t.title, 120)} | ${str(t.app, 80)}${t.live ? ' | LIVE' : ''}`).join('\n');
   const user = `Request: ${text}\n\nApps:\n${apps}\n\nChannels:\n${channels}\n\nHome-screen titles:\n${titles}`;
-  const out = await ask(env, COMMAND_SYSTEM, user, COMMAND_SCHEMA, 2000);
+  const out = await ask(env, { skill: 'tv-command', role: 'fast', system: COMMAND_SYSTEM, user, schema: COMMAND_SCHEMA, maxTokens: 400, deadlineMs: 8000 });
   return out || { action: 'search', app: '', channel_id: '', title: '', query: text, say: '' };
 }
 
@@ -127,7 +146,7 @@ export async function picks(env, body) {
   const request = str(body.request, 300).trim();
   if (!request) throw new HttpError(400, 'no request');
   const lang = str(body.lang, 10) || 'uk-UA';
-  const out = await ask(env, PICKS_SYSTEM, `Request: ${request}`, PICKS_SCHEMA, 3000);
+  const out = await ask(env, { skill: 'tv-picks', role: 'quality', system: PICKS_SYSTEM, user: `Request: ${request}`, schema: PICKS_SCHEMA, maxTokens: 1200, cache: 3600 });
   const found = [];
   for (const p of list(out && out.picks, 8)) {
     const hit = await tmdbFind(env, str(p.title, 120), p.year, p.kind === 'tv' ? 'tv' : 'movie', lang);
@@ -201,7 +220,7 @@ export async function about(env, body) {
     `TMDB rating: ${d.vote_average} from ${d.vote_count} votes`,
     `Overview: ${(d.overview || '').slice(0, 900)}`,
   ].join('\n');
-  const out = await ask(env, ABOUT_SYSTEM, facts, ABOUT_SCHEMA, 1500);
+  const out = await ask(env, { skill: 'tv-about', role: 'quality', system: ABOUT_SYSTEM, user: facts, schema: ABOUT_SCHEMA, maxTokens: 400, cache: 7 * 24 * 3600 });
   if (!out) return { about: str(d.overview, 200), verdict: '' };
   return { about: str(out.about, 220), verdict: str(out.verdict, 160) };
 }

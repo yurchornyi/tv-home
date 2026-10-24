@@ -1,8 +1,5 @@
 {
   "name": "tv-launcher-tmdb",
   "private": true,
-  "type": "module",
-  "dependencies": {
-    "@anthropic-ai/sdk": "1.0.0"
-  }
+  "type": "module"
 }

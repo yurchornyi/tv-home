@@ -12,11 +12,14 @@ for a new key.
 ## AI (ai.js)
 
 `POST /ai/command` turns a spoken request into one action on the TV, `POST /ai/picks` suggests films for a mood
-(found on TMDB for their backdrops), `POST /ai/about` writes two lines on a film. They use Claude (claude-opus-5-5,
-low effort, server-side fallbacks) through Sentra, the owner's AI centre (`SENTRA_URL` in `wrangler.toml`, the `SENTRA_TOKEN` secret that Sentra writes
-into this Worker when the project is connected; the Anthropic key, its limits and spend live there). Each address gets 12 AI requests a
-minute (the `AI_LIMIT` rate limit), and all TVs together 60 (`AI_GLOBAL`); limits and spend are set in Sentra as well,
-since the URL is public.
+(found on TMDB for their backdrops), `POST /ai/about` writes two lines on a film. They go to Sentra, the owner's AI
+centre, on its chat route with a role (`role:fast` for a command, a remote waits; `role:quality` for picks and the
+two lines), and each names its feature in `x-sentra-skill` (`tv-command`, `tv-picks`, `tv-about`): Sentra picks the
+model, keeps the limits and the spend, learns each feature apart and answers repeats from its cache (an hour for
+picks, a week for a film's lines). `SENTRA_URL` is in `wrangler.toml`; the `SENTRA_TOKEN` secret Sentra writes into
+this Worker when the project is connected. Each address gets 12 AI requests a minute (the `AI_LIMIT` rate limit),
+and all TVs together 60 (`AI_GLOBAL`), since the URL is public. `GET /` is a few lines on what this Worker is: the
+address Sentra watches.
 Without `SENTRA_TOKEN` the routes answer 503 and the TV quietly uses plain search.
 
 ## Kyivstar TV (kyivstar.js)
