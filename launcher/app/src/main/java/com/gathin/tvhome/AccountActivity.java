@@ -56,8 +56,26 @@ public final class AccountActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Back from Google Play: an app installed meanwhile is off the list.
-        if (Account.signedIn(this)) show();
+        // Back from Google Play: an app installed meanwhile is off the list, and SmartTube, just installed, gets the
+        // account's settings for it.
+        if (Account.signedIn(this) && !inAdmin) {
+            show();
+            offerSmartTube(false);
+        }
+    }
+
+    /**
+     * SmartTube's settings from the account (AppSettings): handed to SmartTube, which asks to restore them, once per
+     * backup on this TV; by hand (always) from its row.
+     */
+    private void offerSmartTube(boolean always) {
+        if (AppSettings.smartTube(this) == null) return;
+        AppSettings.restore(this, always, (ok, why) -> {
+            if (isFinishing()) return;
+            if (ok) Toast.makeText(this, R.string.smarttube_restoring, Toast.LENGTH_LONG).show();
+            else if (always) Toast.makeText(this, "none".equals(why) ? getString(R.string.smarttube_none)
+                    : message(why), Toast.LENGTH_LONG).show();
+        });
     }
 
     private View build() {
@@ -154,6 +172,7 @@ public final class AccountActivity extends Activity {
                 setResult(RESULT_OK);   // Home rebuilds with what the account had
                 Toast.makeText(this, getString(R.string.account_signed_in, Account.email(this)), Toast.LENGTH_LONG).show();
                 show();
+                offerSmartTube(false);   // another TV's SmartTube settings, if the account has them
             });
         };
         go.setOnClickListener(v -> submit.run());
@@ -196,6 +215,14 @@ public final class AccountActivity extends Activity {
             });
         });
         list.addView(sync, row());
+        if (AppSettings.smartTube(this) != null) {
+            // SmartTube's own settings: sent from a TV that may read them, taken in by hand here as well.
+            boolean sends = AppSettings.canRead();
+            View st = button(getString(R.string.smarttube_settings),
+                    getString(sends ? R.string.smarttube_synced : R.string.smarttube_restore));
+            st.setOnClickListener(v -> offerSmartTube(true));
+            list.addView(st, row());
+        }
         if (!missing.isEmpty()) {
             if (installAt >= missing.size()) installAt = 0;
             Account.App next = missing.get(installAt);

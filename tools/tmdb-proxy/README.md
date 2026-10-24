@@ -38,3 +38,7 @@ tries are limited per address (`ACCOUNT_LIMIT`) and ten wrong ones lock the e-ma
 `GET /spotify/popular` gives the songs most played on Spotify in Ukraine today (kworb.net's copy of Spotify's daily
 chart, the global one to top it up), Russian-language ones left out, each with its 640 px album cover and an
 `open.spotify.com/track` link the Spotify TV app plays. YouTube Music's shelf shows the same songs, opening its search.
+
+`GET`/`PUT /account/app/<package>` keep one app's own settings backup for the account (today SmartTube's, from
+`Android/media/<its package>/data`). The TV encrypts it with AES-GCM under a key made from the PIN (PBKDF2), so
+the Worker holds bytes it cannot read; up to 4 MB per app.

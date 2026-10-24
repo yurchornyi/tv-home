@@ -38,6 +38,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Asked for together with the fine one (Android 12+ needs both in the request) on a TV not set up over adb. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- SmartTube's own settings for the account (AppSettings): reading the backup SmartTube keeps in
+         Android/media/<its package> needs all-files access, which build-and-install grants with appops. Never asked
+         for at runtime; without it the TV only takes settings in. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles, and the
          apps that declare a module card (docs/specs/card.md). -->
@@ -207,6 +212,17 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Hands SmartTube the account's backup of its settings as a zip it can read (AppSettings). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared_files" />
+        </provider>
 
         <!-- The installer's answer about a self-update (Updater, UpdateReceiver). -->
         <receiver

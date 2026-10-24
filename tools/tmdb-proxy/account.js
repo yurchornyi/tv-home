@@ -7,6 +7,8 @@
 //   s:<email>  { state, updated, device } the newest state
 //   f:<email>  failed PIN tries in the last 15 minutes; ten lock the account until they expire
 //   b:<email>  blocked by the owner: no sign-in, no sync, until unblocked
+//   a:<email>:<package>  an app's own settings backup (SmartTube's), encrypted on the TV with a key from the PIN,
+//              so this Worker only ever holds bytes it cannot read; metadata { updated, size }
 // Each address also gets few tries a minute (ACCOUNT_LIMIT), so six digits cannot be guessed from one place.
 // The owner's own account (ADMIN_EMAIL in wrangler.toml) also sees every account and can delete one (/account/admin).
 
@@ -176,7 +178,8 @@ async function adminDelete(request, env) {
   const tokens = await keys(env, 't:');
   const theirs = (await Promise.all(tokens.map(async (t) => ((await env.ACCOUNTS.get(t)) === who ? t : null))))
     .filter(Boolean);
-  await Promise.all([...theirs, 'u:' + who, 's:' + who, 'f:' + who, 'b:' + who].map((k) => env.ACCOUNTS.delete(k)));
+  const apps = await keys(env, `a:${who}:`);
+  await Promise.all([...theirs, ...apps, 'u:' + who, 's:' + who, 'f:' + who, 'b:' + who].map((k) => env.ACCOUNTS.delete(k)));
   return json({ ok: true, signedOut: theirs.length });
 }
 
@@ -191,6 +194,30 @@ async function adminBlock(request, env) {
   return json({ ok: true, blocked: Boolean(body.blocked) });
 }
 
+const MAX_APP_BACKUP = 4 * 1024 * 1024;
+const APP_PATH = /^\/account\/app\/([A-Za-z0-9_.]{3,100})$/;
+
+/** GET /account/app/<package>: that app's encrypted backup as it was sent, its time in X-Updated; 404 when none. */
+async function getApp(request, env, pkg) {
+  const { who } = await signedIn(request, env);
+  const { value, metadata } = await env.ACCOUNTS.getWithMetadata(`a:${who}:${pkg}`, 'arrayBuffer');
+  if (!value) throw new HttpError(404, 'none');
+  return new Response(value, {
+    headers: { 'Content-Type': 'application/octet-stream', 'X-Updated': String((metadata && metadata.updated) || 0) },
+  });
+}
+
+/** PUT /account/app/<package>: keeps the bytes as that app's backup; answers its time. */
+async function putApp(request, env, pkg) {
+  const { who } = await signedIn(request, env);
+  const body = await request.arrayBuffer();
+  if (!body.byteLength) throw new HttpError(400, 'empty');
+  if (body.byteLength > MAX_APP_BACKUP) throw new HttpError(413, 'too large');
+  const updated = Date.now();
+  await env.ACCOUNTS.put(`a:${who}:${pkg}`, body, { metadata: { updated, size: body.byteLength } });
+  return json({ updated });
+}
+
 const ROUTES = {
   'GET /account/admin/accounts': adminList,
   'POST /account/admin/delete': adminDelete,
@@ -202,6 +229,7 @@ const ROUTES = {
 };
 
 export function isAccountRoute(request, url) {
+  if (APP_PATH.test(url.pathname) && (request.method === 'GET' || request.method === 'PUT')) return true;
   return Boolean(ROUTES[request.method + ' ' + url.pathname]);
 }
 
@@ -212,6 +240,8 @@ export async function account(request, env, url) {
     if (!success) return json({ error: 'slow down' }, 429);
   }
   try {
+    const app = APP_PATH.exec(url.pathname);
+    if (app) return await (request.method === 'PUT' ? putApp : getApp)(request, env, app[1]);
     return await ROUTES[request.method + ' ' + url.pathname](request, env);
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message }, e.status);

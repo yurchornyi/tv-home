@@ -226,4 +226,9 @@
     <string name="account_admin_unblock">Розблокувати</string>
     <string name="account_admin_delete">Видалити</string>
     <string name="account_blocked">Цей акаунт заблоковано.</string>
+    <string name="smarttube_settings">Налаштування SmartTube</string>
+    <string name="smarttube_synced">Синхронізуються</string>
+    <string name="smarttube_restore">Перенести</string>
+    <string name="smarttube_restoring">SmartTube відкриється з твоїми налаштуваннями: підтверди там відновлення.</string>
+    <string name="smarttube_none">В акаунті ще немає налаштувань SmartTube.</string>
 </resources>

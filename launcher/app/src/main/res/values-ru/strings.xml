@@ -110,4 +110,7 @@
     <string name="account_admin_block">Заблокировать</string>
     <string name="account_admin_unblock">Разблокировать</string>
     <string name="account_admin_delete">Удалить</string>
+    <string name="smarttube_settings">Настройки SmartTube</string>
+    <string name="smarttube_restore">Перенести</string>
+    <string name="smarttube_restoring">SmartTube откроется с твоими настройками: подтверди там восстановление.</string>
 </resources>

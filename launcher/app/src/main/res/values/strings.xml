@@ -235,4 +235,9 @@
     <string name="account_admin_unblock">Unblock</string>
     <string name="account_admin_delete">Delete</string>
     <string name="account_blocked">This account is blocked.</string>
+    <string name="smarttube_settings">SmartTube settings</string>
+    <string name="smarttube_synced">Synced</string>
+    <string name="smarttube_restore">Take in</string>
+    <string name="smarttube_restoring">SmartTube opens with your settings: confirm the restore there.</string>
+    <string name="smarttube_none">The account has no SmartTube settings yet.</string>
 </resources>

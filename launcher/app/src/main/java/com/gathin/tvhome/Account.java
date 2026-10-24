@@ -39,6 +39,11 @@ final class Account {
 
     interface Done { void onDone(boolean ok, String error); }
 
+    /** Sends one app's settings backup (AppSettings); answers the time the Worker keeps it under. */
+    interface Sender { long send(String pkg, byte[] bytes) throws Exception; }
+
+    interface Fetched { void onFetched(byte[] bytes, long updated, String error); }
+
     private static final String TAG = "TvHome.Account";
     private static final ExecutorService NET = Executors.newSingleThreadExecutor();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -91,6 +96,11 @@ final class Account {
             try {
                 JSONObject body = new JSONObject().put("email", email.trim()).put("pin", pin.trim());
                 JSONObject r = call(ctx, "POST", "signin", null, body.toString());
+                // The key for the apps' settings backups (AppSettings), made from the PIN here and kept only here.
+                String key = android.util.Base64.encodeToString(AppSettings.key(r.optString("email", email), pin.trim()),
+                        android.util.Base64.NO_WRAP);
+                prefs(ctx).edit().putString("key", key).apply();
+                AppSettings.forget(ctx);
                 prefs(ctx).edit().putString("token", r.getString("token")).putString("email", r.optString("email", email))
                         .putBoolean("admin", r.optBoolean("admin")).putLong("remote_updated", 0).remove("synced").remove("apps").apply();
                 if (r.optBoolean("created") || r.optLong("updated") == 0) push(ctx);
@@ -110,7 +120,8 @@ final class Account {
     static void signOut(Context context, Runnable done) {
         Context ctx = context.getApplicationContext();
         String token = prefs(ctx).getString("token", "");
-        prefs(ctx).edit().remove("token").remove("email").remove("admin").remove("synced").remove("apps").remove("remote_updated").apply();
+        AppSettings.forget(ctx);
+        prefs(ctx).edit().remove("token").remove("email").remove("admin").remove("key").remove("synced").remove("apps").remove("remote_updated").apply();
         NET.execute(() -> {
             try {
                 if (!token.isEmpty()) call(ctx, "POST", "signout", token, "{}");
@@ -214,6 +225,7 @@ final class Account {
             boolean applied = false;
             try {
                 applied = pull(ctx, false);
+                pushApps(ctx, prefs(ctx).getString("token", ""));
             } catch (Exception e) {
                 Log.w(TAG, "pull failed: " + e);
             }
@@ -239,10 +251,83 @@ final class Account {
         });
     }
 
+    /** The key the apps' settings backups are encrypted with, or null (signed in before there were any). */
+    static byte[] backupKey(Context ctx) {
+        String k = prefs(ctx).getString("key", "");
+        return k.isEmpty() ? null : android.util.Base64.decode(k, android.util.Base64.NO_WRAP);
+    }
+
+    /** One app's settings backup when it is newer than known (-1: whatever there is); on the main thread. */
+    static void fetchApp(Context context, String pkg, long known, Fetched done) {
+        Context ctx = context.getApplicationContext();
+        NET.execute(() -> {
+            byte[] bytes = null;
+            long updated = 0;
+            String error = null;
+            try {
+                HttpURLConnection c = open(ctx, "GET", "app/" + pkg, prefs(ctx).getString("token", ""));
+                try {
+                    int code = c.getResponseCode();
+                    if (code == 404) error = "none";
+                    else if (code >= 400) error = "HTTP " + code;
+                    else {
+                        updated = Long.parseLong(c.getHeaderField("X-Updated") == null ? "0" : c.getHeaderField("X-Updated"));
+                        if (updated > known) bytes = readAll(c.getInputStream());
+                        else error = "none";
+                    }
+                } finally {
+                    c.disconnect();
+                }
+            } catch (Exception e) {
+                error = "offline";
+            }
+            byte[] got = bytes;
+            long at = updated;
+            String result = error;
+            MAIN.post(() -> done.onFetched(got, at, result));
+        });
+    }
+
+    private static long sendApp(Context ctx, String token, String pkg, byte[] bytes) throws Exception {
+        HttpURLConnection c = open(ctx, "PUT", "app/" + pkg, token);
+        try {
+            c.setDoOutput(true);
+            c.setRequestProperty("Content-Type", "application/octet-stream");
+            c.setFixedLengthStreamingMode(bytes.length);
+            try (OutputStream out = c.getOutputStream()) {
+                out.write(bytes);
+            }
+            int code = c.getResponseCode();
+            if (code >= 400) throw new HttpError("HTTP " + code);
+            return new JSONObject(new String(readAll(c.getInputStream()), StandardCharsets.UTF_8)).optLong("updated");
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    private static HttpURLConnection open(Context ctx, String method, String path, String token) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(base(ctx) + path).openConnection();
+        c.setConnectTimeout(10000);
+        c.setReadTimeout(30000);
+        c.setRequestMethod(method);
+        c.setRequestProperty("Authorization", "Bearer " + token);
+        return c;
+    }
+
+    /** The apps' own settings (SmartTube's), when they changed: they change inside those apps, not on Home. */
+    private static void pushApps(Context ctx, String token) {
+        try {
+            AppSettings.push(ctx, backupKey(ctx), (pkg, bytes) -> sendApp(ctx, token, pkg, bytes));
+        } catch (Exception e) {
+            Log.w(TAG, "app settings not sent: " + e);
+        }
+    }
+
     private static void push(Context ctx) throws Exception {
         SharedPreferences p = prefs(ctx);
         String token = p.getString("token", "");
         if (token.isEmpty()) return;
+        pushApps(ctx, token);
         JSONObject backup = Backup.snapshot(ctx);
         backup.remove("launcher");   // an update alone is no change to send
         String hash = Integer.toHexString(backup.toString().hashCode());
