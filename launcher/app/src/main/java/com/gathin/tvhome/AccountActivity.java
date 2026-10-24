@@ -206,6 +206,11 @@ public final class AccountActivity extends Activity {
             });
             list.addView(install, row());
         }
+        if (Account.admin(this)) {
+            View all = button(getString(R.string.account_admin), null);
+            all.setOnClickListener(v -> showAdmin());
+            list.addView(all, row());
+        }
         View out = button(getString(R.string.account_sign_out), null);
         out.setOnClickListener(v -> Account.signOut(this, () -> {
             if (!isFinishing()) show();
@@ -213,6 +218,174 @@ public final class AccountActivity extends Activity {
         list.addView(out, row());
         list.addView(status, wrap());
         sync.requestFocus();
+    }
+
+    /** In the owner's list: Back goes to the account, not out of the screen. */
+    private boolean inAdmin;
+
+    @Override
+    public void onBackPressed() {
+        if (inAdmin) {
+            inAdmin = false;
+            show();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    /**
+     * The owner's list of every account: its e-mail, when it last synced and from which TV, how many apps. OK on one
+     * opens Block (or Unblock) and Delete under it; Delete asks once more, then the account goes with its Home and
+     * every TV's sign-in.
+     */
+    private void showAdmin() {
+        inAdmin = true;
+        list.removeAllViews();
+        hint.setText(R.string.account_admin_hint);
+        TextView status = text(getString(R.string.account_working), 16, regular, 0x99FFFFFF);
+        status.setPadding(dp(26), 0, 0, 0);
+        list.addView(status, wrap());
+        Account.accounts(this, (accounts, why) -> {
+            if (isFinishing() || !inAdmin) return;
+            list.removeAllViews();
+            if (why != null) {
+                status.setText(message(why));
+                list.addView(status, wrap());
+                return;
+            }
+            TextView count = text(getString(R.string.account_admin_count, accounts.size()), 16, regular, 0x99FFFFFF);
+            count.setPadding(dp(26), 0, 0, dp(4));
+            list.addView(count, wrap());
+            android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+            scroll.setClipToPadding(false);
+            scroll.setPadding(0, dp(4), 0, dp(12));
+            LinearLayout rows = new LinearLayout(this);
+            rows.setOrientation(LinearLayout.VERTICAL);
+            // Room for a focused row to grow without its rounded ends cut: drawn into the padding, not clipped at it.
+            rows.setClipChildren(false);
+            rows.setClipToPadding(false);
+            rows.setPadding(dp(12), 0, dp(12), 0);
+            scroll.setClipChildren(false);
+            scroll.addView(rows);
+            java.text.DateFormat when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,
+                    java.text.DateFormat.SHORT);
+            View first = null;
+            // The owner's own account always heads the list; the others keep the server's order (latest sync first).
+            String me = Account.email(this);
+            List<Account.Entry> ordered = new java.util.ArrayList<>(accounts);
+            java.util.Collections.sort(ordered, (x, y) -> Boolean.compare(!x.email.equalsIgnoreCase(me),
+                    !y.email.equalsIgnoreCase(me)));
+            for (Account.Entry a : ordered) {
+                String detail = a.updated > 0
+                        ? when.format(new java.util.Date(a.updated)) + (a.device.isEmpty() ? "" : " · " + a.device)
+                                + " · " + getString(R.string.account_admin_apps, a.apps)
+                        : getString(R.string.account_admin_never);
+                boolean own = a.email.equalsIgnoreCase(Account.email(this));
+                String shown = a.blocked ? getString(R.string.account_admin_blocked) + " · " + detail : detail;
+                View r = accountRow(a.email, own ? getString(R.string.account_admin_you) : shown, a.blocked, own);
+                LinearLayout.LayoutParams tall = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(76));
+                tall.topMargin = dp(10);
+                rows.addView(r, tall);
+                if (first == null) first = r;
+                if (own) continue;
+                // OK on an account opens its two actions under it; OK again closes them.
+                LinearLayout actions = new LinearLayout(this);
+                actions.setOrientation(LinearLayout.HORIZONTAL);
+                actions.setVisibility(View.GONE);
+                actions.setClipChildren(false);
+                actions.setClipToPadding(false);
+                actions.setPadding(0, 0, 0, 0);
+                View lock = button(getString(a.blocked ? R.string.account_admin_unblock : R.string.account_admin_block), "");
+                lock.setOnClickListener(v -> Account.block(this, a.email, !a.blocked, (ok, err) -> {
+                    if (isFinishing() || !inAdmin) return;
+                    if (ok) showAdmin();
+                    else Toast.makeText(this, message(err), Toast.LENGTH_LONG).show();
+                }));
+                View remove = button(getString(R.string.account_admin_delete), "");
+                boolean[] armed = {false};
+                TextView removeLabel = (TextView) ((LinearLayout) remove).getChildAt(0);
+                remove.setOnClickListener(v -> {
+                    if (!armed[0]) {
+                        armed[0] = true;
+                        removeLabel.setText(R.string.account_admin_confirm);
+                        remove.setBackground(danger());
+                        removeLabel.setTextColor(0xFFFFFFFF);
+                        return;
+                    }
+                    removeLabel.setText(R.string.account_working);
+                    Account.delete(this, a.email, (ok, err) -> {
+                        if (isFinishing() || !inAdmin) return;
+                        if (ok) showAdmin();
+                        else removeLabel.setText(message(err));
+                    });
+                });
+                remove.setOnFocusChangeListener((v, focus) -> {
+                    if (!armed[0]) removeLabel.setTextColor(focus ? 0xFFC62828 : 0xFFFF8A80);
+                    v.animate().scaleX(focus ? 1.025f : 1f).scaleY(focus ? 1.025f : 1f).setDuration(220).start();
+                    if (!focus && armed[0]) {   // moved away: the question is off again
+                        armed[0] = false;
+                        removeLabel.setText(R.string.account_admin_delete);
+                        remove.setBackground(states());
+                        removeLabel.setTextColor(0xFFFF8A80);
+                    }
+                });
+                // Side by side under the account, the pair exactly as wide as its row: the left one starts at its left
+                // edge, the right one ends at its right edge, a small gap between.
+                removeLabel.setTextColor(0xFFFF8A80);
+                for (View action : new View[]{lock, remove}) {
+                    LinearLayout box = (LinearLayout) action;
+                    box.getChildAt(1).setVisibility(View.GONE);   // no value, no chevron: the label sits centred
+                    TextView label = (TextView) box.getChildAt(0);
+                    label.setGravity(Gravity.CENTER);
+                    label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19);
+                    box.setPadding(dp(12), 0, dp(12), 0);
+                }
+                LinearLayout.LayoutParams left = new LinearLayout.LayoutParams(0, dp(56), 1f);
+                left.topMargin = dp(8);
+                left.setMarginEnd(dp(6));
+                LinearLayout.LayoutParams right = new LinearLayout.LayoutParams(0, dp(56), 1f);
+                right.topMargin = dp(8);
+                right.setMarginStart(dp(6));
+                actions.addView(lock, left);
+                actions.addView(remove, right);
+                r.setOnClickListener(v -> actions.setVisibility(actions.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+                rows.addView(actions, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+            }
+            list.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            if (first != null) first.requestFocus();
+        });
+    }
+
+    /** An account in the owner's list: the e-mail, and under it, smaller, when and where it last synced. */
+    /** The owner's own row: a gold edge and gold note, apart from red, which here means blocked or delete. */
+    private static final int OWNER = 0xFFFFC94D;
+
+    private View accountRow(String email, String detail, boolean blocked, boolean own) {
+        LinearLayout b = new LinearLayout(this);
+        b.setOrientation(LinearLayout.VERTICAL);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setFocusable(true);
+        b.setClickable(true);
+        b.setPadding(dp(26), 0, dp(22), 0);
+        b.setBackground(own ? ownerStates() : states());
+        TextView l = text(email, 20, medium, blocked ? 0x99FFFFFF : 0xFFFFFFFF);
+        l.setSingleLine(true);
+        l.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        b.addView(l, wrap());
+        int rest = own ? OWNER : blocked ? 0xCCFF8A80 : 0x99FFFFFF;
+        TextView v = text(detail, 15, own ? medium : regular, rest);
+        v.setSingleLine(true);
+        v.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        v.setPadding(0, dp(6), 0, 0);
+        b.addView(v, wrap());
+        b.setOnFocusChangeListener((view, focus) -> {
+            l.setTextColor(focus ? 0xFF000000 : blocked ? 0x99FFFFFF : 0xFFFFFFFF);
+            v.setTextColor(focus ? (own ? 0xFF8A6400 : 0x99000000) : rest);
+            view.animate().scaleX(focus ? 1.02f : 1f).scaleY(focus ? 1.02f : 1f).setDuration(220).start();
+        });
+        return b;
     }
 
     /** One missing app: KIK from its own GitHub release, any other from its Google Play page. */
@@ -241,6 +414,8 @@ public final class AccountActivity extends Activity {
         if ("bad email".equals(error)) return getString(R.string.account_bad_email);
         if ("bad pin".equals(error)) return getString(R.string.account_bad_pin);
         if ("signed out".equals(error)) return getString(R.string.account_signed_out);
+        if ("not admin".equals(error)) return getString(R.string.account_admin_denied);
+        if ("blocked".equals(error)) return getString(R.string.account_blocked);
         return getString(R.string.account_offline);
     }
 
@@ -284,6 +459,30 @@ public final class AccountActivity extends Activity {
             view.animate().scaleX(focus ? 1.025f : 1f).scaleY(focus ? 1.025f : 1f).setDuration(220).start();
         });
         return b;
+    }
+
+    /** Like states(), with a gold edge whether focused or not. */
+    private StateListDrawable ownerStates() {
+        StateListDrawable s = new StateListDrawable();
+        GradientDrawable on = new GradientDrawable();
+        on.setCornerRadius(dp(16));
+        on.setColor(0xF5FFFFFF);
+        on.setStroke(dp(2), OWNER);
+        GradientDrawable off = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x2EFFC94D, 0x12FFC94D});
+        off.setCornerRadius(dp(16));
+        off.setStroke(dp(2), OWNER);
+        s.addState(new int[]{android.R.attr.state_focused}, on);
+        s.addState(new int[]{}, off);
+        return s;
+    }
+
+    /** Delete, asked once more: a red button with white text, so the question cannot be missed. */
+    private GradientDrawable danger() {
+        GradientDrawable d = new GradientDrawable();
+        d.setCornerRadius(dp(16));
+        d.setColor(0xFFD32F2F);
+        return d;
     }
 
     private StateListDrawable states() {

@@ -6,7 +6,9 @@
 //   t:<token>  <email>                   a TV's sign-in, until it signs out
 //   s:<email>  { state, updated, device } the newest state
 //   f:<email>  failed PIN tries in the last 15 minutes; ten lock the account until they expire
+//   b:<email>  blocked by the owner: no sign-in, no sync, until unblocked
 // Each address also gets few tries a minute (ACCOUNT_LIMIT), so six digits cannot be guessed from one place.
+// The owner's own account (ADMIN_EMAIL in wrangler.toml) also sees every account and can delete one (/account/admin).
 
 const enc = new TextEncoder();
 const MAX_STATE = 512 * 1024;
@@ -62,6 +64,7 @@ async function signedIn(request, env) {
   if (!/^[0-9a-f]{48}$/.test(token)) throw new HttpError(401, 'signed out');
   const who = await env.ACCOUNTS.get('t:' + token);
   if (!who) throw new HttpError(401, 'signed out');
+  if (await env.ACCOUNTS.get('b:' + who)) throw new HttpError(403, 'blocked');
   return { who, token };
 }
 
@@ -70,11 +73,12 @@ async function signin(request, env) {
   const body = await request.json().catch(() => ({}));
   const who = email(body.email);
   const p = pin(body.pin);
+  if (await env.ACCOUNTS.get('b:' + who)) throw new HttpError(403, 'blocked');
   const user = await env.ACCOUNTS.get('u:' + who, 'json');
   if (!user) {
     const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
     await env.ACCOUNTS.put('u:' + who, JSON.stringify({ salt, hash: await pinHash(p, salt), created: Date.now() }));
-    return json({ token: await newToken(env, who), created: true, email: who });
+    return json({ token: await newToken(env, who), created: true, email: who, admin: isOwner(env, who) });
   }
   const failed = Number.parseInt((await env.ACCOUNTS.get('f:' + who)) || '0', 10);
   if (failed >= 10) throw new HttpError(429, 'locked');
@@ -84,7 +88,8 @@ async function signin(request, env) {
   }
   if (failed) await env.ACCOUNTS.delete('f:' + who);
   const state = await env.ACCOUNTS.get('s:' + who, 'json');
-  return json({ token: await newToken(env, who), created: false, email: who, updated: state ? state.updated : 0 });
+  return json({ token: await newToken(env, who), created: false, email: who, updated: state ? state.updated : 0,
+    admin: isOwner(env, who) });
 }
 
 /** GET /account/state: the newest state, or {updated: 0} when no TV has sent one yet. */
@@ -119,7 +124,77 @@ async function signout(request, env) {
   return json({ ok: true });
 }
 
+function isOwner(env, who) {
+  const owner = String(env.ADMIN_EMAIL || '').trim().toLowerCase();
+  return Boolean(owner) && who === owner;
+}
+
+async function admin(request, env) {
+  const { who } = await signedIn(request, env);
+  if (!isOwner(env, who)) throw new HttpError(403, 'not admin');
+  return who;
+}
+
+/** Every key with a prefix (KV lists a thousand at a time). */
+async function keys(env, prefix) {
+  const out = [];
+  let cursor;
+  do {
+    const page = await env.ACCOUNTS.list({ prefix, cursor });
+    out.push(...page.keys.map((k) => k.name));
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return out;
+}
+
+/** GET /account/admin/accounts: each account with when it was made, its last sync, the TV that sent it, its apps. */
+async function adminList(request, env) {
+  await admin(request, env);
+  const emails = (await keys(env, 'u:')).map((k) => k.slice(2));
+  const accounts = await Promise.all(emails.map(async (e) => {
+    const [user, state, blocked] = await Promise.all([env.ACCOUNTS.get('u:' + e, 'json'),
+      env.ACCOUNTS.get('s:' + e, 'json'), env.ACCOUNTS.get('b:' + e)]);
+    return {
+      email: e,
+      created: (user && user.created) || 0,
+      updated: (state && state.updated) || 0,
+      device: (state && state.device) || '',
+      apps: state && state.state && Array.isArray(state.state.apps) ? state.state.apps.length : 0,
+      blocked: Boolean(blocked),
+    };
+  }));
+  accounts.sort((a, b) => (b.updated || b.created) - (a.updated || a.created));
+  return json({ accounts });
+}
+
+/** POST /account/admin/delete {email}: the account, its state and every TV's sign-in to it go. Not the owner's own. */
+async function adminDelete(request, env) {
+  const owner = await admin(request, env);
+  const body = await request.json().catch(() => ({}));
+  const who = email(body.email);
+  if (who === owner) throw new HttpError(400, 'own account');
+  const tokens = await keys(env, 't:');
+  const theirs = (await Promise.all(tokens.map(async (t) => ((await env.ACCOUNTS.get(t)) === who ? t : null))))
+    .filter(Boolean);
+  await Promise.all([...theirs, 'u:' + who, 's:' + who, 'f:' + who, 'b:' + who].map((k) => env.ACCOUNTS.delete(k)));
+  return json({ ok: true, signedOut: theirs.length });
+}
+
+/** POST /account/admin/block {email, blocked}: a blocked account can neither sign in nor sync; its Home is kept. */
+async function adminBlock(request, env) {
+  const owner = await admin(request, env);
+  const body = await request.json().catch(() => ({}));
+  const who = email(body.email);
+  if (who === owner) throw new HttpError(400, 'own account');
+  if (body.blocked) await env.ACCOUNTS.put('b:' + who, String(Date.now()));
+  else await env.ACCOUNTS.delete('b:' + who);
+  return json({ ok: true, blocked: Boolean(body.blocked) });
+}
+
 const ROUTES = {
+  'GET /account/admin/accounts': adminList,
+  'POST /account/admin/delete': adminDelete,
+  'POST /account/admin/block': adminBlock,
   'POST /account/signin': signin,
   'GET /account/state': getState,
   'PUT /account/state': putState,

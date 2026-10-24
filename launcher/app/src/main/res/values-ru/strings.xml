@@ -104,4 +104,10 @@
     <string name="account_locked">Слишком много попыток. Подожди несколько минут.</string>
     <string name="account_offline">Нет связи с сервером. Попробуй ещё раз.</string>
     <string name="listen_now">Слушать</string>
+    <string name="account_admin">Все аккаунты</string>
+    <string name="account_admin_confirm">Точно удалить?</string>
+    <string name="account_admin_you">Это ты · владелец</string>
+    <string name="account_admin_block">Заблокировать</string>
+    <string name="account_admin_unblock">Разблокировать</string>
+    <string name="account_admin_delete">Удалить</string>
 </resources>

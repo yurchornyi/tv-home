@@ -31,4 +31,6 @@ binding = "ACCOUNTS"
 id = "6e74394e0755459494f2678a18b530d9"
 
 [vars]
+# The account that sees and deletes the others (account.js /account/admin).
+ADMIN_EMAIL = "yurchornyi@gmail.com"
 SENTRA_URL = "https://sentra.sntr.workers.dev"

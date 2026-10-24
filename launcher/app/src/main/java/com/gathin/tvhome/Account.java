@@ -92,7 +92,7 @@ final class Account {
                 JSONObject body = new JSONObject().put("email", email.trim()).put("pin", pin.trim());
                 JSONObject r = call(ctx, "POST", "signin", null, body.toString());
                 prefs(ctx).edit().putString("token", r.getString("token")).putString("email", r.optString("email", email))
-                        .putLong("remote_updated", 0).remove("synced").remove("apps").apply();
+                        .putBoolean("admin", r.optBoolean("admin")).putLong("remote_updated", 0).remove("synced").remove("apps").apply();
                 if (r.optBoolean("created") || r.optLong("updated") == 0) push(ctx);
                 else pull(ctx, true);
             } catch (HttpError e) {
@@ -110,7 +110,7 @@ final class Account {
     static void signOut(Context context, Runnable done) {
         Context ctx = context.getApplicationContext();
         String token = prefs(ctx).getString("token", "");
-        prefs(ctx).edit().remove("token").remove("email").remove("synced").remove("apps").remove("remote_updated").apply();
+        prefs(ctx).edit().remove("token").remove("email").remove("admin").remove("synced").remove("apps").remove("remote_updated").apply();
         NET.execute(() -> {
             try {
                 if (!token.isEmpty()) call(ctx, "POST", "signout", token, "{}");
@@ -118,6 +118,77 @@ final class Account {
                 Log.w(TAG, "sign out: " + e);
             }
             MAIN.post(done);
+        });
+    }
+
+    /** The owner's own account (the Worker's ADMIN_EMAIL): it sees every account and can delete one. */
+    static boolean admin(Context ctx) {
+        return signedIn(ctx) && prefs(ctx).getBoolean("admin", false);
+    }
+
+    /** One account as the owner's list shows it. */
+    static final class Entry {
+        final String email, device;
+        final long created, updated;
+        final int apps;
+        final boolean blocked;
+
+        Entry(JSONObject o) {
+            blocked = o.optBoolean("blocked");
+            email = o.optString("email");
+            device = o.optString("device");
+            created = o.optLong("created");
+            updated = o.optLong("updated");
+            apps = o.optInt("apps");
+        }
+    }
+
+    interface Listed { void onList(List<Entry> accounts, String error); }
+
+    /** Every account, the most recently synced first (admin only). */
+    static void accounts(Context context, Listed done) {
+        Context ctx = context.getApplicationContext();
+        NET.execute(() -> {
+            List<Entry> out = new ArrayList<>();
+            String error = null;
+            try {
+                JSONArray a = call(ctx, "GET", "admin/accounts", prefs(ctx).getString("token", ""), null).getJSONArray("accounts");
+                for (int i = 0; i < a.length(); i++) out.add(new Entry(a.getJSONObject(i)));
+            } catch (HttpError e) {
+                error = e.message;
+            } catch (Exception e) {
+                error = "offline";
+            }
+            String result = error;
+            MAIN.post(() -> done.onList(out, result));
+        });
+    }
+
+    /** Deletes an account, its Home and every TV's sign-in to it (admin only). */
+    static void delete(Context context, String email, Done done) {
+        admin(context, "admin/delete", email, null, done);
+    }
+
+    /** Blocks an account (no sign-in, no sync, its Home kept) or lets it in again (admin only). */
+    static void block(Context context, String email, boolean blocked, Done done) {
+        admin(context, "admin/block", email, blocked, done);
+    }
+
+    private static void admin(Context context, String path, String email, Boolean blocked, Done done) {
+        Context ctx = context.getApplicationContext();
+        NET.execute(() -> {
+            String error = null;
+            try {
+                JSONObject body = new JSONObject().put("email", email);
+                if (blocked != null) body.put("blocked", blocked.booleanValue());
+                call(ctx, "POST", path, prefs(ctx).getString("token", ""), body.toString());
+            } catch (HttpError e) {
+                error = e.message;
+            } catch (Exception e) {
+                error = "offline";
+            }
+            String result = error;
+            MAIN.post(() -> done.onDone(result == null, result));
         });
     }
 

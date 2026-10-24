@@ -213,4 +213,17 @@
     <string name="account_signed_out">Вихід з акаунта. Увійди знову.</string>
     <string name="account_offline">Немає зв\'язку з сервером. Спробуй ще раз.</string>
     <string name="listen_now">Слухати</string>
+    <string name="account_admin">Усі акаунти</string>
+    <string name="account_admin_hint">Усі акаунти, створені на твоїх телевізорах: коли востаннє синхронізувались і з якого телевізора. OK на акаунті показує «Заблокувати» і «Видалити»; видалення питає ще раз і прибирає його Home та всі входи.</string>
+    <string name="account_admin_count">Акаунтів: %1$d</string>
+    <string name="account_admin_apps">додатків: %1$d</string>
+    <string name="account_admin_never">Ще не синхронізувався</string>
+    <string name="account_admin_you">Це ти · власник</string>
+    <string name="account_admin_confirm">Точно видалити?</string>
+    <string name="account_admin_denied">Це бачить лише акаунт власника.</string>
+    <string name="account_admin_blocked">Заблоковано</string>
+    <string name="account_admin_block">Заблокувати</string>
+    <string name="account_admin_unblock">Розблокувати</string>
+    <string name="account_admin_delete">Видалити</string>
+    <string name="account_blocked">Цей акаунт заблоковано.</string>
 </resources>
