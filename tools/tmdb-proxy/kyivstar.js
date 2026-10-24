@@ -1,7 +1,8 @@
 // Kyivstar TV's own posters for the launcher's top shelf (launcher KyivstarFeed): what is popular on Kyivstar TV
 // right now (its weekly top ten, its most popular films and series), and for one live channel the programmes that
 // are popular on it. Everything comes from the public catalogue behind tv.kyivstar.ua (Vidmind's clients API), as an
-// anonymous visitor sees it. Answers are cached at the edge for three hours.
+// anonymous visitor sees it. Answers are cached at the edge for three hours. When Kyivstar is down or changes its API,
+// the shelf comes back empty (the TV keeps what it has) and console.error tells Sentra's monitoring.
 
 const API = 'https://clients.production.vidmind.com/vidmind-stb-ws';
 const HEADERS = { 'x-vidmind-device-type': 'WEB', 'User-Agent': 'Mozilla/5.0 (Linux; Android 12; TV) tv-launcher' };
@@ -103,11 +104,12 @@ function item(asset, title) {
 
 function json(o, maxAge) {
   const headers = { 'Content-Type': 'application/json; charset=utf-8' };
-  if (maxAge) headers['Cache-Control'] = 'public, max-age=' + maxAge;
+  headers['Cache-Control'] = maxAge ? 'public, max-age=' + maxAge : 'no-store';
   return new Response(JSON.stringify(o), { status: 200, headers });
 }
 
-async function cached(request, ctx, build) {
+/** `build` gives { items }; only a list with something in it is cached. An empty one is logged when `needed`. */
+async function cached(request, ctx, build, needed = true) {
   const key = new Request(new URL(request.url).toString(), { method: 'GET' });
   const hit = await caches.default.match(key);
   if (hit) return hit;
@@ -115,11 +117,16 @@ async function cached(request, ctx, build) {
   try {
     body = await build();
   } catch (e) {
-    console.error('kyivstar failed', String(e));
-    return new Response(JSON.stringify({ error: 'kyivstar unavailable' }), { status: 502 });
+    console.error('kyivstar shelf empty', new URL(request.url).pathname, String(e));
+    return json({ items: [] }, 0);
   }
-  const response = json(body, TTL);
-  if (body.items && body.items.length) ctx.waitUntil(caches.default.put(key, response.clone()));
+  const items = body && Array.isArray(body.items) ? body.items : [];
+  if (!items.length) {
+    if (needed) console.error('kyivstar shelf empty', new URL(request.url).pathname, 'nothing usable');
+    return json({ items: [] }, 0);
+  }
+  const response = json({ items }, TTL);
+  ctx.waitUntil(caches.default.put(key, response.clone()));
   return response;
 }
 
@@ -128,7 +135,10 @@ export function popular(request, ctx) {
   return cached(request, ctx, async () => {
     const ids = await groupIds();
     const lists = await Promise.all([TOP_WEEK, POPULAR_FILMS, POPULAR_SERIES].map((g) =>
-      group(ids[g.name] || g.id, 20).catch(() => [])));
+      group(ids[g.name] || g.id, 20).catch((e) => {
+        console.error('kyivstar group', g.name, String(e));
+        return [];
+      })));
     const items = [];
     const seen = new Set();
     const add = (a) => {
@@ -208,5 +218,5 @@ export function channel(request, ctx, url) {
       }
     }
     return { items };
-  });
+  }, false);   // a channel with nothing popular is possible: its shelf keeps the app's posters
 }

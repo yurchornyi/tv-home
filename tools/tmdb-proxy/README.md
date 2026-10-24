@@ -5,6 +5,10 @@ only in the Worker's `TMDB_KEY` secret and never in the APK or on GitHub. The la
 `config.xml` `tmdb_proxy` (https://tv-launcher-tmdb.basic-175.workers.dev). Only the read-only paths the shelf uses are
 passed on; anything else is a 404.
 
+When TMDB, Kick, Kyivstar TV or the Spotify charts are down or change their answers, the shelf comes back empty with a
+200 (the TV keeps the posters it has and asks again later), and `console.error` names the failure, which is what
+Sentra's monitoring watches. Tests: `npm test` here (Node 22), also run by `python3 -m unittest discover -s tests`.
+
 Deploy or change the key: put it in `launcher/local.properties` as `tmdb.key=...`, then run
 `tools/tmdb-proxy/deploy.sh` (wrangler, logged in to Cloudflare once with `npx wrangler login`). TVs need no update
 for a new key.

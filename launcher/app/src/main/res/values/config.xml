@@ -73,7 +73,7 @@
     </string-array>
 
     <!-- Dock apps whose top shelf shows film and series backdrops from TMDB instead of their softened banner
-         (needs tmdb.key in launcher/local.properties). Netflix shows what is popular on Netflix, the others what is
+         (through the tmdb_proxy Worker, which holds the key). Netflix shows what is popular on Netflix, the others what is
          trending. A theme can set "shelf_feed_apps". -->
     <string-array name="shelf_feed_apps">
         <item>com.netflix.ninja</item>
@@ -188,7 +188,7 @@
          hourly (and twice a day in the background), downloads a newer build, checks it as KIK does, and installs it
          or offers "Update / Later" over Home. Empty: the launcher never looks. A theme can set "update_url". -->
     <!-- Where the top shelf asks TMDB for posters: the tv-launcher-tmdb Cloudflare Worker (tools/tmdb-proxy), which keeps
-         the key, so the APK has none. Empty: straight to TMDB with a key built in (tmdb.embed_key), or no posters. -->
+         the key, so the APK has none. Empty: no posters. -->
     <!-- Where KIK's latest build is described (its GitHub release's update.json); empty: Home never offers it. -->
     <string name="kik_update_url" translatable="false">https://github.com/yurchornyi/KIK/releases/latest/download/update.json</string>
     <string name="tmdb_proxy" translatable="false">https://tv-launcher-tmdb.basic-175.workers.dev</string>

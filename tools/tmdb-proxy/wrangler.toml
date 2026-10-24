@@ -7,7 +7,7 @@ workers_dev = true
 [observability]
 enabled = true
 
-# The AI routes (ai.js): per-address limit, so the public URL cannot be used to spend the Sentra (Claude) allowance.
+# The AI routes (ai.js): per-address limit, so the public URL cannot be used to spend the Sentra allowance.
 [[ratelimits]]
 name = "AI_LIMIT"
 namespace_id = "1001"

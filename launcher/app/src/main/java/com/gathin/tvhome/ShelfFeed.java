@@ -38,7 +38,8 @@ import java.util.concurrent.Executors;
  * played on Spotify in Ukraine, each album cover set on a 16:9 picture of its own (poster()), and YouTube Music the
  * same songs, opened by a search there. Titles come in the TV's
  * language. Lists are cached for six hours in preferences, images on disk, the last few decoded in memory as RGB_565
- * (about 1.8 MB each at 1280 px), so a ~1 GB TV is not squeezed. No key (BuildConfig.TMDB_KEY) means no requests.
+ * (about 1.8 MB each at 1280 px), so a ~1 GB TV is not squeezed. TMDB is asked only through the Worker, which holds
+ * the key: the APK carries none, and without the Worker (config.xml tmdb_proxy empty) there are no requests.
  */
 final class ShelfFeed {
 
@@ -76,7 +77,7 @@ final class ShelfFeed {
     interface ImageListener { void onImage(String backdrop, Bitmap bitmap); }
 
     private static final String TAG = "TvHome.ShelfFeed";
-    /** TMDB's API, or the Worker that asks it on the launcher's behalf (config.xml tmdb_proxy). */
+    /** The Worker that asks TMDB on the launcher's behalf (config.xml tmdb_proxy). */
     private final String API;
     private static final String IMAGES = "https://image.tmdb.org/t/p/w1280";
     private static final long MAX_AGE_MS = 6 * 60 * 60 * 1000L;
@@ -99,7 +100,6 @@ final class ShelfFeed {
     }
 
     private final Context ctx;
-    private final String key;
     private final String language;
     private final String region;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -120,12 +120,10 @@ final class ShelfFeed {
         @Override protected int sizeOf(String k, Bitmap b) { return b.getAllocationByteCount(); }
     };
 
-    ShelfFeed(Context ctx, String key, String proxy) {
+    ShelfFeed(Context ctx, String proxy) {
         this.ctx = ctx.getApplicationContext();
         String p = proxy == null ? "" : proxy.trim();
-        // With the Worker, no key goes along: it adds its own.
-        this.key = p.isEmpty() && key != null ? key.trim() : "";
-        this.API = p.isEmpty() ? "https://api.themoviedb.org/3/" : (p.endsWith("/") ? p : p + "/") + "3/";
+        this.API = (p.endsWith("/") ? p : p + "/") + "3/";
         this.proxied = !p.isEmpty();
         this.proxyBase = p.isEmpty() ? "" : (p.endsWith("/") ? p : p + "/");
         java.util.Locale l = java.util.Locale.getDefault();
@@ -138,7 +136,7 @@ final class ShelfFeed {
     private final String proxyBase;
 
     boolean enabled() {
-        return proxied || !key.isEmpty();
+        return proxied;
     }
 
     /** What is cached for this app right now, without any fetch; empty when nothing is. */
@@ -649,14 +647,10 @@ final class ShelfFeed {
         return get(url, false);
     }
 
-    /** A v4 read token (long JWT) goes in the Authorization header, a v3 key in the query. */
     private byte[] get(String url, boolean api) throws Exception {
-        boolean bearer = key.length() > 40;
-        if (api && !bearer && !key.isEmpty()) url += "&api_key=" + key;
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(8000);
         c.setReadTimeout(12000);
-        if (api && bearer && !key.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + key);
         try (InputStream in = c.getInputStream()) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buf = new byte[16384];

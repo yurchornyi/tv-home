@@ -3,13 +3,8 @@ plugins {
 }
 
 // The top shelf's TMDB requests go through the tv-launcher-tmdb Worker (config.xml tmdb_proxy, tools/tmdb-proxy), which
-// holds the key, so builds carry none. tmdb.key=... in launcher/local.properties (git ignores it) is what
-// tools/tmdb-proxy/deploy.sh hands the Worker; tmdb.embed_key=true puts it in the APK instead, for a fork without
-// a Worker. Neither: no posters.
-def localProps = new Properties()
-def localFile = rootProject.file('local.properties')
-if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
-def tmdbKey = localProps.getProperty('tmdb.embed_key') == 'true' ? (localProps.getProperty('tmdb.key') ?: '').trim() : ''
+// holds the key, so builds carry none. tmdb.key=... in launcher/local.properties (git ignores it) is only what
+// tools/tmdb-proxy/deploy.sh hands the Worker.
 
 // The release key (made once, kept off the repository): ~/.tv-launcher/release.jks, its password in the macOS
 // Keychain (service tv-launcher-release-key) or in TV_LAUNCHER_KEY_PASSWORD. Every TV trusts only the key its
@@ -35,7 +30,6 @@ android {
         versionName '1.8'
         // Ukrainian only: res/values is Ukrainian, and the libraries' other translations stay out of the APK.
         resourceConfigurations += ['uk']
-        buildConfigField 'String', 'TMDB_KEY', '"' + tmdbKey.replace('"', '') + '"'
     }
 
     buildFeatures {

@@ -2,6 +2,7 @@
 // kworb.net keeps of Spotify's own (spotify.com publishes it only behind a sign-in), each with its album cover
 // (Spotify's oEmbed) and a link the Spotify TV app opens. Russian-language songs are left out: a Cyrillic title or
 // artist stays only with a letter Russian lacks (і, ї, є, ґ). The global chart tops the list up. Cached six hours.
+// When the charts are down or change their page, the shelf comes back empty and console.error tells Sentra.
 
 const UA = { 'User-Agent': 'Mozilla/5.0 (Linux; Android 12; TV) tv-launcher' };
 const TTL = 6 * 60 * 60;
@@ -47,15 +48,17 @@ export async function popular(request, ctx) {
     if (picked.length >= MAX) break;
     try {
       const r = await fetch(chart, { headers: UA });
-      if (!r.ok) continue;
-      for (const row of rows(await r.text())) {
+      if (!r.ok) throw new Error('status ' + r.status);
+      const found = rows(await r.text());
+      if (!found.length) throw new Error('no rows: the page changed');
+      for (const row of found) {
         if (picked.length >= MAX) break;
         if (seen.has(row.id) || !notRussian(row.artist) || !notRussian(row.title)) continue;
         seen.add(row.id);
         picked.push(row);
       }
     } catch (e) {
-      console.warn('chart', chart, String(e));
+      console.error('spotify chart', chart, String(e));
     }
   }
   const covers = await Promise.all(picked.map((p) => cover(p.id).catch(() => '')));
@@ -64,8 +67,10 @@ export async function popular(request, ctx) {
     backdrop: covers[i],
     open: `https://open.spotify.com/track/${p.id}`,
   })).filter((it) => it.backdrop);
+  if (!items.length) console.error('spotify shelf empty', picked.length + ' songs, no covers');
   const response = new Response(JSON.stringify({ items }), {
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=' + TTL },
+    headers: { 'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': items.length ? 'public, max-age=' + TTL : 'no-store' },
   });
   if (items.length) ctx.waitUntil(caches.default.put(key, response.clone()));
   return response;

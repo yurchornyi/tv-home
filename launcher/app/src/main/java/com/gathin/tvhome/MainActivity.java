@@ -935,7 +935,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         for (View b : npButtons) b.setOnKeyListener(npKeys);
         feedApps.addAll(cfg.shelfFeedApps);
         channelApps.addAll(cfg.shelfChannelApps);
-        shelfFeed = new ShelfFeed(this, BuildConfig.TMDB_KEY, getString(R.string.tmdb_proxy));
+        shelfFeed = new ShelfFeed(this, getString(R.string.tmdb_proxy));
         ai = new AiClient(this, getString(R.string.tmdb_proxy));
         kickFeed = new KickFeed(getString(R.string.tmdb_proxy));
         channelFeed = new ChannelFeed(this);

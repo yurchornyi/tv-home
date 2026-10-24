@@ -21,6 +21,20 @@ const PASSED = ['language', 'region', 'with_networks', 'with_watch_providers', '
   'sort_by', 'include_image_language', 'page'];
 const TTL = 6 * 60 * 60;
 
+/**
+ * What the TV gets when TMDB is down, refuses the key or answers in a shape it no longer reads: the same shape, empty.
+ * ShelfFeed then keeps the posters it has and tries again later; console.error is what Sentra's monitoring sees.
+ */
+function tmdbEmpty(path, why) {
+  if (why) console.error('tmdb shelf empty', path, why);
+  const body = path.endsWith('/images') ? { backdrops: [] }
+    : path.endsWith('/external_ids') ? {}
+      : { page: 1, results: [], total_pages: 0, total_results: 0 };
+  return new Response(JSON.stringify(body), {
+    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
 const ABOUT_PAGE = `TV-Launcher: the backend of an Android TV home screen for a Ukrainian household.
 - TMDB posters for the top shelf (/3/...), Kyivstar TV, Kick and Spotify shelves.
 - AI through Sentra: a spoken command turned into one TV action, film picks for a mood, two lines on a film.
@@ -74,7 +88,7 @@ export default {
     if (url.pathname === '/kyivstar/channel') return kyivstarChannel(request, ctx, url);
     if (url.pathname === '/spotify/popular') return spotifyPopular(request, ctx);
     if (!ALLOWED.some((re) => re.test(url.pathname))) return new Response('Not found', { status: 404 });
-    if (!env.TMDB_KEY) return new Response('Not configured', { status: 503 });
+    if (!env.TMDB_KEY) return tmdbEmpty(url.pathname, 'TMDB_KEY not set');
 
     // The upstream request carries only known parameters, in a fixed order, so the cache key is stable.
     const upstream = new URL('https://api.themoviedb.org' + url.pathname);
@@ -99,16 +113,24 @@ export default {
     else upstream.searchParams.set('api_key', key);                 // a v3 key
     // no-store: Cloudflare must not keep TMDB's own answer by URL. A v4 token travels in a header the URL does not
     // show, so a 401 cached under an old token kept coming back, now and then, after the token changed.
-    const answer = await fetch(upstream.toString(), { headers, cache: 'no-store' });
-    // Only the type travels on: TMDB's own headers (its CDN's ids, cookies) stay behind.
-    response = new Response(answer.body, {
-      status: answer.status,
-      headers: { 'Content-Type': answer.headers.get('Content-Type') || 'application/json; charset=utf-8' },
-    });
-    if (answer.ok) {
-      response.headers.set('Cache-Control', 'public, max-age=' + TTL);
-      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    let data;
+    try {
+      const answer = await fetch(upstream.toString(), { headers, cache: 'no-store' });
+      // An unknown title's images or ids: nothing to show, and nothing broken either.
+      if (answer.status === 404) return tmdbEmpty(url.pathname, '');
+      if (!answer.ok) return tmdbEmpty(url.pathname, 'status ' + answer.status);
+      data = await answer.json();
+    } catch (e) {
+      return tmdbEmpty(url.pathname, e instanceof Error ? `${e.name}: ${e.message}` : String(e));
     }
+    const list = !/\/(images|external_ids)$/.test(url.pathname);
+    if (!data || typeof data !== 'object' || (list ? !Array.isArray(data.results) : url.pathname.endsWith('/images')
+      && !Array.isArray(data.backdrops))) return tmdbEmpty(url.pathname, 'unexpected shape');
+    // Only the JSON travels on: TMDB's own headers (its CDN's ids, cookies) stay behind.
+    response = new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=' + TTL },
+    });
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   },
 };
