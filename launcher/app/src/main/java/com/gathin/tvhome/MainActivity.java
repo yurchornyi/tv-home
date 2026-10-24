@@ -501,7 +501,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Outfit at this weight, made from the font file itself: Android 9 (the TCL) ignores the variation in the font
      * resource and on the view, and draws Outfit's thinnest instance, pale grey at 720p. A Typeface.Builder over the
      * file honours it. Built once per weight; the file is copied out of the resources once.
+     * R.font.outfit is the .ttf itself, so reading it as a raw resource works; lint only sees the font type.
      */
+    @android.annotation.SuppressLint("ResourceType")
     private void weight(TextView t, int wght) {
         android.graphics.Typeface face = WEIGHTS.get(wght);
         if (face == null) {
