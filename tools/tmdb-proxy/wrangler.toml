@@ -19,5 +19,16 @@ name = "TMDB_LIMIT"
 namespace_id = "1002"
 simple = { limit = 120, period = 60 }
 
+# Account sign-in (account.js): per-address limit on PIN tries.
+[[ratelimits]]
+name = "ACCOUNT_LIMIT"
+namespace_id = "1003"
+simple = { limit = 10, period = 60 }
+
+# Accounts and their synced Home (account.js).
+[[kv_namespaces]]
+binding = "ACCOUNTS"
+id = "6e74394e0755459494f2678a18b530d9"
+
 [vars]
 SENTRA_URL = "https://sentra.sntr.workers.dev"

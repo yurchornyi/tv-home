@@ -22,7 +22,8 @@ import java.util.Set;
  * The owner's choices in one file, backup.json in the launcher's external files folder (readable over adb, see
  * tools/backup-settings.sh): the tile order, what was added to or removed from Home, the shelf's poster switches,
  * the channel choices and counts. Written whenever they change; a file put there from outside (restore, or a
- * copy from another TV) is taken in at the next start. Nothing leaves the TV by itself.
+ * copy from another TV) is taken in at the next start. Nothing leaves the TV by itself, unless the owner signed in to
+ * an account (Account), which then gets the same snapshot.
  */
 final class Backup {
 
@@ -68,6 +69,7 @@ final class Backup {
             }
             if (!tmp.renameTo(f)) throw new IllegalStateException("rename failed");
             state(ctx).edit().putString("exported", hash).putString("imported", hash).apply();
+            Account.changed(ctx);
         } catch (Exception e) {
             Log.w(TAG, "export failed: " + e);
         }
@@ -88,22 +90,7 @@ final class Backup {
             String hash = Integer.toHexString(o.toString(1).hashCode());
             SharedPreferences st = state(ctx);
             if (hash.equals(st.getString("imported", "")) || hash.equals(st.getString("exported", ""))) return false;
-            JSONObject files = o.optJSONObject("files");
-            if (files != null) {
-                for (String name : FILES) {
-                    if (!files.has(name)) continue;
-                    AtomicFile af = new AtomicFile(new File(ctx.getFilesDir(), name));
-                    FileOutputStream out = af.startWrite();
-                    try {
-                        out.write(files.getString(name).getBytes(StandardCharsets.UTF_8));
-                        af.finishWrite(out);
-                    } catch (Exception e) {
-                        af.failWrite(out);
-                        throw e;
-                    }
-                }
-            }
-            writePrefs(ctx, o.optJSONObject("prefs"));
+            write(ctx, o);
             st.edit().putString("imported", hash).putString("exported", hash).apply();
             Log.i(TAG, "settings restored from " + f);
             return true;
@@ -111,6 +98,30 @@ final class Backup {
             Log.w(TAG, "import failed: " + e);
             return false;
         }
+    }
+
+    /** Takes in a snapshot from the owner's account (Account): another TV's Home, in this TV's package names. */
+    static void apply(Context ctx, JSONObject snapshot) throws Exception {
+        write(ctx, (JSONObject) Aliases.localizeJson(ctx.getPackageManager(), new JSONObject(snapshot.toString())));
+    }
+
+    private static void write(Context ctx, JSONObject o) throws Exception {
+        JSONObject files = o.optJSONObject("files");
+        if (files != null) {
+            for (String name : FILES) {
+                if (!files.has(name)) continue;
+                AtomicFile af = new AtomicFile(new File(ctx.getFilesDir(), name));
+                FileOutputStream out = af.startWrite();
+                try {
+                    out.write(files.getString(name).getBytes(StandardCharsets.UTF_8));
+                    af.finishWrite(out);
+                } catch (Exception e) {
+                    af.failWrite(out);
+                    throw e;
+                }
+            }
+        }
+        writePrefs(ctx, o.optJSONObject("prefs"));
     }
 
     /**
@@ -187,7 +198,7 @@ final class Backup {
         }
     }
 
-    private static JSONObject snapshot(Context ctx) throws Exception {
+    static JSONObject snapshot(Context ctx) throws Exception {
         JSONObject o = new JSONObject();
         o.put("launcher", BuildConfig.VERSION_NAME);
         JSONObject files = new JSONObject();

@@ -147,6 +147,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private int feedGen;
     private List<ShelfFeed.Item> feedItems;
     private int feedIndex;
+    /** The channel whose programmes the shelf's posters show now (a focused channel tile), null for the app's own. */
+    private String feedChannel;
     private float lastDockTop;
     private TextView shelfTitle;
     /** The Watch pill under the shelf title: opens the film or video shown (openFeedItem). */
@@ -1155,6 +1157,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         promptsPaused = false;
         updater.check();
+        // Signed in to an account: another TV's newer Home comes in, and this one rebuilds with it.
+        Account.refresh(this, applied -> {
+            if (applied && homeInFront && !isFinishing() && !recreating) {
+                recreating = true;
+                recreate();
+            }
+        });
         if (updater.readyVersion() != null) onUpdateReady();
         askForTvListings();
         handler.removeCallbacks(kikOffer);
@@ -2053,7 +2062,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             stopFeed();
             return false;
         }
-        if (pkg.equals(feedPkg)) {
+        if (pkg.equals(feedPkg) && feedChannel == null) {
             positionShelfTitle();
             showShelfOpen(feedItems != null && !feedItems.isEmpty(), true);   // back when a channel row went away
             return true;
@@ -2517,6 +2526,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             v.setAlpha(1f);
             v.setTranslationY(0f);   // a search tile still rising into place lands at once
             if (focused) hideGlass();
+            if (focused && c != null) showChannelPosters(pkg, c);
         });
         tile.setOnKeyListener((v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
@@ -2544,6 +2554,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
         }
         return tile;
+    }
+
+    private LiveChannels.Channel postersFor;
+    private String postersPkg;
+    private final Runnable channelPosters = this::loadChannelPosters;
+
+    /**
+     * A channel tile has focus: the posters behind the row become the programmes popular on that channel (Kyivstar's
+     * Worker route), after a moment, so running along the row does not ask for every channel passed. A channel with
+     * none keeps the posters shown.
+     */
+    private void showChannelPosters(String pkg, LiveChannels.Channel c) {
+        if (!pkg.equals(feedPkg) || c.id.equals(feedChannel)) return;
+        postersFor = c;
+        postersPkg = pkg;
+        handler.removeCallbacks(channelPosters);
+        handler.postDelayed(channelPosters, 350);
+    }
+
+    private void loadChannelPosters() {
+        LiveChannels.Channel c = postersFor;
+        String pkg = postersPkg;
+        if (c == null || pkg == null || !pkg.equals(feedPkg)) return;
+        int gen = feedGen;
+        shelfFeed.channelItems(c.id, c.name, items -> {
+            if (gen != feedGen || !pkg.equals(feedPkg) || postersFor != c || items.isEmpty()) return;
+            View f = getCurrentFocus();
+            if (f == null || f.getParent() != shelfChannels) return;   // focus already back on the dock
+            feedChannel = c.id;
+            feedItems = new ArrayList<>(items);
+            feedIndex = 0;
+            showFeedItem();
+        });
     }
 
     /** The small menu over a held channel tile: remove it from the shelf, or open the channel picker. */
@@ -3626,6 +3669,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void stopFeed() {
         handler.removeCallbacks(feedTick);
+        handler.removeCallbacks(channelPosters);
+        feedChannel = null;
         feedGen++;
         if (feedPkg == null) return;
         feedPkg = null;

@@ -36,6 +36,7 @@ public final class LauncherSettingsActivity extends Activity {
 
     static final String EXTRA_THEN = "then", EXTRA_CHANGED = "changed";
     static final String THEN_ADD = "add", THEN_REORDER = "reorder", THEN_MODULES = "modules";
+    private static final int ACCOUNT_REQUEST = 7;
     private static final int[] SLEEP_STEPS = {0, 15, 30, 45, 60, 90, 120};
     private static final PathInterpolator EASE = new PathInterpolator(0.2f, 0f, 0f, 1f);
 
@@ -319,6 +320,11 @@ public final class LauncherSettingsActivity extends Activity {
                 () -> open(new Intent(Settings.ACTION_SETTINGS)), null);
         tv.shown = () -> "";
 
+        section(list, R.string.settings_section_account, false);
+        Row account = row(list, getString(R.string.account), getString(R.string.account_row_hint),
+                () -> startActivityForResult(new Intent(this, AccountActivity.class), ACCOUNT_REQUEST), null);
+        account.shown = () -> Account.signedIn(this) ? Account.email(this) : getString(R.string.off);
+
         section(list, R.string.settings_section_about, false);
         Row version = row(list, getString(R.string.version_label), getString(R.string.version_hint), () -> {
             if (updater.readyVersion() != null) {
@@ -359,6 +365,14 @@ public final class LauncherSettingsActivity extends Activity {
             SleepTimer.set(this, minutes);
         }
         // Not markChanged(): the timer needs no rebuild of Home, whose clock line picks it up on return.
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // Signed in to an account with another TV's Home: this one took it in, so Home rebuilds on the way back.
+        if (requestCode == ACCOUNT_REQUEST && resultCode == RESULT_OK) markChanged();
+        refresh();
     }
 
     private void markChanged() {

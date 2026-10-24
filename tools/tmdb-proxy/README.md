@@ -17,3 +17,18 @@ low effort, server-side fallbacks) through Sentra, the owner's AI centre (`SENTR
 into this Worker when the project is connected; the Anthropic key, its limits and spend live there). Each address gets 12 AI requests a
 minute (the `AI_LIMIT` rate limit); limits and spend are set in Sentra as well, since the URL is public.
 Without `SENTRA_TOKEN` the routes answer 503 and the TV quietly uses plain search.
+
+## Kyivstar TV (kyivstar.js)
+
+`GET /kyivstar/popular` gives Kyivstar TV's own posters for its shelf: the weekly top ten, then its most popular films
+and series. `GET /kyivstar/channel?id=<channel id>&name=<name>` gives the programmes popular on one channel (Kyivstar's
+"Popular on TV" list for it, then the shows of its programme guide with the catalogue's pictures). Both come from the
+public catalogue behind tv.kyivstar.ua with an anonymous session, cached three hours, and never list "Svaty" or
+"Sluha narodu". Each item carries the app's deep link (`com.kyivstar.tv.tvapp://movie<id>` or `://series<id>`).
+
+## Accounts (account.js)
+
+`POST /account/signin {email, pin}` signs in or makes the account (PIN of 4 to 6 digits, kept only as PBKDF2);
+`GET /account/state` and `PUT /account/state` carry one TV's Home (Backup's snapshot and its apps) to the others;
+`POST /account/signout` ends one TV's sign-in. Data lives in the `ACCOUNTS` KV namespace (tv-launcher-accounts); PIN
+tries are limited per address (`ACCOUNT_LIMIT`) and ten wrong ones lock the e-mail for 15 minutes.

@@ -33,7 +33,8 @@ import java.util.concurrent.Executors;
  * Posters for the top shelf (config.xml shelf_feed_apps): film and series backdrops from TMDB, shown while one of
  * those dock apps is focused. Netflix gets what is popular on Netflix in the TV's region (its network for series,
  * its watch provider for films); Kyivstar TV Ukrainian series and films, then what is popular in the region; every
- * other listed app what is trending this week. Titles come in the TV's
+ * other listed app what is trending this week. Kyivstar TV, through the Worker, shows its own posters instead: what is
+ * popular on Kyivstar TV, and with a channel focused the programmes popular on that channel. Titles come in the TV's
  * language. Lists are cached for six hours in preferences, images on disk, the last few decoded in memory as RGB_565
  * (about 1.8 MB each at 1280 px), so a ~1 GB TV is not squeezed. No key (BuildConfig.TMDB_KEY) means no requests.
  */
@@ -81,7 +82,7 @@ final class ShelfFeed {
     private static final String KYIVSTAR = "com.kyivstar.tv.tvapp";
     /** Titles the owner never wants on the shelf, whichever app or list offers them (any spelling, any season). */
     private static final java.util.regex.Pattern NEVER = java.util.regex.Pattern.compile(
-            "(^|[^\\p{L}])(свати|сваты|svaty)([^\\p{L}]|$)",
+            "(^|[^\\p{L}])(свати|сваты|svaty|слуга народу|слуга народа)([^\\p{L}]|$)",
             java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
 
     static boolean never(String title) {
@@ -117,12 +118,15 @@ final class ShelfFeed {
         this.key = p.isEmpty() && key != null ? key.trim() : "";
         this.API = p.isEmpty() ? "https://api.themoviedb.org/3/" : (p.endsWith("/") ? p : p + "/") + "3/";
         this.proxied = !p.isEmpty();
+        this.proxyBase = p.isEmpty() ? "" : (p.endsWith("/") ? p : p + "/");
         java.util.Locale l = java.util.Locale.getDefault();
         this.language = l.getLanguage() + (l.getCountry().isEmpty() ? "" : "-" + l.getCountry());
         this.region = l.getCountry().isEmpty() ? "US" : l.getCountry();
     }
 
     private final boolean proxied;
+    /** The Worker's own address ("" without one): Kyivstar TV's posters come from its /kyivstar routes. */
+    private final String proxyBase;
 
     boolean enabled() {
         return proxied || !key.isEmpty();
@@ -131,10 +135,10 @@ final class ShelfFeed {
     /** What is cached for this app right now, without any fetch; empty when nothing is. */
     List<Item> cached(String pkg) {
         if (!enabled()) return java.util.Collections.emptyList();
-        String group = NETFLIX.equals(pkg) ? "netflix" : KYIVSTAR.equals(Aliases.canonical(pkg)) ? "ukraine" : "trending";
+        String group = group(pkg);
         List<Item> known = lists.get(group);
         if (known == null) {
-            known = parse(prefs().getString(group, ""));
+            known = parse(prefs().getString(group, ""), !"kyivstar".equals(group));
             if (!known.isEmpty()) lists.put(group, known);
         }
         return known;
@@ -143,10 +147,10 @@ final class ShelfFeed {
     /** The cached list for this app at once if there is one, then a fresh one when the cache is old. */
     void items(String pkg, ItemsListener listener) {
         if (!enabled()) return;
-        String group = NETFLIX.equals(pkg) ? "netflix" : KYIVSTAR.equals(Aliases.canonical(pkg)) ? "ukraine" : "trending";
+        String group = group(pkg);
         List<Item> known = lists.get(group);
         if (known == null) {
-            known = parse(prefs().getString(group, ""));
+            known = parse(prefs().getString(group, ""), !"kyivstar".equals(group));
             if (!known.isEmpty()) lists.put(group, known);
         }
         if (!known.isEmpty()) listener.onItems(known);
@@ -163,6 +167,8 @@ final class ShelfFeed {
             List<Item> got = new ArrayList<>();
             JSONArray raw = new JSONArray();
             try {
+                if ("kyivstar".equals(group)) kyivstar(proxyBase + "kyivstar/popular", got, raw);
+                else {
                 String[] paths = "netflix".equals(group)
                         ? new String[]{"discover/tv?with_networks=213&sort_by=popularity.desc",
                                        "discover/movie?with_watch_providers=8&watch_region=" + region + "&sort_by=popularity.desc"}
@@ -173,6 +179,7 @@ final class ShelfFeed {
                                        "movie/popular?region=" + region}
                         : new String[]{"trending/all/week", "movie/popular?region=" + region};
                 for (String path : paths) collect(path, got, raw);
+                }
             } catch (Exception e) {
                 Log.w(TAG, "feed failed: " + e);
             }
@@ -184,12 +191,85 @@ final class ShelfFeed {
                     return;
                 }
                 failedAt.remove(group);
-                Collections.shuffle(got);
+                if (!"kyivstar".equals(group)) Collections.shuffle(got);   // Kyivstar's comes most popular first
                 lists.put(group, got);
                 prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
                 if (all != null) for (ItemsListener l : all) l.onItems(got);
             });
         });
+    }
+
+    /** Which cached list an app's shelf shows. */
+    private String group(String pkg) {
+        if (NETFLIX.equals(pkg)) return "netflix";
+        if (KYIVSTAR.equals(Aliases.canonical(pkg))) return proxied ? "kyivstar" : "ukraine";
+        return "trending";
+    }
+
+    /**
+     * The programmes popular on one Kyivstar TV channel (the Worker's /kyivstar/channel), cached like the lists; the
+     * listener hears them on the main thread, empty when the channel has none (its shelf keeps the app's posters).
+     */
+    void channelItems(String channelId, String channelName, ItemsListener listener) {
+        if (!proxied) {
+            listener.onItems(Collections.emptyList());
+            return;
+        }
+        String group = "ch_" + channelId;
+        List<Item> known = lists.get(group);
+        if (known == null) {
+            known = parse(prefs().getString(group, ""), false);
+            lists.put(group, known);
+        }
+        boolean fresh = System.currentTimeMillis() - prefs().getLong(group + "_at", 0) < MAX_AGE_MS;
+        if (fresh || io.isShutdown()) {
+            listener.onItems(known);
+            return;
+        }
+        Long failed = failedAt.get(group);
+        if (failed != null && System.currentTimeMillis() - failed < RETRY_MS) {
+            listener.onItems(known);
+            return;
+        }
+        List<Item> stale = known;
+        io.execute(() -> {
+            List<Item> got = new ArrayList<>();
+            JSONArray raw = new JSONArray();
+            boolean ok = false;
+            try {
+                kyivstar(proxyBase + "kyivstar/channel?id=" + java.net.URLEncoder.encode(channelId, "UTF-8")
+                        + "&name=" + java.net.URLEncoder.encode(channelName == null ? "" : channelName, "UTF-8"), got, raw);
+                ok = true;
+            } catch (Exception e) {
+                Log.w(TAG, "channel feed failed: " + e);
+            }
+            boolean loaded = ok;
+            main.post(() -> {
+                if (!loaded) {
+                    failedAt.put(group, System.currentTimeMillis());
+                    listener.onItems(stale);
+                    return;
+                }
+                failedAt.remove(group);
+                lists.put(group, got);
+                prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
+                listener.onItems(got);
+            });
+        });
+    }
+
+    /** A list from the Worker's Kyivstar routes: title, backdrop (Kyivstar's own picture) and the app's deep link. */
+    private void kyivstar(String url, List<Item> into, JSONArray raw) throws Exception {
+        JSONArray items = new JSONObject(new String(get(url, false), StandardCharsets.UTF_8)).getJSONArray("items");
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject r = items.getJSONObject(i);
+            String title = r.optString("title", "");
+            String backdrop = r.optString("backdrop", "");
+            String open = r.optString("open", "");
+            if (title.isEmpty() || backdrop.isEmpty() || never(title)) continue;
+            into.add(new Item(title, backdrop, open.isEmpty() ? null : open, "", 0));
+            raw.put(new JSONObject().put("t", title).put("b", backdrop).put("u", open));
+        }
     }
 
     /** The backdrop from memory, else disk, else TMDB; the listener hears it on the main thread. */
@@ -290,20 +370,22 @@ final class ShelfFeed {
         }
     }
 
-    private static List<Item> parse(String json) {
+    private static List<Item> parse(String json, boolean shuffle) {
         List<Item> out = new ArrayList<>();
         if (json.isEmpty()) return out;
         try {
             JSONArray a = new JSONArray(json);
             for (int i = 0; i < a.length(); i++) {
                 JSONObject o = a.getJSONObject(i);
-                Item item = new Item(o.getString("t"), o.getString("b"), null, o.optString("ty", ""), o.optLong("id"));
+                String open = o.optString("u", "");
+                Item item = new Item(o.getString("t"), o.getString("b"), open.isEmpty() ? null : open,
+                        o.optString("ty", ""), o.optLong("id"));
                 item.original = o.optString("o", "");
                 item.year = o.optString("y", "");
                 if (never(item.title) || never(item.original)) continue;
                 out.add(item);
             }
-            Collections.shuffle(out);
+            if (shuffle) Collections.shuffle(out);
         } catch (Exception ignored) {
         }
         return out;
