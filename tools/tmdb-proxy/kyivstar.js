@@ -14,6 +14,11 @@ const TOP_WEEK = { name: 'Топ-10 тижня', id: '68f251f535b4956d90011a23' 
 const POPULAR_FILMS = { name: 'Найпопулярніші фільми', id: '661cec7dc7b45a1690959607' };
 const POPULAR_SERIES = { name: 'Найпопулярніші серіали', id: '660a7dc314f4b3f94bbe7777' };
 const POPULAR_PROGRAMS = { name: 'Популярне на ТБ: Програми', id: '5f0851018d54597041cba621' };
+// What tops the shelf up when the popular films and series come back short: since October 2026 those two are
+// recommendations, and an anonymous visitor gets none of them.
+const NEW = { name: 'Нове на Київстар ТБ', id: '67efcd0583d4a7114f86703c' };
+const UKRAINIAN = { name: 'Українські серіали та фільми', id: '66e024925bd49f112008988a' };
+const MAX = 30;
 
 /** Titles the owner never wants on the shelf (ShelfFeed.NEVER on the TV says the same). */
 const NEVER = /(^|[^\p{L}])(свати|сваты|svaty|слуга народу|слуга народа)([^\p{L}]|$)/iu;
@@ -43,9 +48,20 @@ async function get(path) {
   throw new Error('kyivstar refused ' + path);
 }
 
-async function group(id, limit) {
+/** A group's assets; an empty one is logged, since the groups this Worker reads are never empty on Kyivstar TV. */
+async function group(id, limit, name = id) {
   const g = await get(`/api/v1/gallery/v3/contentgroups/${id}{s}?offset=0&limit=${limit}`);
-  return g.assets || [];
+  const assets = Array.isArray(g.assets) ? g.assets : [];
+  if (!assets.length) console.error('kyivstar group empty', name, id);
+  return assets;
+}
+
+/** Each group in `groups` (by its id on the main page, else the known one), [] for one that fails. */
+function groups(ids, list) {
+  return Promise.all(list.map((g) => group(ids[g.name] || g.id, 20, g.name).catch((e) => {
+    console.error('kyivstar group', g.name, String(e));
+    return [];
+  })));
 }
 
 /** The main page's group ids by name; the weekly top is a compilation whose first element is the group. */
@@ -130,15 +146,14 @@ async function cached(request, ctx, build, needed = true) {
   return response;
 }
 
-/** GET /kyivstar/popular: the weekly top ten first, then the most popular films and series, interleaved. */
+/**
+ * GET /kyivstar/popular: the weekly top ten first, then the most popular films and series, interleaved; while that is
+ * short of thirty, what is new on Kyivstar TV and its Ukrainian series and films, interleaved the same way.
+ */
 export function popular(request, ctx) {
   return cached(request, ctx, async () => {
     const ids = await groupIds();
-    const lists = await Promise.all([TOP_WEEK, POPULAR_FILMS, POPULAR_SERIES].map((g) =>
-      group(ids[g.name] || g.id, 20).catch((e) => {
-        console.error('kyivstar group', g.name, String(e));
-        return [];
-      })));
+    const lists = await groups(ids, [TOP_WEEK, POPULAR_FILMS, POPULAR_SERIES]);
     const items = [];
     const seen = new Set();
     const add = (a) => {
@@ -148,12 +163,16 @@ export function popular(request, ctx) {
       seen.add(it.title);
       items.push(it);
     };
+    const interleave = (a, b) => {
+      for (let i = 0; i < 20; i++) {
+        if (a[i]) add(a[i]);
+        if (b[i]) add(b[i]);
+      }
+    };
     lists[0].slice(0, 10).forEach(add);
-    for (let i = 0; i < 20; i++) {
-      if (lists[1][i]) add(lists[1][i]);
-      if (lists[2][i]) add(lists[2][i]);
-    }
-    return { items: items.slice(0, 30) };
+    interleave(lists[1], lists[2]);
+    if (items.length < MAX) interleave(...(await groups(ids, [NEW, UKRAINIAN])));
+    return { items: items.slice(0, MAX) };
   });
 }
 

@@ -74,3 +74,46 @@ test('without TMDB_KEY the TMDB shelf is empty and says so', async () => {
   assert.deepEqual((await r.json()).results, []);
   assert.ok(errors.some((e) => e.includes('TMDB_KEY')));
 });
+
+/** Kyivstar's clients API as it answers an anonymous visitor: `sizes` gives each group's number of assets. */
+function fakeKyivstar(sizes) {
+  const asset = (group, i) => ({
+    assetId: `${group}-${i}`, name: `${group} ${i}`, assetType: i % 2 ? 'SERIES' : 'MOVIE',
+    imagesSource: [{ url: 'https://img.test/' + group + i, imgFiles: [{ fileName: 'IMAGE_16_9_XL.jpg' }] }],
+  });
+  const ids = { top: '68f251f535b4956d90011a23', films: '661cec7dc7b45a1690959607', series: '660a7dc314f4b3f94bbe7777',
+    fresh: '67efcd0583d4a7114f86703c', ukrainian: '66e024925bd49f112008988a' };
+  return async (u) => {
+    const url = String(u);
+    if (url.includes('/authentication/login')) return Response.json({ sessionId: 'anon' });
+    if (url.includes('/contentareas/')) return Response.json([]);
+    const m = /contentgroups\/([0-9a-f]{24})/.exec(url);
+    const name = m && Object.keys(ids).find((k) => ids[k] === m[1]);
+    if (!name) return new Response('not found', { status: 404 });
+    return Response.json({ assets: Array.from({ length: sizes[name] || 0 }, (_, i) => asset(name, i)) });
+  };
+}
+
+test('/kyivstar/popular: empty popular films and series are topped up with new and Ukrainian ones', async () => {
+  globalThis.fetch = fakeKyivstar({ top: 10, films: 0, series: 0, fresh: 20, ukrainian: 20 });
+  const r = await worker.fetch(new Request(BASE + '/kyivstar/popular?t=fallback'), {}, ctx);
+  const { items } = await r.json();
+  assert.equal(items.length, 30);
+  assert.deepEqual(items.slice(0, 10).map((i) => i.title), Array.from({ length: 10 }, (_, i) => `top ${i}`));
+  assert.deepEqual(items.slice(10, 14).map((i) => i.title), ['fresh 0', 'ukrainian 0', 'fresh 1', 'ukrainian 1']);
+  assert.ok(errors.some((e) => e.includes('kyivstar group empty') && e.includes('Найпопулярніші фільми')));
+  assert.ok(errors.some((e) => e.includes('Найпопулярніші серіали')));
+});
+
+test('/kyivstar/popular: with the popular groups full, the fallbacks are not asked', async () => {
+  const fake = fakeKyivstar({ top: 10, films: 20, series: 20, fresh: 20, ukrainian: 20 });
+  const asked = [];
+  globalThis.fetch = (u, o) => {
+    asked.push(String(u));
+    return fake(u, o);
+  };
+  const { items } = await (await worker.fetch(new Request(BASE + '/kyivstar/popular?t=full'), {}, ctx)).json();
+  assert.equal(items.length, 30);
+  assert.ok(!asked.some((u) => u.includes('67efcd0583d4a7114f86703c')));
+  assert.equal(errors.length, 0);
+});

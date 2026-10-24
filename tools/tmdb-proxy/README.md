@@ -29,7 +29,8 @@ Without `SENTRA_TOKEN` the routes answer 503 and the TV quietly uses plain searc
 ## Kyivstar TV (kyivstar.js)
 
 `GET /kyivstar/popular` gives Kyivstar TV's own posters for its shelf: the weekly top ten, then its most popular films
-and series. `GET /kyivstar/channel?id=<channel id>&name=<name>` gives the programmes popular on one channel (Kyivstar's
+and series, topped up while short of thirty with what is new on Kyivstar TV and its Ukrainian series and films
+(anonymous visitors get no popular ones since October 2026). `GET /kyivstar/channel?id=<channel id>&name=<name>` gives the programmes popular on one channel (Kyivstar's
 "Popular on TV" list for it, then the shows of its programme guide with the catalogue's pictures). Both come from the
 public catalogue behind tv.kyivstar.ua with an anonymous session, cached three hours, and never list "Svaty" or
 "Sluha narodu". Each item carries the app's deep link (`com.kyivstar.tv.tvapp://movie<id>` or `://series<id>`).
