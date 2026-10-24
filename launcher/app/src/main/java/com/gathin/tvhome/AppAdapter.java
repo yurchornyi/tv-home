@@ -98,6 +98,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final float FOCUS_SCALE = 1.10f;
+
+    /**
+     * How far a focused tile rises (advanced effects): 4dp in the grid, none in the dock, whose panel frames the row
+     * with equal room above and below; lifted there, the zoomed tile sat closer to the panel's top than its bottom.
+     */
+    private float lift(int position) {
+        if (!advancedEffects || (dockRow && position >= 0 && position < dockSize)) return 0f;
+        return -4f * ctx.getResources().getDisplayMetrics().density;
+    }
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
 
@@ -544,7 +553,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
         name.setLayoutParams(nameLp);
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion);
+        return new Holder(v, listener, animations, advancedEffects, reducedMotion,
+                p -> dockRow && p >= 0 && p < dockSize);
     }
 
     @Override
@@ -571,7 +581,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.name.setAlpha(focused ? 1f : 0f);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
-        h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
+        h.card.setTranslationY(focused ? lift(position) : 0f);
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
@@ -834,9 +844,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final boolean advancedEffects;
         final boolean reducedMotion;
 
+        /** Whether a position is in the dock, where a focused tile does not rise (AppAdapter.lift). */
+        private final java.util.function.IntPredicate inDock;
+
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion) {
+               boolean reducedMotion, java.util.function.IntPredicate inDock) {
             super(v);
+            this.inDock = inDock;
             card = v.findViewById(R.id.card);
             banner = v.findViewById(R.id.banner);
             icon = v.findViewById(R.id.icon);
@@ -881,7 +895,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     name.setTranslationY(0f);
                 } else if (reducedMotion) {
                     view.animate().scaleX(s).scaleY(s)
-                            .translationY(focused && advancedEffects ? -4f * density : 0f)
+                            .translationY(focused && advancedEffects && !inDock.test(getBindingAdapterPosition()) ? -4f * density : 0f)
                             .translationZ(focused && advancedEffects ? 8f * density : 0f)
                             .setDuration(focused ? 120 : 80)
                             .setInterpolator(new DecelerateInterpolator())
@@ -893,7 +907,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     if (focused) name.setTranslationY(density * 4f);
                 } else {
                     view.animate().scaleX(s).scaleY(s)
-                            .translationY(focused && advancedEffects ? -4f * density : 0f)
+                            .translationY(focused && advancedEffects && !inDock.test(getBindingAdapterPosition()) ? -4f * density : 0f)
                             .translationZ(focused && advancedEffects ? 8f * density : 0f)
                             .setDuration(advancedEffects ? (focused ? 220 : 170) : (focused ? 260 : 180))
                             .setInterpolator(new OvershootInterpolator(focused ? (advancedEffects ? 0.7f : 1.6f) : 0f))
