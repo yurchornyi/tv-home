@@ -159,7 +159,8 @@ final class ShelfFeed {
         if (!enabled()) return;
         String group = group(pkg);
         if (group == null) return;
-        ItemsListener listener = YOUTUBE_MUSIC.equals(pkg) ? items -> asked.onItems(forApp(pkg, items)) : asked;
+        ItemsListener forThisApp = YOUTUBE_MUSIC.equals(pkg) ? items -> asked.onItems(forApp(pkg, items)) : asked;
+        ItemsListener listener = music(pkg) ? withMine(forThisApp) : forThisApp;
         List<Item> known = lists.get(group);
         if (known == null) {
             known = parse(prefs().getString(group, ""), !ordered(group));
@@ -218,6 +219,74 @@ final class ShelfFeed {
         if (music(pkg)) return proxied ? "spotify" : null;
         if (KYIVSTAR.equals(Aliases.canonical(pkg))) return proxied ? "kyivstar" : "ukraine";
         return "trending";
+    }
+
+    /**
+     * The songs the owner played (Listened) among the popular ones, one of each in turn, as soon as their covers are
+     * known; the covers still unknown are looked up (iTunes' search, which needs no key) and the list comes again.
+     */
+    private ItemsListener withMine(ItemsListener listener) {
+        return popular -> {
+            listener.onItems(mixMine(popular));
+            List<Listened.Song> missing = new ArrayList<>();
+            for (Listened.Song song : Listened.all(ctx)) {
+                if (!art().contains(song.key())) missing.add(song);
+                if (missing.size() == 10) break;
+            }
+            if (missing.isEmpty() || io.isShutdown()) return;
+            io.execute(() -> {
+                SharedPreferences.Editor e = art().edit();
+                for (Listened.Song song : missing) e.putString(song.key(), lookUpCover(song));
+                e.apply();
+                main.post(() -> listener.onItems(mixMine(popular)));
+            });
+        };
+    }
+
+    private List<Item> mixMine(List<Item> popular) {
+        List<Item> mine = new ArrayList<>();
+        Set<String> titles = new HashSet<>();
+        for (Listened.Song song : Listened.all(ctx)) {
+            String cover = art().getString(song.key(), "");
+            if (cover.isEmpty()) continue;
+            String q = song.artist + " " + song.title;
+            try {
+                q = java.net.URLEncoder.encode(q, "UTF-8").replace("+", "%20");
+            } catch (java.io.UnsupportedEncodingException ignored) {
+            }
+            String title = song.title + " · " + song.artist;
+            titles.add(title.toLowerCase(java.util.Locale.ROOT));
+            mine.add(new Item(title, cover, "https://open.spotify.com/search/" + q, "", 0));
+            if (mine.size() == 10) break;
+        }
+        if (mine.isEmpty()) return popular;
+        List<Item> out = new ArrayList<>();
+        int a = 0, b = 0;
+        while (a < mine.size() || b < popular.size()) {
+            if (a < mine.size()) out.add(mine.get(a++));
+            while (b < popular.size() && titles.contains(popular.get(b).title.toLowerCase(java.util.Locale.ROOT))) b++;
+            if (b < popular.size()) out.add(popular.get(b++));
+        }
+        return out;
+    }
+
+    /** A song's cover at 600 px from iTunes' search, or "" when it finds none. */
+    private String lookUpCover(Listened.Song song) {
+        try {
+            String url = "https://itunes.apple.com/search?entity=song&limit=1&country=ua&term="
+                    + java.net.URLEncoder.encode(song.artist + " " + song.title, "UTF-8");
+            JSONArray r = new JSONObject(new String(get(url, false), StandardCharsets.UTF_8)).getJSONArray("results");
+            if (r.length() == 0) return "";
+            return r.getJSONObject(0).optString("artworkUrl100", "").replace("100x100bb", "600x600bb");
+        } catch (Exception e) {
+            Log.w(TAG, "cover lookup failed: " + e);
+            return "";
+        }
+    }
+
+    /** The covers found for the songs played, by Listened.Song.key; this TV's own, never synced. */
+    private SharedPreferences art() {
+        return ctx.getSharedPreferences("listened_art", Context.MODE_PRIVATE);
     }
 
     /** YouTube Music gets Spotify's chart, each song opening YouTube Music's search for it. */
@@ -358,9 +427,10 @@ final class ShelfFeed {
         });
     }
 
-    /** A Spotify album cover: square, so it is set on a 16:9 picture rather than cropped to one. */
+    /** An album cover (Spotify's, or iTunes' for a song played): square, so it is set on a 16:9 picture rather than cropped to one. */
     private static boolean cover(String backdrop) {
-        return backdrop.contains("spotifycdn.com/image/") || backdrop.contains("i.scdn.co/image/");
+        return backdrop.contains("spotifycdn.com/image/") || backdrop.contains("i.scdn.co/image/")
+                || backdrop.contains("mzstatic.com/image/");
     }
 
     /** The cover on the right of its own colour field (glow), clear of the top bar and above the dock. */

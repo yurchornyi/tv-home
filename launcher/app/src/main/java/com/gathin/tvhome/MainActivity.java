@@ -1452,6 +1452,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * - a tile carried: arrows move it; Back (or OK) puts it down and the mode stays on for the next one.
      * Other keys (volume, Home) pass through; leaving the launcher ends the mode and saves.
      */
+    /** The full-screen player's next (or previous) shown button gets focus; the row's ends stay where they are. */
+    private void stepAmbientControls(boolean forward) {
+        ViewGroup row = findViewById(R.id.ambientControls);
+        List<View> buttons = new ArrayList<>();
+        for (int i = 0; i < row.getChildCount(); i++) {
+            View b = row.getChildAt(i);
+            if (b.getVisibility() == View.VISIBLE && b.isFocusable()) buttons.add(b);
+        }
+        if (row.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) forward = !forward;
+        int at = buttons.indexOf(row.getFocusedChild());
+        int next = at < 0 ? buttons.indexOf(ambientPlay) : at + (forward ? 1 : -1);
+        if (next >= 0 && next < buttons.size()) buttons.get(next).requestFocus();
+    }
+
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         lastKeyAt = SystemClock.uptimeMillis();
@@ -1481,6 +1495,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                             || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_UP || event.getKeyCode() == KeyEvent.KEYCODE_DPAD_DOWN) {
                         if (wereHidden) return true;   // this press only woke the buttons
                         if (!ambientScreen.hasFocus()) ambientPlay.requestFocus();
+                        int code = event.getKeyCode();
+                        if (code == KeyEvent.KEYCODE_DPAD_LEFT || code == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                            // Along the row by hand: the focus finder stopped at Next, the gap before Open and Close
+                            // too wide for it beside the larger Play button.
+                            if (down) stepAmbientControls(code == KeyEvent.KEYCODE_DPAD_RIGHT);
+                            return true;
+                        }
                         return super.dispatchKeyEvent(event);
                     }
                     return true;
@@ -3762,6 +3783,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Something started or stopped playing: redraw the shelf if the dock has focus (it shows there). */
     private void onNowPlayingChanged() {
+        Listened.record(this, nowPlaying.track());   // a song in a music app joins its shelf
         if (ambientScreen.getVisibility() == View.VISIBLE) {
             // A player between two tracks reports nothing for a moment: the full screen waits it out and leaves
             // only when nothing plays a few seconds later.

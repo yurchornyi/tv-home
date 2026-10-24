@@ -21,8 +21,8 @@ import java.util.Set;
 /**
  * The owner's choices in one file, backup.json in the launcher's external files folder (readable over adb, see
  * tools/backup-settings.sh): the tile order, what was added to or removed from Home, the shelf's poster switches,
- * the channel choices and counts. Written whenever they change; a file put there from outside (restore, or a
- * copy from another TV) is taken in at the next start. Nothing leaves the TV by itself, unless the owner signed in to
+ * the channel choices and counts, the songs played (Listened). Written whenever they change; a file put there from
+ * outside (restore, or a copy from another TV) is taken in at the next start. Nothing leaves the TV by itself, unless the owner signed in to
  * an account (Account), which then gets the same snapshot.
  */
 final class Backup {
@@ -30,7 +30,7 @@ final class Backup {
     private static final String TAG = "TvHome.Backup";
     static final String FILE_NAME = "backup.json";
     private static final String[] FILES = {Order.FILE_NAME, "library_apps.txt", "library_home_removed.txt"};
-    private static final String[] PREFS = {"shelf", "channels"};
+    private static final String[] PREFS = {"shelf", "channels", Listened.PREFS};
 
     private Backup() { }
 
