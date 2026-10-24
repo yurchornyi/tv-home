@@ -34,7 +34,7 @@ JSON
 git add app/build.gradle
 git commit -q -m "launcher $VERSION (versionCode $CODE)"
 git tag "v$VERSION"
-git push -q "${RELEASE_REMOTE:-mine}" HEAD "v$VERSION"
+git push -q "${RELEASE_REMOTE:-origin}" HEAD "v$VERSION"
 gh release create "v$VERSION" --repo "$REPO" --title "Launcher $VERSION" --notes "$NOTES" "$OUT/tv-launcher.apk" "$OUT/update.json"
 rm -rf "$OUT"
 echo "Released $VERSION ($CODE). TVs on 2.37 or later pick it up within an hour, or when their screen turns on or off."
