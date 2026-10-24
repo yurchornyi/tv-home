@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="PROMPT.md">The prompt</a> ·
-  <a href="examples/">TV lists</a> ·
+  <a href="examples/">109 TV lists</a> ·
   <a href="https://github.com/yurchornyi/tv-launcher/releases/latest">Latest release</a>
 </p>
 
@@ -22,7 +22,7 @@ systems. **Fire TV** takes the debloat half only,
 since Fire OS will not hand Home to a third-party launcher. A few China-market TCL sets refuse to
 install any launcher at all; their lists say so in the header.
 
-Tested lists from contributors, one folder per model in [`examples/`](examples/):
+Tested lists for 109 TV models from contributors, one folder per model in [`examples/`](examples/):
 
 **TCL** 20 · **Sony** 17 · **Xiaomi** 15 · **Philips** 7 · **Hisense** 6 · **Panasonic** 3 ·
 **Amazon Fire TV Stick** 2 · **BenQ** 2 · **CHiQ** 2 · **Haier** 2 · **Hitachi** 2 · **NVIDIA Shield** 2 ·
@@ -210,9 +210,7 @@ the install script finds `~/Android/Sdk` and the `java` on your PATH.
 - **On-TV launcher settings:** click Settings for the TV's system settings, or hold OK on Settings and choose Launcher settings to set 4, 5, 6 or 7 apps per row, turn animations on or off, and opt into advanced effects. The advanced option adds tile lift, icon zoom and smooth ambient-colour transitions; it may use more memory. Use Follow theme to clear on-TV choices. Pushing or resetting a theme also clears them.
 - **Change the default home:** Launcher settings and the optional Default-home tile (`show_home_settings_shortcut`) open Android's home picker. Choose the original launcher to stop using TV Launcher as Home, or TV Launcher to return. The original launcher must be enabled. If the install script disabled it, use the restore script below first. Some TVs provide no home picker.
 - **Themes** set the same keys plus a background colour and a wallpaper from a `config.json` pushed to the TV, no rebuild. Four ship in [`themes/`](themes/), documented there.
-- **Language** follows the TV: English, German, Spanish, Catalan, French, Russian, Serbian (Latin), Polish, Portuguese, Turkish, Arabic, Hebrew, Simplified Chinese, Traditional Chinese (Taiwan), Thai, Finnish, Vietnamese, Bangla. Android 13+ can set it for the launcher alone: `tools/tv.py 'cmd locale set-app-locales com.gathin.tvhome --locales ca'`.
-  Hebrew places the menu buttons on the left and the date and clock on the right, with the greeting above the clock. The Clock screensaver right-aligns its date and time, and Hebrew dates include the month prefix ב (for example, 19 באוקטובר). Hebrew dock and app-grid rows start on the right, with matching left/right remote navigation. The Hebrew input selector places icons and labels on the right, status on the left, and aligns the dropdown with the Inputs button’s right edge. Other languages keep their original layouts.
-  Russian includes the module-card approval and management screens and the VPN-off badge.
+- **Language**: Ukrainian only, whatever language the TV is set to.
 - **Module cards** let any TV app declare its own tile (label, caption, glow). The launcher asks you once per app, Keep hidden by default, and remembers the answer for that app's signing key and card name. Hold OK on Settings and choose Module cards to change your mind. How to make one: [`docs/modules.md`](docs/modules.md); the contract: [`docs/specs/card.md`](docs/specs/card.md).
 - **Clock screensaver**: a drifting clock over the glow, so nothing burns in. Pick "Clock" in the TV's screensaver settings, or over ADB:
   `tools/tv.py 'settings put secure screensaver_components com.gathin.tvhome/.ClockDream; settings put secure screensaver_enabled 1'`

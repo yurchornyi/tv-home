@@ -11,6 +11,18 @@ def localFile = rootProject.file('local.properties')
 if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
 def tmdbKey = localProps.getProperty('tmdb.embed_key') == 'true' ? (localProps.getProperty('tmdb.key') ?: '').trim() : ''
 
+// The release key (made once, kept off the repository): ~/.tv-launcher/release.jks, its password in the macOS
+// Keychain (service tv-launcher-release-key) or in TV_LAUNCHER_KEY_PASSWORD. Every TV trusts only the key its
+// launcher was signed with, so updates must come from this key. Without it (CI, a fork) the debug key signs.
+def releaseStore = new File(System.getProperty('user.home'), '.tv-launcher/release.jks')
+def releasePassword = System.getenv('TV_LAUNCHER_KEY_PASSWORD') ?: ''
+if (releaseStore.isFile() && !releasePassword && new File('/usr/bin/security').canExecute()) {
+    def p = ['/usr/bin/security', 'find-generic-password', '-a', 'tv-launcher', '-s', 'tv-launcher-release-key', '-w'].execute()
+    p.waitFor()
+    if (p.exitValue() == 0) releasePassword = p.text.trim()
+}
+def hasReleaseKey = releaseStore.isFile() && releasePassword
+
 android {
     namespace 'com.gathin.tvhome'
     compileSdk 34
@@ -21,11 +33,24 @@ android {
         targetSdk 34
         versionCode 58
         versionName '1.6'
+        // Ukrainian only: res/values is Ukrainian, and the libraries' other translations stay out of the APK.
+        resourceConfigurations += ['uk']
         buildConfigField 'String', 'TMDB_KEY', '"' + tmdbKey.replace('"', '') + '"'
     }
 
     buildFeatures {
         buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseKey) {
+                storeFile releaseStore
+                storePassword releasePassword
+                keyAlias 'tv-launcher'
+                keyPassword releasePassword
+            }
+        }
     }
 
     buildTypes {
@@ -34,8 +59,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Sideloaded over ADB, never published: sign with the debug key so it installs over a debug build.
-            signingConfig signingConfigs.debug
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
         }
     }
 

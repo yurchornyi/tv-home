@@ -3,9 +3,9 @@
 #   launcher/release.sh 2.5 "What changed"
 # Bumps versionName to 2.5 and versionCode by one in app/build.gradle, commits and tags v2.5, builds the release
 # APK, and creates a GitHub release on $RELEASE_REPO (default yurchornyi/tv-launcher) with tv-launcher.apk and
-# update.json (with the APK's SHA-256, which the TVs check); .../releases/latest/download/update.json is what the TVs read. The APK is signed with this
-# machine's debug key (app/build.gradle): release from the same machine, or copy ~/.android/debug.keystore, or
-# the TVs refuse the update as foreign.
+# update.json (with the APK's SHA-256, which the TVs check); .../releases/latest/download/update.json is what the TVs read. The APK is signed with the
+# release key (~/.tv-launcher/release.jks, password in the Keychain; app/build.gradle): without it the TVs refuse the
+# update as foreign, so the release stops here when it is missing.
 set -e
 cd "$(dirname "$0")"
 # The JDK and SDK Gradle needs, where Homebrew puts them, unless the shell already says.
@@ -23,6 +23,7 @@ CODE=$(($(sed -n 's/^ *versionCode \([0-9]*\)$/\1/p' app/build.gradle) + 1))
 sed -i '' "s/^\( *versionCode \)[0-9]*$/\1$CODE/; s/^\( *versionName \)'[^']*'$/\1'$VERSION'/" app/build.gradle
 grep -q "versionCode $CODE" app/build.gradle || { echo "could not bump the version" >&2; exit 1; }
 # New TVs start from the owner's latest saved settings (backups/xgimi.json, tools/backup-settings.sh).
+[ -f "$HOME/.tv-launcher/release.jks" ] || { git checkout -- app/build.gradle; echo "no release key at ~/.tv-launcher/release.jks" >&2; exit 1; }
 python3 -I ../tools/make-defaults.py
 ./gradlew assembleRelease -q --console=plain || { git checkout -- app/build.gradle; echo "build failed; version left as it was" >&2; exit 1; }
 APK=app/build/outputs/apk/release/app-release.apk

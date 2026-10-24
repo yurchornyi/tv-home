@@ -2,6 +2,6 @@
 <resources>
     <bool name="rtl_app_grid">false</bool>
     <bool name="rtl_menu_bar">false</bool>
-    <!-- Other locales keep the date on one line, ellipsized as before. -->
-    <bool name="date_single_line">true</bool>
+    <!-- Ukrainian weekday and month names need two lines (date_format_home has a line break). -->
+    <bool name="date_single_line">false</bool>
 </resources>
