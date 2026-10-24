@@ -2731,19 +2731,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         shelfOpen.setTag(round);
         int size = (int) (42 * density);
         if (round) {
+            // The disc and its triangle in one drawable, the triangle at the disc's centre (a compound drawable sits
+            // at the padding's edge, which never quite centres it); nudged right a dp, where its weight looks right.
             android.graphics.drawable.GradientDrawable disc = new android.graphics.drawable.GradientDrawable();
             disc.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             disc.setColor(0xFFFFFFFF);
-            shelfOpen.setBackground(disc);
+            Drawable play = getDrawable(R.drawable.ic_np_play).mutate();
+            play.setTint(0xFF111111);
+            android.graphics.drawable.LayerDrawable face = new android.graphics.drawable.LayerDrawable(new Drawable[]{disc, play});
+            int icon = (int) (20 * density);
+            face.setLayerSize(1, icon, icon);
+            face.setLayerGravity(1, Gravity.CENTER);
+            face.setLayerInsetStart(1, (int) (1.5f * density));
+            shelfOpen.setBackground(face);
+            shelfOpen.setCompoundDrawablesRelative(null, null, null, null);
             shelfOpen.setText("");
             shelfOpen.setContentDescription(getString(R.string.listen_now));
-            int pad = (size - (int) (22 * density)) / 2;
-            // The triangle's weight sits left of its box: a little more room on the left centres it to the eye.
-            shelfOpen.setPaddingRelative(pad + (int) (2 * density), 0, pad - (int) (2 * density), 0);
-            shelfOpen.setCompoundDrawablePadding(0);
+            shelfOpen.setPaddingRelative(0, 0, 0, 0);
             shelfOpen.setMinWidth(size);
             shelfOpen.setMinHeight(size);
-            shelfOpen.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(0xFF111111));
+            shelfOpen.setMinimumWidth(size);
+            shelfOpen.setMinimumHeight(size);
         } else {
             shelfOpen.setBackground(pillBackground);
             shelfOpen.setTextColor(pillText);
@@ -2752,7 +2760,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             shelfOpen.setCompoundDrawablePadding((int) (10 * density));
             shelfOpen.setMinWidth(0);
             shelfOpen.setMinHeight((int) (42 * density));
-            shelfOpen.setCompoundDrawableTintList(null);
+            shelfOpen.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_np_play, 0, 0, 0);
         }
     }
 
