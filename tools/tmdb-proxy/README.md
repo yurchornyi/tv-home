@@ -32,3 +32,9 @@ public catalogue behind tv.kyivstar.ua with an anonymous session, cached three h
 `GET /account/state` and `PUT /account/state` carry one TV's Home (Backup's snapshot and its apps) to the others;
 `POST /account/signout` ends one TV's sign-in. Data lives in the `ACCOUNTS` KV namespace (tv-launcher-accounts); PIN
 tries are limited per address (`ACCOUNT_LIMIT`) and ten wrong ones lock the e-mail for 15 minutes.
+
+## Spotify (spotify.js)
+
+`GET /spotify/popular` gives the songs most played on Spotify in Ukraine today (kworb.net's copy of Spotify's daily
+chart, the global one to top it up), Russian-language ones left out, each with its 640 px album cover and an
+`open.spotify.com/track` link the Spotify TV app plays. YouTube Music's shelf shows the same songs, opening its search.

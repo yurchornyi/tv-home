@@ -704,6 +704,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return false;
         });
         shelfOpen.setOnFocusChangeListener((v, focused) -> {
+            // The music Play disc grows a little under focus, as the player's buttons do.
+            if (v.getTag() == Boolean.TRUE) v.animate().scaleX(focused ? 1.12f : 1f).scaleY(focused ? 1.12f : 1f).setDuration(180).start();
+            else if (v.getScaleX() != 1f) v.setScaleX(1f);
+            if (v.getTag() != Boolean.TRUE) v.setScaleY(1f);
             // Choosing: the carousel stands still, the dock's highlight steps aside; it moves on again after.
             if (focused) {
                 hideGlass();
@@ -2085,7 +2089,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (gen != feedGen || !pkg.equals(feedPkg)) return;
             boolean first = feedItems == null;
             ShelfFeed.Item shown = first || feedItems.isEmpty() ? null : feedItems.get(feedIndex % feedItems.size());
-            feedItems = withContinue(pkg, items);
+            // Music is no film to go back to: a music app's shelf has no Continue entry, only what is popular.
+            feedItems = ShelfFeed.music(pkg) ? items : withContinue(pkg, items);
             if (first) {
                 feedIndex = 0;
                 showFeedItem();
@@ -2690,6 +2695,67 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * its own (SmartTube, KIK's channels, Kick, a Continue entry) or Netflix with the title's Netflix id. A poster
      * that could only open the app (Kyivstar) or a search by its name (TMDB posters over KIK) has none.
      */
+    /**
+     * A song on a music app's shelf reads as the player does: its title large, the artist under it, and a round Play
+     * button like the player's instead of a film's labelled pill. The Worker's titles are "Song · Artist".
+     */
+    private void showAsSong(String title) {
+        int dot = title.lastIndexOf(" · ");
+        String song = dot > 0 ? title.substring(0, dot) : title;
+        String artist = dot > 0 ? title.substring(dot + 3) : "";
+        android.text.SpannableStringBuilder t = new android.text.SpannableStringBuilder(song);
+        if (!artist.isEmpty()) {
+            int start = t.length();
+            t.append('\n').append(artist);
+            t.setSpan(new android.text.style.RelativeSizeSpan(0.55f), start, t.length(), 0);
+            t.setSpan(new android.text.style.ForegroundColorSpan(0xB3FFFFFF), start, t.length(), 0);
+        }
+        shelfTitle.setText(t);
+        playerPill(true);
+    }
+
+    private Drawable pillBackground;
+    private android.content.res.ColorStateList pillText;
+
+    /**
+     * The shelf's pill as a music player's Play button: a white disc with a dark triangle, as Apple Music and the
+     * Spotify app have it; or back as the labelled glass Watch pill for films.
+     */
+    private void playerPill(boolean round) {
+        if (pillBackground == null) {
+            pillBackground = shelfOpen.getBackground();
+            pillText = shelfOpen.getTextColors();
+        }
+        if (round) shelfOpen.setText("");   // each poster sets its label first
+        if (round == (shelfOpen.getTag() == Boolean.TRUE)) return;
+        shelfOpen.setTag(round);
+        int size = (int) (42 * density);
+        if (round) {
+            android.graphics.drawable.GradientDrawable disc = new android.graphics.drawable.GradientDrawable();
+            disc.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            disc.setColor(0xFFFFFFFF);
+            shelfOpen.setBackground(disc);
+            shelfOpen.setText("");
+            shelfOpen.setContentDescription(getString(R.string.listen_now));
+            int pad = (size - (int) (22 * density)) / 2;
+            // The triangle's weight sits left of its box: a little more room on the left centres it to the eye.
+            shelfOpen.setPaddingRelative(pad + (int) (2 * density), 0, pad - (int) (2 * density), 0);
+            shelfOpen.setCompoundDrawablePadding(0);
+            shelfOpen.setMinWidth(size);
+            shelfOpen.setMinHeight(size);
+            shelfOpen.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(0xFF111111));
+        } else {
+            shelfOpen.setBackground(pillBackground);
+            shelfOpen.setTextColor(pillText);
+            shelfOpen.setContentDescription(null);
+            shelfOpen.setPaddingRelative((int) (20 * density), 0, (int) (22 * density), 0);
+            shelfOpen.setCompoundDrawablePadding((int) (10 * density));
+            shelfOpen.setMinWidth(0);
+            shelfOpen.setMinHeight((int) (42 * density));
+            shelfOpen.setCompoundDrawableTintList(null);
+        }
+    }
+
     private int shelfLabel(String pkg, ShelfFeed.Item item) {
         boolean title = item.open != null;
         if (!title && NETFLIX_PKG.equals(pkg) && item.id > 0) {
@@ -2697,7 +2763,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             title = id != null && !id.isEmpty();
         }
         if (!title) return 0;
-        return item == continueItem ? R.string.continue_row : R.string.watch_now;
+        if (item == continueItem) return R.string.continue_row;
+        return ShelfFeed.music(pkg) ? R.string.listen_now : R.string.watch_now;
     }
 
     /** Whether the poster on the shelf now has a button (see shelfLabel). */
@@ -3594,10 +3661,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             boolean animate = animations && !reducedMotion && heroArt.getAlpha() > 0f;
             Runnable title = () -> {
                 String tidy = ShelfText.clean(item.title);
+                boolean song = ShelfFeed.music(pkg);
                 shelfTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ShelfText.size(tidy));
                 shelfTitle.setText(tidy);
                 int label = shelfLabel(pkg, item);
                 if (label != 0) shelfOpen.setText(label);
+                if (song) showAsSong(tidy);
+                else playerPill(false);
                 // Netflix: whether the title can be opened is known once its Netflix id is looked up (once per title).
                 if (NETFLIX_PKG.equals(pkg) && item.id > 0 && item.open == null
                         && shelfFeed.knownNetflixId(item.type, item.id) == null) {
@@ -3733,7 +3803,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (t.cover != npCoverShown) {
             npCoverShown = t.cover;
             npCover.setImageBitmap(t.cover);
-            npBackdrop = t.cover != null ? NowPlaying.soft(this, t.cover) : null;
+            // A song's square cover: behind the player a field of its colours, not the cover a second time (the
+            // card shows it); a video's frame is softened as before.
+            boolean square = t.cover != null && Math.abs(t.cover.getWidth() - t.cover.getHeight()) * 10 < t.cover.getWidth();
+            npBackdrop = t.cover == null ? null : square
+                    ? new BitmapDrawable(getResources(), ShelfFeed.glow(t.cover)) : NowPlaying.soft(this, t.cover);
         }
         npCover.setVisibility(t.cover != null ? View.VISIBLE : View.GONE);
         if (npBackdrop != null && heroArtShown != npBackdrop) {

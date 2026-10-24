@@ -34,7 +34,9 @@ import java.util.concurrent.Executors;
  * those dock apps is focused. Netflix gets what is popular on Netflix in the TV's region (its network for series,
  * its watch provider for films); Kyivstar TV Ukrainian series and films, then what is popular in the region; every
  * other listed app what is trending this week. Kyivstar TV, through the Worker, shows its own posters instead: what is
- * popular on Kyivstar TV, and with a channel focused the programmes popular on that channel. Titles come in the TV's
+ * popular on Kyivstar TV, and with a channel focused the programmes popular on that channel; Spotify the songs most
+ * played on Spotify in Ukraine, each album cover set on a 16:9 picture of its own (poster()), and YouTube Music the
+ * same songs, opened by a search there. Titles come in the TV's
  * language. Lists are cached for six hours in preferences, images on disk, the last few decoded in memory as RGB_565
  * (about 1.8 MB each at 1280 px), so a ~1 GB TV is not squeezed. No key (BuildConfig.TMDB_KEY) means no requests.
  */
@@ -80,6 +82,13 @@ final class ShelfFeed {
     private static final long MAX_AGE_MS = 6 * 60 * 60 * 1000L;
     private static final String NETFLIX = "com.netflix.ninja";
     private static final String KYIVSTAR = "com.kyivstar.tv.tvapp";
+    private static final String SPOTIFY = "com.spotify.tv.android";
+    static final String YOUTUBE_MUSIC = "com.google.android.youtube.tvmusic";
+
+    /** A music app: its shelf shows the popular songs, as a player shows a song (MainActivity). */
+    static boolean music(String pkg) {
+        return SPOTIFY.equals(pkg) || YOUTUBE_MUSIC.equals(pkg);
+    }
     /** Titles the owner never wants on the shelf, whichever app or list offers them (any spelling, any season). */
     private static final java.util.regex.Pattern NEVER = java.util.regex.Pattern.compile(
             "(^|[^\\p{L}])(свати|сваты|svaty|слуга народу|слуга народа)([^\\p{L}]|$)",
@@ -136,21 +145,24 @@ final class ShelfFeed {
     List<Item> cached(String pkg) {
         if (!enabled()) return java.util.Collections.emptyList();
         String group = group(pkg);
+        if (group == null) return java.util.Collections.emptyList();
         List<Item> known = lists.get(group);
         if (known == null) {
-            known = parse(prefs().getString(group, ""), !"kyivstar".equals(group));
+            known = parse(prefs().getString(group, ""), !ordered(group));
             if (!known.isEmpty()) lists.put(group, known);
         }
-        return known;
+        return forApp(pkg, known);
     }
 
     /** The cached list for this app at once if there is one, then a fresh one when the cache is old. */
-    void items(String pkg, ItemsListener listener) {
+    void items(String pkg, ItemsListener asked) {
         if (!enabled()) return;
         String group = group(pkg);
+        if (group == null) return;
+        ItemsListener listener = YOUTUBE_MUSIC.equals(pkg) ? items -> asked.onItems(forApp(pkg, items)) : asked;
         List<Item> known = lists.get(group);
         if (known == null) {
-            known = parse(prefs().getString(group, ""), !"kyivstar".equals(group));
+            known = parse(prefs().getString(group, ""), !ordered(group));
             if (!known.isEmpty()) lists.put(group, known);
         }
         if (!known.isEmpty()) listener.onItems(known);
@@ -167,7 +179,8 @@ final class ShelfFeed {
             List<Item> got = new ArrayList<>();
             JSONArray raw = new JSONArray();
             try {
-                if ("kyivstar".equals(group)) kyivstar(proxyBase + "kyivstar/popular", got, raw);
+                if ("kyivstar".equals(group)) fromWorker(proxyBase + "kyivstar/popular", got, raw);
+                else if ("spotify".equals(group)) fromWorker(proxyBase + "spotify/popular", got, raw);
                 else {
                 String[] paths = "netflix".equals(group)
                         ? new String[]{"discover/tv?with_networks=213&sort_by=popularity.desc",
@@ -191,7 +204,7 @@ final class ShelfFeed {
                     return;
                 }
                 failedAt.remove(group);
-                if (!"kyivstar".equals(group)) Collections.shuffle(got);   // Kyivstar's comes most popular first
+                if (!ordered(group)) Collections.shuffle(got);   // Kyivstar's and Spotify's come most popular first
                 lists.put(group, got);
                 prefs().edit().putString(group, raw.toString()).putLong(group + "_at", System.currentTimeMillis()).apply();
                 if (all != null) for (ItemsListener l : all) l.onItems(got);
@@ -199,11 +212,31 @@ final class ShelfFeed {
         });
     }
 
-    /** Which cached list an app's shelf shows. */
+    /** Which cached list an app's shelf shows; null for none (Spotify without the Worker). */
     private String group(String pkg) {
         if (NETFLIX.equals(pkg)) return "netflix";
+        if (music(pkg)) return proxied ? "spotify" : null;
         if (KYIVSTAR.equals(Aliases.canonical(pkg))) return proxied ? "kyivstar" : "ukraine";
         return "trending";
+    }
+
+    /** YouTube Music gets Spotify's chart, each song opening YouTube Music's search for it. */
+    private static List<Item> forApp(String pkg, List<Item> items) {
+        if (!YOUTUBE_MUSIC.equals(pkg)) return items;
+        List<Item> out = new ArrayList<>();
+        for (Item i : items) {
+            String q = i.title.replace(" · ", " ");
+            try {
+                q = java.net.URLEncoder.encode(q, "UTF-8");
+            } catch (java.io.UnsupportedEncodingException ignored) {
+            }
+            out.add(new Item(i.title, i.backdrop, "https://music.youtube.com/search?q=" + q, "", 0));
+        }
+        return out;
+    }
+
+    private static boolean ordered(String group) {
+        return "kyivstar".equals(group) || "spotify".equals(group);
     }
 
     /**
@@ -237,7 +270,7 @@ final class ShelfFeed {
             JSONArray raw = new JSONArray();
             boolean ok = false;
             try {
-                kyivstar(proxyBase + "kyivstar/channel?id=" + java.net.URLEncoder.encode(channelId, "UTF-8")
+                fromWorker(proxyBase + "kyivstar/channel?id=" + java.net.URLEncoder.encode(channelId, "UTF-8")
                         + "&name=" + java.net.URLEncoder.encode(channelName == null ? "" : channelName, "UTF-8"), got, raw);
                 ok = true;
             } catch (Exception e) {
@@ -258,8 +291,8 @@ final class ShelfFeed {
         });
     }
 
-    /** A list from the Worker's Kyivstar routes: title, backdrop (Kyivstar's own picture) and the app's deep link. */
-    private void kyivstar(String url, List<Item> into, JSONArray raw) throws Exception {
+    /** A list from the Worker's Kyivstar or Spotify routes: title, backdrop and the app's deep link. */
+    private void fromWorker(String url, List<Item> into, JSONArray raw) throws Exception {
         JSONArray items = new JSONObject(new String(get(url, false), StandardCharsets.UTF_8)).getJSONArray("items");
         for (int i = 0; i < items.length(); i++) {
             JSONObject r = items.getJSONObject(i);
@@ -307,6 +340,11 @@ final class ShelfFeed {
                         ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565;
                 b = BitmapFactory.decodeFile(f.getPath(), o);
                 if (b == null) f.delete();   // a broken download: fetch it again next time, not never show it
+                else if (cover(backdrop)) {
+                    Bitmap cover = b;
+                    b = poster(cover);
+                    cover.recycle();
+                }
             } catch (Exception e) {
                 Log.w(TAG, "image failed: " + e);
             }
@@ -318,6 +356,64 @@ final class ShelfFeed {
                 for (ImageListener l : all) l.onImage(backdrop, done);
             });
         });
+    }
+
+    /** A Spotify album cover: square, so it is set on a 16:9 picture rather than cropped to one. */
+    private static boolean cover(String backdrop) {
+        return backdrop.contains("spotifycdn.com/image/") || backdrop.contains("i.scdn.co/image/");
+    }
+
+    /** The cover on the right of its own colour field (glow), clear of the top bar and above the dock. */
+    static Bitmap poster(Bitmap cover) {
+        cover = software(cover);
+        Bitmap out = glow(cover);
+        android.graphics.Canvas c = new android.graphics.Canvas(out);
+        int size = 330, x = out.getWidth() - size - 150, y = 135;
+        android.graphics.RectF box = new android.graphics.RectF(x, y, x + size, y + size);
+        android.graphics.Paint shadow = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        shadow.setColor(0x59000000);
+        c.drawRoundRect(new android.graphics.RectF(x + 4, y + 16, x + size + 4, y + size + 16), 24, 24, shadow);
+        android.graphics.Path clip = new android.graphics.Path();
+        clip.addRoundRect(box, 18, 18, android.graphics.Path.Direction.CW);
+        c.save();
+        c.clipPath(clip);
+        c.drawBitmap(cover, null, box, new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG));
+        c.restore();
+        return out;
+    }
+
+    /**
+     * A 1280x720 field of the cover's own colours: the cover shrunk to 3x3 pixels, more saturated and lighter, and stretched
+     * back up with filtering into a few large soft patches; darker on the left, where the shelf's text sits. Behind
+     * the player it stands alone, since the player card shows the cover itself.
+     */
+    static Bitmap glow(Bitmap cover) {
+        cover = software(cover);
+        int w = 1280, h = 720;
+        // Full colour: in RGB_565 the soft patches fall into visible bands.
+        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas c = new android.graphics.Canvas(out);
+        Bitmap tiny = Bitmap.createScaledBitmap(cover, 3, 3, true);
+        android.graphics.ColorMatrix vivid = new android.graphics.ColorMatrix();
+        vivid.setSaturation(1.7f);
+        android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix();
+        dim.setScale(1.15f, 1.15f, 1.15f, 1f);   // a dark cover still gives colour
+        vivid.postConcat(dim);
+        android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+        paint.setColorFilter(new android.graphics.ColorMatrixColorFilter(vivid));
+        // Drawn a third larger than the picture on each side: the edge pixels' colours fade in from outside.
+        c.drawBitmap(tiny, null, new android.graphics.Rect(-w / 3, -h / 3, w + w / 3, h + h / 3), paint);
+        tiny.recycle();
+        android.graphics.Paint shade = new android.graphics.Paint();
+        shade.setShader(new android.graphics.LinearGradient(0, 0, w, 0, new int[]{0x8C000000, 0x33000000, 0x14000000},
+                null, android.graphics.Shader.TileMode.CLAMP));
+        c.drawRect(0, 0, w, h, shade);
+        return out;
+    }
+
+    /** A media session's cover can be a hardware bitmap, which a software canvas cannot draw. */
+    private static Bitmap software(Bitmap b) {
+        return b.getConfig() == Bitmap.Config.HARDWARE ? b.copy(Bitmap.Config.ARGB_8888, false) : b;
     }
 
     /** Stops the download thread; the activity is going away and nothing will hear the answers. */

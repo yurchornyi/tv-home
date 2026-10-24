@@ -80,6 +80,10 @@
         <!-- KIK, the owner's film app -->
         <item>kik.app</item>
         <item>com.kyivstar.tv.tvapp</item>
+        <!-- Spotify: the songs most played on Spotify in Ukraine (the Worker's /spotify/popular) -->
+        <item>com.spotify.tv.android</item>
+        <!-- YouTube Music: the same songs, each opening its search there -->
+        <item>com.google.android.youtube.tvmusic</item>
     </string-array>
 
     <!-- Dock apps whose top shelf shows what the app itself suggests: the programs it publishes to Android TV's

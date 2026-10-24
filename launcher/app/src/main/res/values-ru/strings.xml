@@ -103,4 +103,5 @@
     <string name="account_wrong_pin">Неверный PIN для этой почты.</string>
     <string name="account_locked">Слишком много попыток. Подожди несколько минут.</string>
     <string name="account_offline">Нет связи с сервером. Попробуй ещё раз.</string>
+    <string name="listen_now">Слушать</string>
 </resources>

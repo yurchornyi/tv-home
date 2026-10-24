@@ -212,4 +212,5 @@
     <string name="account_locked">Забагато спроб. Зачекай кілька хвилин.</string>
     <string name="account_signed_out">Вихід з акаунта. Увійди знову.</string>
     <string name="account_offline">Немає зв\'язку з сервером. Спробуй ще раз.</string>
+    <string name="listen_now">Слухати</string>
 </resources>

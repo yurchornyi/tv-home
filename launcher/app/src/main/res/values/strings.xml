@@ -221,4 +221,5 @@
     <string name="account_locked">Too many tries. Wait a few minutes.</string>
     <string name="account_signed_out">Signed out. Sign in again.</string>
     <string name="account_offline">No connection to the server. Try again.</string>
+    <string name="listen_now">Listen</string>
 </resources>

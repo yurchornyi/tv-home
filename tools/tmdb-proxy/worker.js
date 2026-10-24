@@ -2,6 +2,7 @@ import { command, picks, about, HttpError } from './ai.js';
 import { featured as kickFeatured, play as kickPlay } from './kick.js';
 import { popular as kyivstarPopular, channel as kyivstarChannel } from './kyivstar.js';
 import { account, isAccountRoute } from './account.js';
+import { popular as spotifyPopular } from './spotify.js';
 
 // The launcher's TMDB requests go through here (ShelfFeed, config.xml tmdb_proxy), so the TMDB key lives only in
 // this Worker's secret (TMDB_KEY) and never in the APK or on GitHub. Only the few read-only paths the top shelf
@@ -56,6 +57,7 @@ export default {
     if (url.pathname === '/kick/play') return kickPlay(url);
     if (url.pathname === '/kyivstar/popular') return kyivstarPopular(request, ctx);
     if (url.pathname === '/kyivstar/channel') return kyivstarChannel(request, ctx, url);
+    if (url.pathname === '/spotify/popular') return spotifyPopular(request, ctx);
     if (!ALLOWED.some((re) => re.test(url.pathname))) return new Response('Not found', { status: 404 });
     if (!env.TMDB_KEY) return new Response('Not configured', { status: 503 });
 
