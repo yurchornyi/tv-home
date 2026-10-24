@@ -3,8 +3,7 @@
 <p align="center">
   <a href="PROMPT.md">The prompt</a> ·
   <a href="examples/">TV lists</a> ·
-  <a href="https://github.com/yurchornyi/tv-launcher/releases/latest">Latest release</a> ·
-  <a href="README.zh-CN.md">简体中文</a>
+  <a href="https://github.com/yurchornyi/tv-launcher/releases/latest">Latest release</a>
 </p>
 
 Strip the bloatware from any Android TV or Google TV over Wi-Fi, and replace the ad-filled home

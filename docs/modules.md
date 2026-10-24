@@ -75,7 +75,7 @@ Useful checks:
 
 ```bash
 # Did the card filter and the meta-data land on the right activity?
-adb shell pm dump io.github.udhaykumarbala.retro | grep -B2 -A6 DOCK_CARD
+adb shell pm dump io.example.retro | grep -B2 -A6 DOCK_CARD
 
 # Why was a card rejected? One line per reason.
 adb logcat -s TvHomeCards
@@ -103,8 +103,3 @@ until the owner answers. Sign with one certificate; the launcher rejects APKs wi
 Keep the keystore out of your repo.
 
 Publish the APK's own SHA-256 next to it as well.
-
-## Reference module
-
-Retro, an NES library for the TV, declares a card exactly as above:
-<https://github.com/udhaykumarbala/tv-vibehack-retro>.

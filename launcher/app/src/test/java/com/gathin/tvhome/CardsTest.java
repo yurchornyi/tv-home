@@ -76,7 +76,7 @@ public class CardsTest {
     public void foldDropsCaseSpacesAndPunctuation() {
         assertEquals("retro", Cards.fold("Retro"));
         assertEquals("livetv", Cards.fold("Live TV"));
-        assertEquals("tvvibehack", Cards.fold("tv-vibehack"));
+        assertEquals("tvlauncher", Cards.fold("tv-launcher"));
         assertEquals("kidstv20", Cards.fold("Kid's TV+ 2.0"));
         assertEquals("", Cards.fold(null));
         assertEquals("netflx", Cards.fold("Netflіx"));   // non ASCII letters never match anything
@@ -96,7 +96,7 @@ public class CardsTest {
         assertTrue(Cards.isReserved(Cards.fold("HDMI"), ui));
         assertTrue(Cards.isReserved(Cards.fold("HDMI 2"), ui));
         assertTrue(Cards.isReserved(Cards.fold("AV"), ui));
-        assertTrue(Cards.isReserved(Cards.fold("tv-vibehack"), ui));
+        assertTrue(Cards.isReserved(Cards.fold("tv-launcher"), ui));
         assertFalse(Cards.isReserved(Cards.fold("Xbox"), ui));
         assertTrue(Cards.isReserved("", ui));
         assertFalse(Cards.isReserved(Cards.fold("Retro"), ui));
@@ -113,9 +113,9 @@ public class CardsTest {
     @Test
     public void labelTakenByAnotherPackageOnly() {
         Map<String, Set<String>> names = new HashMap<>();
-        names.put("retro", new HashSet<>(Arrays.asList("io.github.udhaykumarbala.retro")));
+        names.put("retro", new HashSet<>(Arrays.asList("io.example.retro")));
         names.put("netflix", new HashSet<>(Arrays.asList("com.netflix.ninja")));
-        assertFalse(Cards.isTaken("retro", "io.github.udhaykumarbala.retro", names));   // its own app label
+        assertFalse(Cards.isTaken("retro", "io.example.retro", names));   // its own app label
         assertTrue(Cards.isTaken("retro", "io.example.spoof", names));
         assertTrue(Cards.isTaken("netflix", "io.example.spoof", names));
         assertFalse(Cards.isTaken("retrogames", "io.example.spoof", names));
@@ -407,20 +407,20 @@ public class CardsTest {
     @Test
     public void storeRoundTrip() {
         Map<String, Cards.Record> in = new TreeMap<>();
-        in.put("io.github.udhaykumarbala.retro", new Cards.Record("io.github.udhaykumarbala.retro", DIGEST_B, "retro", "show", 1700000000000L, 1700000001000L));
+        in.put("io.example.retro", new Cards.Record("io.example.retro", DIGEST_B, "retro", "show", 1700000000000L, 1700000001000L));
         in.put("io.example.spoof", new Cards.Record("io.example.spoof", DIGEST_A, "netflix", "hide", 1700000002000L, 1700000003000L));
         String text = Cards.encode(in);
         assertEquals("{\"version\":2,\"records\":[\n"
-                + "{\"package\":\"io.example.spoof\",\"signer_sha256\":\"" + DIGEST_A + "\",\"label\":\"netflix\",\"decision\":\"hide\",\"first_seen\":1700000002000,\"decided_at\":1700000003000},\n"
-                + "{\"package\":\"io.github.udhaykumarbala.retro\",\"signer_sha256\":\"" + DIGEST_B + "\",\"label\":\"retro\",\"decision\":\"show\",\"first_seen\":1700000000000,\"decided_at\":1700000001000}\n"
+                + "{\"package\":\"io.example.retro\",\"signer_sha256\":\"" + DIGEST_B + "\",\"label\":\"retro\",\"decision\":\"show\",\"first_seen\":1700000000000,\"decided_at\":1700000001000},\n"
+                + "{\"package\":\"io.example.spoof\",\"signer_sha256\":\"" + DIGEST_A + "\",\"label\":\"netflix\",\"decision\":\"hide\",\"first_seen\":1700000002000,\"decided_at\":1700000003000}\n"
                 + "]}\n", text);
         Map<String, Cards.Record> out = Cards.decode(text);
         assertNotNull(out);
         assertEquals(2, out.size());
-        assertEquals("show", out.get("io.github.udhaykumarbala.retro").decision);
-        assertEquals("retro", out.get("io.github.udhaykumarbala.retro").label);
-        assertEquals(DIGEST_B, out.get("io.github.udhaykumarbala.retro").digest);
-        assertEquals(1700000000000L, out.get("io.github.udhaykumarbala.retro").firstSeen);
+        assertEquals("show", out.get("io.example.retro").decision);
+        assertEquals("retro", out.get("io.example.retro").label);
+        assertEquals(DIGEST_B, out.get("io.example.retro").digest);
+        assertEquals(1700000000000L, out.get("io.example.retro").firstSeen);
         assertEquals(1700000003000L, out.get("io.example.spoof").decidedAt);
     }
 

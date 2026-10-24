@@ -5,7 +5,7 @@
          intent it declares, and SmartTube declares ACTION_MAIN. No launcher category, so no tile anywhere; opened
          by mistake it closes at once. -->
     <application
-        android:label="TV Home channels stub"
+        android:label="TV Launcher channels stub"
         android:allowBackup="false">
         <activity
             android:name=".Nothing"

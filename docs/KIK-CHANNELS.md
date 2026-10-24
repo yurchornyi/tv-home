@@ -1,12 +1,12 @@
-# KIK: channels for the TV Home shelf
+# KIK: channels for the TV Launcher shelf
 
-TV Home shows posters above the KIK tile. It reads them from KIK's Android TV home-screen channels
+TV Launcher shows posters above the KIK tile. It reads them from KIK's Android TV home-screen channels
 (`TvContract.Channels` / `TvContract.PreviewPrograms`), and only from channels whose
-`internal_provider_id` starts with `tvhome:`. While KIK publishes none, TV Home shows generic TMDB posters.
+`internal_provider_id` starts with `tvhome:`. While KIK publishes none, TV Launcher shows generic TMDB posters.
 
 KIK today publishes RezkaTV's five channels: Новинки, Смотрят, Горячие, Обновления сериалов, История. All of them
 have `internal_provider_id = 9`. The first three are Rezka's generic catalogue in Russian, with no country filter,
-so TV Home ignores them.
+so TV Launcher ignores them.
 
 ## What KIK should publish
 
@@ -19,11 +19,11 @@ opens her profile and only looks around, the shelf stays on Юра's lists until
 | `tvhome:for_you` | Для вас | The profile's recommendations (the same ranking KIK uses on its home screen), with the profile's country filter applied. |
 | `tvhome:new_episodes` | Нові серії | New episodes of series the profile follows ("Обновления сериалов"). |
 
-Make the channels in this order: TV Home shows them in the order they were made, taking turns between them.
+Make the channels in this order: TV Launcher shows them in the order they were made, taking turns between them.
 
 For each program:
 - `title`: the Ukrainian title (the one KIK shows).
-- `poster_art_uri`: an `https://` landscape backdrop, 16:9 and at least 1280 px wide. TV Home skips programs without
+- `poster_art_uri`: an `https://` landscape backdrop, 16:9 and at least 1280 px wide. TV Launcher skips programs without
   an http(s) poster. Set `poster_art_aspect_ratio` to `ASPECT_RATIO_16_9`.
 - `intent_uri`: an intent that opens this exact title in KIK. For Continue, it should resume playback.
   `Intent.toUri(Intent.URI_INTENT_SCHEME)`, e.g. the existing `hdrezka://film?u=...` VIEW intent.
@@ -40,7 +40,7 @@ For each program:
   for the remembered profile (the one that played last).
 
 Replace a channel's programs by deleting its old ones and inserting the new ones. Keep the channel ids stable:
-update channels, don't recreate them. TV Home rereads at most once a minute.
+update channels, don't recreate them. TV Launcher rereads at most once a minute.
 
 ## RezkaTV's old channels
 
@@ -49,7 +49,7 @@ Otherwise they stay on the stock Android TV home screen with Russian names.
 
 ## Checking it
 
-On the TV, with TV Home 2.47 or later, focus the KIK tile and run:
+On the TV, with TV Launcher 2.47 or later, focus the KIK tile and run:
 
     adb logcat -s TvHome.ChannelFeed
 

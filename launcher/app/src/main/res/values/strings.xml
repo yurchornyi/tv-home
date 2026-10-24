@@ -145,8 +145,8 @@
     <string name="sleep_off">Turn the timer off</string>
     <string name="sleep_set">The TV goes to sleep in %d min</string>
     <string name="sleep_in">sleep in %d min</string>
-    <string name="sleep_service_off">Turn on TV Home sleep timer here, and the timer will work</string>
-    <string name="sleep_service_name">TV Home sleep timer</string>
+    <string name="sleep_service_off">Turn on TV Launcher sleep timer here, and the timer will work</string>
+    <string name="sleep_service_name">TV Launcher sleep timer</string>
     <string name="sleep_service_description">Puts the TV to sleep when the launcher\'s sleep timer runs out.</string>
     <!-- Tile menu: the top shelf's posters for this app on or off. -->
     <string name="shelf_posters_hide">Hide posters on the shelf</string>

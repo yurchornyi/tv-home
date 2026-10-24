@@ -78,7 +78,7 @@ final class Cards {
     private static final String[] RESERVED_ANYWHERE = {"verified", "official"};
     /** Names the launcher's own UI renders (pills, tiles, the Inputs menu): rejected as a whole label. */
     private static final Set<String> RESERVED_EXACT = new HashSet<>(Arrays.asList(
-            "tvvibehack", "tvlauncher", "settings", "inputs", "livetv", "home", "defaulthome", "wifi", "av"));
+            "tvlauncher", "settings", "inputs", "livetv", "home", "defaulthome", "wifi", "av"));
     /** "HDMI", "HDMI 1", "HDMI2"... */
     private static final String RESERVED_PREFIX = "hdmi";
 

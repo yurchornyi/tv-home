@@ -19,8 +19,6 @@
 #   android.settings.SETTINGS or WIFI_SETTINGS (the launcher's pills need a fallback for that).
 # - Casting (com.xiaomi.mitv.smartshare / com.xiaomi.miplay / com.xiaomi.wfdsinkhelperservice /
 #   com.duokan.airkan.tvbox) and the app store are deliberately kept.
-# Newer China firmware (MiTV-MFTR0 "freeguy", Android 14): input routes, Xiaomi settings intents and app
-# discovery notes in docs/devices/xiaomi-mitv-mftr0-freeguy.txt.
 
 # Xiaomi telemetry / push / cloud control
 com.miui.analytics
